@@ -183,23 +183,12 @@ Program test
   Write( *, * ) 'real_E time ', Real( finish - start, wp ) / rate
 
   tot_E = real_E + Real( recip_E, wp ) + sic
-        
+
+  ! Now grid the charge
   Call system_clock( start, rate )
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  ! Find range of gaussian
-  n_vec = [ 1, 0, 0 ] ! Will use cshift to move onto next vector
-  q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
-  Do i_dir = 1, 3
-     Call l%get_dir_vec( n_vec, G )
-     range_gauss( i_dir ) = 1
-     Do
-        grid_vec = ( range_gauss( i_dir ) * G ) / ( n_grid( i_dir ) )
-        q_val = q_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
-        If( q_val < 1e-15_wp ) Exit
-        range_gauss( i_dir ) = range_gauss( i_dir ) + 1
-     End Do
-     n_vec = Cshift( n_vec, -1 )
-  End Do
+  ! First find range of the gaussian along each of the axes of the grid
+  Call find_gauss_range( l, alpha, n_grid, range_gauss )
   Write( *, * ) 'range_gauss = ', range_gauss
   Call grid_charge( l, alpha, q, r, range_gauss, q_grid )
   Call system_clock( finish, rate )
@@ -663,9 +652,50 @@ Contains
     
   End Subroutine grid_charge
 
+  Subroutine find_gauss_range( l, alpha, n_grid, range_gauss )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
+
+    Use lattice_module, Only : lattice
+
+    Implicit None
+
+    Type( lattice )             , Intent( In    ) :: l
+    Real( wp ),                   Intent( In    ) :: alpha
+    Integer   , Dimension( 1:3 ), Intent( In    ) :: n_grid
+    Integer   , Dimension( 1:3 ), Intent(   Out ) :: range_gauss
+
+    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
+    Real( wp ), Dimension( 1:3 ) :: G
+    Real( wp ), Dimension( 1:3 ) :: grid_vec
+
+    Real( wp ) :: q_norm
+    Real( wp ) :: q_val
+
+    Integer, Dimension( 1:3 ) :: n_vec
+
+    Integer :: i_dir
+
+    n_vec = [ 1, 0, 0 ] ! Will use cshift to move onto next vector
+    q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
+    Do i_dir = 1, 3
+       Call l%get_dir_vec( n_vec, G )
+       range_gauss( i_dir ) = 1
+       Do
+          grid_vec = ( range_gauss( i_dir ) * G ) / ( n_grid( i_dir ) )
+          q_val = q_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+          If( q_val < 1e-15_wp ) Exit
+          range_gauss( i_dir ) = range_gauss( i_dir ) + 1
+       End Do
+       n_vec = Cshift( n_vec, -1 )
+    End Do
+
+  End Subroutine find_gauss_range
+
 End Program test
 
-  
+
 Subroutine dummy_msolve(lb,ub,x,y)                   ! Solve M*y = x
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
   Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
