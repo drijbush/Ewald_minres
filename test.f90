@@ -119,6 +119,11 @@ Program test
   End Do
   Write( *, * ) 'r(1) after shift and reference = ', r( :, 1 )
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !
+  !  TRADITIONAL EWALD SECTION
+
+  ! Generate the useful fourier space function
   Call system_clock( start, rate )
   Allocate( ew_func( 0:l%get_n_rec_vecs() - 1 ) )
   Write( *, * ) '!!!!!!!!!!!!!!!!!!!!!!!!', l%get_rec_vec_max_index(), l%get_n_rec_vecs()
@@ -147,6 +152,7 @@ Program test
   Call system_clock( finish, rate )
   Write( *, * ) 'ewfunc time ', Real( finish - start, wp ) / rate
 
+  ! Calculate the fourier space energy
   Call system_clock( start, rate )
   recip_E = 0.0_wp
   !$omp parallel default( none ) shared( l, r, recip_E, q, n, ew_func ) &
@@ -170,21 +176,30 @@ Program test
   !$omp end do
   !$omp end parallel
   recip_E = recip_E * 0.5_wp
-  sic = - Sum( q * q ) * alpha / Sqrt( pi )
   Call system_clock( finish, rate )
   Write( *, * ) 'recip_E time ', Real( finish - start, wp ) / rate
+
+  ! Self interaction correction
+  sic = - Sum( q * q ) * alpha / Sqrt( pi )
 
   Call system_clock( start, rate )
   !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E )
   Call real_space_energy( l, q, r, alpha, max_G_shells, real_E )
   !$omp end parallel
   Call system_clock( finish, rate )
-  Call system_clock( finish, rate )
   Write( *, * ) 'real_E time ', Real( finish - start, wp ) / rate
 
   tot_E = real_E + Real( recip_E, wp ) + sic
 
-  ! Now grid the charge
+  ! END TRADITIONAL EWALD SECTION
+  !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+!!!!!!!!!!!!!!!!!!!!!
+  !
+  ! CHARGE GRIDING
+  
   Call system_clock( start, rate )
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   ! First find range of the gaussian along each of the axes of the grid
@@ -195,6 +210,8 @@ Program test
   Write( *, * ) 'q grid time ', Real( finish - start, wp ) / rate, ( Real( finish - start, wp ) / rate ) / Product( n_grid )
   q_error = Sum( q_grid )
   Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
+
+  ! Save the q grid to file
   Open ( 11, file = 'q_grid.dat' )
   Write( 11, * ) 'Sum of charge over grid ', Sum( q_grid ), Sum( q_grid ) / l%get_volume()
   Do i3 = 0, n_grid( 3 ) - 1
@@ -208,7 +225,12 @@ Program test
      End Do
   End Do
   Close( 11 )
-  
+
+!!!!!!!!!!!!!!!!!!!!!1
+  !
+  ! SLOW FOURIER POISSON SOLVER (SFP) i.e. no FFT
+
+  ! Fourier space energy
   Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Call system_clock( start, rate )
   !$omp parallel default( none ) shared( l, n_grid, ew_func, pot_grid ) &
@@ -242,6 +264,8 @@ Program test
   Call system_clock( finish, rate )
   Write( *, * ) 'pot grid time ', Real( finish - start, wp ) / rate, ( Real( finish - start, wp ) / rate ) / Product( n_grid )
   Write( *, * ) 'Sum over pot grid ', Sum( pot_grid ), Sum( pot_grid ) / l%get_volume()
+
+  ! Save the pot grid to file
   Open ( 11, file = 'pot_grid.dat' )
   Write( 11, * ) 'Sum over pot grid ', Sum( pot_grid ), Sum( pot_grid ) / l%get_volume()
   Do i3 = 0, n_grid( 3 ) - 1
@@ -262,8 +286,10 @@ Program test
   ! Minus sign on whole comes here just so can add up all contribs at end rather than confuse myself about signs
   recip_E_sfp = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
 
+  ! SFP self interaction correction
   sic_ffp = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
-  
+
+  ! SFP Real Space
   Call system_clock( start, rate )
   !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E_ffp )
   Call real_space_energy( l, q, r, alpha / Sqrt( 2.0_wp ), max_G_shells, real_E_ffp )
@@ -273,7 +299,19 @@ Program test
 
   tot_E_sfp = real_E_ffp + sic_ffp + recip_E_sfp
 
-  ! Now the big one
+  ! END SFP SECTION
+  !
+!!!!!!!!!!!!!
+
+!!!!!!!!!!
+  !
+  ! SYMMETRICALLY SCREENED POISSON (SSP) - purely real space methods used
+  !
+  ! Short range contribution and SIC same as SFP
+  
+  ! Calculate the long range term by finite difference methods
+
+  ! Initialise the FD template
   dGrid_vecs = l%get_direct_vectors()
   Do i = 1, 3
      dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
@@ -281,6 +319,7 @@ Program test
   End Do
   Call FD%init( FD_order, dGrid_vecs )
 
+  ! Solve the Possion equation on the grid by FDs
   Allocate( pot_grid_fd( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   rtol = 1.0e-12_wp
   Call system_clock( start, rate )
@@ -291,6 +330,7 @@ Program test
   Call system_clock( finish, rate )
   Write( *, * ) 'MINRES time ', Real( finish - start, wp ) / rate
 
+  ! summarise the solver
   Write( *, * ) 'Iterative solver summary:'
   Write( *, * ) 'alpha                = ', alpha
   Write( *, * ) 'Grid resolution      = ', dG
@@ -298,7 +338,8 @@ Program test
   Write( *, * ) 'Order                = ', FD_order
   Write( *, * ) 'iterations           = ', itn
   Write( *, * ) 'norm of the residual = ', rnorm
-  
+
+  ! Save the SSP potential
   Open ( 11, file = 'pot_grid_fd.dat' )
   Write( 11, * ) 'Sum over pot grid ', Sum( pot_grid_fd ), Sum( pot_grid_fd ) / l%get_volume()
   Do i3 = 0, n_grid( 3 ) - 1
@@ -314,8 +355,19 @@ Program test
   End Do
   Close( 11 )
 
+  ! Calculate from the potential the long range energy
   recip_E_ffp_fd = - 0.5_wp * Sum( - q_grid * pot_grid_fd ) * ( l%get_volume() / Product( n_grid ) )
+
+  ! And hence total energy - SIC and long range same as for sfp
   tot_E_ffp_fd = real_E_ffp + sic_ffp + recip_E_ffp_fd
+
+  ! END SSP SECTION
+  !
+!!!!!!!!!!!!!!!!!!!!!
+  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !
+  ! REPORT RESULTS
   
   Write( *, '( t39, a, t149, a )' ) 'Internal', 'DL_POLY'
   Write( *, '( t14, a, t39, a, t64, a, t89, a, t124, a, t149, a, t174, a, t199, a  )' ) &
@@ -333,6 +385,7 @@ Program test
   Write( *, '( "Difference in energy SFP - EW: ", g30.16 )' ) tot_E_sfp    - tot_E
   Write( *, '( "Difference in energy SSP - EW: ", g30.16 )' ) tot_E_ffp_fd - tot_E
 
+  ! Add a line to the summary file
   rms_delta_pot = Sum( ( pot_grid - pot_grid_fd ) ** 2 )
   rms_delta_pot = Sqrt( rms_delta_pot ) / Size( pot_grid )
   Inquire( file = 'summary.dat', exist = fexist )
@@ -352,6 +405,14 @@ Program test
        Real( recip_E_sfp, wp ), recip_E_ffp_fd, Abs( Real( recip_E_sfp, wp ) - recip_E_ffp_fd ), &
        rms_delta_pot
   Close( 11 )
+
+  ! END REPORTING RESULTS SECTION
+  !
+!!!!!!!!!!!
+
+!!!!!!!!!
+  !
+  ! FFP SECTION - i.e. using FFT - IN DEVELOPMENT AND NOT WORKING
 
   Allocate( struc_fac( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( pot_k( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
@@ -395,6 +456,10 @@ Program test
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
        'FFP ', recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp, &
        recip_E_ffp * r4pie0, sic_ffp * r4pie0, real_E_ffp * r4pie0, tot_E_ffp * r4pie0
+
+  !  END FFP SECTION
+  !
+!!!!!!!!!!!!!!!
 
 Contains
 
