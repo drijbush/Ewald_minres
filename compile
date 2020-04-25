@@ -1,0 +1,3 @@
+#gfortran-8 -g -fcheck=all -ffpe-trap=invalid,zero,overflow -std=f2008 -Wall -Wextra -O3 -pedantic vec_utilities.f90 sort.f90 lattice.f90 FD_Template/src/constants.f90  FD_Template/src/grid_vectors.f90 FD_Template/src/fd_template.f90 FD_Template/src/fd_laplacian_3d.f90 minres-ijb/halo.f90 minres-ijb/minresModule_ijb.f90  test.f90
+
+gfortran-8 -g -fopenmp -std=f2008 -Wall -Wextra -O3 -pedantic vec_utilities.f90 sort.f90 lattice.f90 FD_Template/src/constants.f90  FD_Template/src/grid_vectors.f90 FD_Template/src/fd_template.f90 FD_Template/src/fd_laplacian_3d.f90 minres-ijb/halo.f90 minres-ijb/minresModule_ijb.f90  test.f90 
