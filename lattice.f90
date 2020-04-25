@@ -25,6 +25,8 @@ Module lattice_module
      Procedure :: get_n_rec_vecs
      Procedure :: get_nth_dir_vec
      Procedure :: get_nth_rec_vec
+     Procedure :: get_nth_rec_vec_index
+     Procedure :: get_rec_vec_max_index
      Procedure :: to_reference
      Procedure :: minimum_image
      Procedure :: to_direct
@@ -469,6 +471,30 @@ Contains
     vec( 1:l%dim ) = Matmul( l%rec_vecs, Real( l%rec_vec_list( :, n ), wp ) )
     
   End Subroutine get_nth_rec_vec
+
+  Pure Subroutine get_nth_rec_vec_index( l, n, vec ) 
+
+    Implicit None
+    
+    Class( lattice )       , Intent( In    ) :: l
+    Integer                , Intent( In    ) :: n
+    Integer, Dimension( : ), Intent(   Out ) :: vec
+
+    vec( 1:l%dim ) = l%rec_vec_list( 1:l%dim, n )
+    
+  End Subroutine get_nth_rec_vec_index
+
+  Pure Function get_rec_vec_max_index( l ) Result( max_index ) 
+
+    Implicit None
+    
+    Integer :: max_index
+
+    Class( lattice ), Intent( In    ) :: l
+
+    max_index = Maxval( l%rec_vec_list( 1:l%dim, : ) )
+    
+  End Function get_rec_vec_max_index
 
   Pure Subroutine rotate_given_to_used( l, r, vec )
 
