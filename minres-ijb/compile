@@ -1,0 +1,1 @@
+gfortran -c -std=f2008 -Wall -Wextra -fcheck=all -pedantic-errors ../FD_Template/src/constants.f90 ../FD_Template/src/grid_vectors.f90 ../FD_Template/src/fd_template.f90 halo.f90 minresModule_ijb.f90 
