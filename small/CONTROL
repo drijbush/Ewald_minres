@@ -1,0 +1,35 @@
+SODIUM CHLORIDE WITH (27000 IONS)
+
+#restart noscale
+restart scale
+
+temperature           700.0
+# First used for dynamics, second for checking
+#equilibration steps   5000
+#steps                 20000
+##steps                 40000
+equilibration steps   0
+steps                 0
+timestep              0.001
+#scale                 5
+
+#cutoff                12.0
+#rvdw                  12.0
+cutoff                11.0
+rvdw                  11.0
+# First used for dynamics, second for checking
+#ewald precision       1d-10  20
+ewald precision       1d-16  20
+
+ensemble nve
+
+print every           1000
+stats every           1000
+collect
+
+job time              100000
+close time            10000
+
+l_scr
+
+finish
