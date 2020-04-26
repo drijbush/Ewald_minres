@@ -125,29 +125,7 @@ Program test
   ! Generate the useful fourier space function
   Call system_clock( start, rate )
   Allocate( ew_func( 0:l%get_n_rec_vecs() - 1 ) )
-  Write( *, * ) '!!!!!!!!!!!!!!!!!!!!!!!!', l%get_rec_vec_max_index(), l%get_n_rec_vecs()
-  ew_func( 0 ) = 0.0_wp
-  !$omp parallel default( none ) shared( n, ew_func, l, alpha, q, r ) &
-  !$omp                          private( s_fac, ig, G, G_len_sq, G_fac )
-  !$omp do
-  Do iG = 1, Ubound( ew_func, Dim = 1 )
-     Call l%get_nth_rec_vec( ig + 1, G )
-     G = G * 2.0_wp * pi
-     ! Calculate the structure factor for this G vector
-     s_fac = 0.0_wp
-     Do j = 1, n
-        s_fac = s_fac + &
-             q( j ) * Exp( Cmplx( 0.0_wp, - Dot_product( G, r( :, j ) ), wp ) )
-     End Do
-     G_len_sq = Dot_product( G, G )
-     G_fac = Exp( - G_len_sq / ( 4.0_wp * alpha * alpha ) ) / G_len_sq
-     ! Note difference from Darden paper - here in the ewfunc we have adsorbed 2*pi into the lattice vectors
-     ! Hence we multiply though by 4 * pi * pi and then another factor of 2 as this is for the potential
-     ! not the energy. This formulation is the same as in Appendix B of Kittel
-     ew_func( iG ) = ( 4.0_wp * pi / l%get_volume() ) * s_fac * g_fac
-  End Do
-  !$omp end do
-  !$omp end parallel
+  Call generate_ew_func( l, q, r, alpha, ew_func )
   Call system_clock( finish, rate )
   Write( *, * ) 'ewfunc time ', Real( finish - start, wp ) / rate
 
@@ -593,6 +571,8 @@ Contains
 
   Subroutine save_grid( unit, filename, l, grid )
 
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
     Integer                            , Intent( In ) :: unit
     Character( Len = * )               , Intent( In ) :: filename
     Type( lattice )                    , Intent( In ) :: l
@@ -623,6 +603,49 @@ Contains
     Close( unit )
     
   End Subroutine save_grid
+
+  Subroutine generate_ew_func( l, q, r, alpha, ew_func )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Type( lattice )               , Intent( In    ) :: l
+    Real( wp ), Dimension( :     ), Intent( In    ) :: q
+    Real( wp ), Dimension( :, :  ), Intent( In    ) :: r
+    Real( wp ),                     Intent( In    ) :: alpha
+    Complex( wp ), Dimension( 0: ), Intent(   Out ) :: ew_func
+
+    Complex( wp ) :: s_fac
+
+    Real( wp ), Dimension( 1:3 ) :: G
+
+    Real( wp ) :: G_len_sq, G_fac
+    
+    Integer :: iG
+    
+    ew_func( 0 ) = 0.0_wp
+    !$omp parallel default( none ) shared( n, ew_func, l, alpha, q, r ) &
+    !$omp                          private( s_fac, ig, G, G_len_sq, G_fac )
+    !$omp do
+    Do iG = 1, Ubound( ew_func, Dim = 1 )
+       Call l%get_nth_rec_vec( ig + 1, G )
+       G = G * 2.0_wp * pi
+       ! Calculate the structure factor for this G vector
+       s_fac = 0.0_wp
+       Do j = 1, n
+          s_fac = s_fac + &
+               q( j ) * Exp( Cmplx( 0.0_wp, - Dot_product( G, r( :, j ) ), wp ) )
+       End Do
+       G_len_sq = Dot_product( G, G )
+       G_fac = Exp( - G_len_sq / ( 4.0_wp * alpha * alpha ) ) / G_len_sq
+       ! Note difference from Darden paper - here in the ewfunc we have adsorbed 2*pi into the lattice vectors
+       ! Hence we multiply though by 4 * pi * pi and then another factor of 2 as this is for the potential
+       ! not the energy. This formulation is the same as in Appendix B of Kittel
+       ew_func( iG ) = ( 4.0_wp * pi / l%get_volume() ) * s_fac * g_fac
+    End Do
+    !$omp end do
+    !$omp end parallel
+
+  End Subroutine generate_ew_func
 
 End Program test
 
