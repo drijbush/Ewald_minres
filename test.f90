@@ -6,15 +6,12 @@ Program test
 
   Use lattice_module, Only : lattice
   Use charge_grid_module, Only : charge_grid_calculate, charge_grid_find_range
-  Use FD_Laplacian_3d_module, Only : FD_Laplacian_3D
-  Use minresmodule, Only : minres
   Use fft_module, Only : fft_fft3d
   Use symetrically_screened_poisson_module, Only : ssp_long_range
   
   Implicit None
 
   Type( lattice ) :: l
-  Type( FD_Laplacian_3d ) :: FD
 
   Complex( wp ), Dimension( :, :, : ), Allocatable :: struc_fac
   Complex( wp ), Dimension( :, :, : ), Allocatable :: pot_k
@@ -37,8 +34,6 @@ Program test
 
   Real( wp ), Dimension( : ), Allocatable :: q
 
-  Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
-
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: G, dG
   Real( wp ), Dimension( 1:3 ) :: ri
@@ -52,7 +47,6 @@ Program test
   Real( wp ) :: recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp
   Real( wp ) :: recip_E_ffp_fd, tot_E_ffp_fd
   Real( wp ) :: recip_E_sfp, tot_E_sfp
-  Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
   Real( wp ) :: xshift
   Real( wp ) :: rms_delta_pot, q_error
   Real( wp ) :: t_grid, t_real, t_recip
@@ -66,8 +60,6 @@ Program test
   Integer :: nd
   Integer :: i, j, iG
   Integer :: max_G_shells = 2
-  Integer :: istop
-  Integer :: itn
   Integer :: i1, i2, i3
   
   Integer( li ) :: start, finish, rate
