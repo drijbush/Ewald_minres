@@ -12,7 +12,7 @@ Module fft_module
 
   Interface
      Subroutine dfftw_plan_dft_3d( plan, k1, k2, k3, a, b, dir, method )
-       Use numbers_module
+       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
        Implicit None
        Integer, Parameter :: long = Selected_int_kind( 12 )
        Integer( long )                             , Intent(   Out ) :: plan
@@ -25,13 +25,13 @@ Module fft_module
        Integer                                     , Intent( In    ) :: method
      End Subroutine dfftw_plan_dft_3d
      Subroutine dfftw_destroy_plan( plan )
-       Use numbers_module
+       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
        Implicit None
        Integer, Parameter :: long = Selected_int_kind( 12 )
        Integer( long ), Intent( InOut ) :: plan
      End Subroutine dfftw_destroy_plan
      Subroutine dfftw_execute( plan )
-       Use numbers_module
+       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
        Implicit None
        Integer, Parameter :: long = Selected_int_kind( 12 )
        Integer( long ), Intent( InOut ) :: plan
