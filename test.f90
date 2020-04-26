@@ -20,9 +20,7 @@ Program test
 
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
-  Complex( wp ) :: s_fac
-  Complex( wp ) :: recip_E, pot, potG
-  Complex( wp ) :: cc, cy, ct
+  Complex( wp ) :: pot
   
   Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
@@ -49,13 +47,14 @@ Program test
   Real( wp ) :: potr
   Real( wp ) :: G_len_sq, G_fac
   Real( wp ) :: sic
-  Real( wp ) :: real_E, tot_E
+  Real( wp ) :: recip_E, real_E, tot_E
   Real( wp ) :: recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp
   Real( wp ) :: recip_E_ffp_fd, tot_E_ffp_fd
   Real( wp ) :: recip_E_sfp, tot_E_sfp
   Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
   Real( wp ) :: xshift
   Real( wp ) :: rms_delta_pot, q_error
+  Real( wp ) :: t_real, t_recip
   
   Integer, Dimension( 1:3 ) :: n_grid, i_point, i_grid
   Integer, Dimension( 1:3 ) :: range_gauss
@@ -129,44 +128,48 @@ Program test
   Call system_clock( finish, rate )
   Write( *, * ) 'ewfunc time ', Real( finish - start, wp ) / rate
 
-  ! Calculate the fourier space energy
-  Call system_clock( start, rate )
-  recip_E = 0.0_wp
-  !$omp parallel default( none ) shared( l, r, recip_E, q, n, ew_func ) &
-  !$omp                          private( i, iG, pot, G, ri, cc, cy, ct, potg )
-  cc = 0.0_wp
-  !$omp do reduction( +:recip_E )
-  Do i = 1, n
-     pot = 0.0_wp
-     ri = r( :, i )
-     Do iG = 1, Ubound( ew_func, Dim = 1 )
-        Call l%get_nth_rec_vec( ig + 1, G )
-        G = G * 2.0_wp * pi
-        potG = Exp( Cmplx( 0.0_wp, Dot_product(   G, ri ), wp ) ) *        ew_func( ig )
-        pot = pot + potG + Conjg( potG )
-     End Do
-     cy = q( i ) * pot - cc
-     ct = recip_E + cy
-     cc = ( ct - recip_E ) - cy
-     recip_E = ct
-  End Do
-  !$omp end do
-  !$omp end parallel
-  recip_E = recip_E * 0.5_wp
-  Call system_clock( finish, rate )
-  Write( *, * ) 'recip_E time ', Real( finish - start, wp ) / rate
+!!$  ! Calculate the fourier space energy
+!!$  Call system_clock( start, rate )
+!!$  recip_E = 0.0_wp
+!!$  !$omp parallel default( none ) shared( l, r, recip_E, q, n, ew_func ) &
+!!$  !$omp                          private( i, iG, pot, G, ri, cc, cy, ct, potg )
+!!$  cc = 0.0_wp
+!!$  !$omp do reduction( +:recip_E )
+!!$  Do i = 1, n
+!!$     pot = 0.0_wp
+!!$     ri = r( :, i )
+!!$     Do iG = 1, Ubound( ew_func, Dim = 1 )
+!!$        Call l%get_nth_rec_vec( ig + 1, G )
+!!$        G = G * 2.0_wp * pi
+!!$        potG = Exp( Cmplx( 0.0_wp, Dot_product(   G, ri ), wp ) ) *        ew_func( ig )
+!!$        pot = pot + potG + Conjg( potG )
+!!$     End Do
+!!$     cy = q( i ) * pot - cc
+!!$     ct = recip_E + cy
+!!$     cc = ( ct - recip_E ) - cy
+!!$     recip_E = ct
+!!$  End Do
+!!$  !$omp end do
+!!$  !$omp end parallel
+!!$  recip_E = recip_E * 0.5_wp
+!!$  Call system_clock( finish, rate )
+!!$  Write( *, * ) 'recip_E time ', Real( finish - start, wp ) / rate
+!!$
+!!$  ! Self interaction correction
+!!$  sic = - Sum( q * q ) * alpha / Sqrt( pi )
+!!$
+!!$  Call system_clock( start, rate )
+!!$  !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E )
+!!$  Call real_space_energy( l, q, r, alpha, max_G_shells, real_E )
+!!$  !$omp end parallel
+!!$  Call system_clock( finish, rate )
+!!$  Write( *, * ) 'real_E time ', Real( finish - start, wp ) / rate
+!!$
+!!$  tot_E = real_E + Real( recip_E, wp ) + sic
 
-  ! Self interaction correction
-  sic = - Sum( q * q ) * alpha / Sqrt( pi )
-
-  Call system_clock( start, rate )
-  !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E )
-  Call real_space_energy( l, q, r, alpha, max_G_shells, real_E )
-  !$omp end parallel
-  Call system_clock( finish, rate )
-  Write( *, * ) 'real_E time ', Real( finish - start, wp ) / rate
-
-  tot_E = real_E + Real( recip_E, wp ) + sic
+  Call trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_recip, t_real )
+  Write( *, * ) 'Trad Ewald long  range time: ', t_recip
+  Write( *, * ) 'Trad Ewald short range time: ', t_real
 
   ! END TRADITIONAL EWALD SECTION
   !
@@ -646,6 +649,80 @@ Contains
     !$omp end parallel
 
   End Subroutine generate_ew_func
+
+  Subroutine trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_recip, t_real )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
+
+    Use lattice_module, Only : lattice
+
+    Type( lattice )               , Intent( In    ) :: l
+    Real( wp ), Dimension( :     ), Intent( In    ) :: q
+    Real( wp ), Dimension( :, :  ), Intent( In    ) :: r
+    Real( wp ),                     Intent( In    ) :: alpha
+    Complex( wp ), Dimension( 0: ), Intent( In    ) :: ew_func
+    Real( wp )                    , Intent( Out   ) :: recip_E
+    Real( wp )                    , Intent( Out   ) :: SIC
+    Real( wp )                    , Intent( Out   ) :: real_E
+    Real( wp )                    , Intent( Out   ) :: tot_E
+    Real( wp )                    , Intent( Out   ) :: t_recip
+    Real( wp )                    , Intent( Out   ) :: t_real
+
+    Complex( wp ) :: potg
+    Complex( wp ) :: cc, cy, ct
+
+    Real( wp ), Dimension( 1:3 ) :: G
+    Real( wp ), Dimension( 1:3 ) :: ri
+    
+    Real( wp ) :: pot
+    
+    Integer :: max_G_shells = 2
+    Integer :: n
+    Integer :: i, iG
+    
+    Integer( li ) :: start, finish, rate
+
+    n = Size( q )
+    
+    Call system_clock( start, rate )
+    recip_E = 0.0_wp
+    !$omp parallel default( none ) shared( l, r, recip_E, q, n, ew_func ) &
+    !$omp                          private( i, iG, pot, G, ri, cc, cy, ct, potg )
+    cc = 0.0_wp
+    !$omp do reduction( +:recip_E )
+    Do i = 1, n
+       pot = 0.0_wp
+       ri = r( :, i )
+       Do iG = 1, Ubound( ew_func, Dim = 1 )
+          Call l%get_nth_rec_vec( ig + 1, G )
+          G = G * 2.0_wp * pi
+          potG = Exp( Cmplx( 0.0_wp, Dot_product(   G, ri ), wp ) ) *        ew_func( ig )
+          pot = pot + Real( potG + Conjg( potG ), wp )
+       End Do
+       cy = q( i ) * pot - cc
+       ct = recip_E + cy
+       cc = ( ct - recip_E ) - cy
+       recip_E = Real( ct, wp )
+    End Do
+    !$omp end do
+    !$omp end parallel
+    recip_E = recip_E * 0.5_wp
+    Call system_clock( finish, rate )
+    t_recip = Real( finish - start, wp ) / rate
+
+    ! Self interaction correction
+    sic = - Sum( q * q ) * alpha / Sqrt( pi )
+
+    Call system_clock( start, rate )
+    !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E )
+    Call real_space_energy( l, q, r, alpha, max_G_shells, real_E )
+    !$omp end parallel
+    Call system_clock( finish, rate )
+    t_real = Real( finish - start, wp ) / rate
+
+    tot_E = real_E + Real( recip_E, wp ) + sic
+
+  End Subroutine trad_ewald
 
 End Program test
 
