@@ -9,6 +9,7 @@ Program test
   Use FD_Laplacian_3d_module, Only : FD_Laplacian_3D
   Use minresmodule, Only : minres
   Use fft_module, Only : fft_fft3d
+  Use symetrically_screened_poisson_module, Only : ssp_long_range
   
   Implicit None
 
@@ -54,7 +55,7 @@ Program test
   Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
   Real( wp ) :: xshift
   Real( wp ) :: rms_delta_pot, q_error
-  Real( wp ) :: t_real, t_recip
+  Real( wp ) :: t_grid, t_real, t_recip
   
   Integer, Dimension( 1:3 ) :: n_grid, i_point, i_grid
   Integer, Dimension( 1:3 ) :: range_gauss
@@ -230,40 +231,13 @@ Program test
   ! Short range contribution and SIC same as SFP
   
   ! Calculate the long range term by finite difference methods
-
-  ! Initialise the FD template
-  dGrid_vecs = l%get_direct_vectors()
-  Do i = 1, 3
-     dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
-     dG = Sqrt( Dot_product( dGrid_vecs( :, i ), dGrid_vecs( :, i ) ) )
-  End Do
-  Call FD%init( FD_order, dGrid_vecs )
-
-  ! Solve the Possion equation on the grid by FDs
   Allocate( pot_grid_fd( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  rtol = 1.0e-12_wp
-  Call system_clock( start, rate )
-  Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, dummy_Msolve, - 4.0_wp * pi * q_grid, 0.0_wp, .True., .False., &
-       pot_grid_fd, 1000, 99, rtol,                      &
-       istop, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
-  pot_grid_fd = pot_grid_fd - Sum( pot_grid_fd ) / Size( pot_grid_fd )
-  Call system_clock( finish, rate )
-  Write( *, * ) 'MINRES time ', Real( finish - start, wp ) / rate
-
-  ! summarise the solver
-  Write( *, * ) 'Iterative solver summary:'
-  Write( *, * ) 'alpha                = ', alpha
-  Write( *, * ) 'Grid resolution      = ', dG
-  Write( *, * ) 'Grid size            = ', n_grid
-  Write( *, * ) 'Order                = ', FD_order
-  Write( *, * ) 'iterations           = ', itn
-  Write( *, * ) 'norm of the residual = ', rnorm
+  Call ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid_fd, recip_E_ffp_fd, t_grid, t_recip )
+  Write( *, * ) 'SSP grid  time: ', t_grid
+  Write( *, * ) 'SSP solve time: ', t_recip
 
   ! Save the SSP potential
   Call save_grid( 11, 'pot_grid_fd.dat', l, pot_grid_fd )
-
-  ! Calculate from the potential the long range energy
-  recip_E_ffp_fd = - 0.5_wp * Sum( - q_grid * pot_grid_fd ) * ( l%get_volume() / Product( n_grid ) )
 
   ! And hence total energy - SIC and long range same as for sfp
   tot_E_ffp_fd = real_E_ffp + sic_ffp + recip_E_ffp_fd
