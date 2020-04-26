@@ -212,21 +212,13 @@ Program test
   Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
 
   ! Save the q grid to file
-  Open ( 11, file = 'q_grid.dat' )
-  Write( 11, * ) 'Sum of charge over grid ', Sum( q_grid ), Sum( q_grid ) / l%get_volume()
-  Do i3 = 0, n_grid( 3 ) - 1
-     Do i2 = 0, n_grid( 2 ) - 1
-        Do i1 = 0, n_grid( 1 ) - 1
-           i_grid = [ i1, i2, i3 ]
-           f_point = Real( i_grid, wp ) / n_grid
-           Call l%to_direct( f_point, r_point )
-           Write( 11, '( 3( f6.2, 1x ), 5x, f15.12 )' ) r_point, q_grid( i1, i2, i3 )
-        End Do
-     End Do
-  End Do
-  Close( 11 )
+  Call save_grid( 11, 'q_grid.dat', l, q_grid )
 
-!!!!!!!!!!!!!!!!!!!!!1
+  ! END CHARGE GRIDING
+  !
+!!!!!!!!!!!!!!!!!!!!!!
+  
+!!!!!!!!!!!!!!!!!!!!!!
   !
   ! SLOW FOURIER POISSON SOLVER (SFP) i.e. no FFT
 
@@ -266,20 +258,7 @@ Program test
   Write( *, * ) 'Sum over pot grid ', Sum( pot_grid ), Sum( pot_grid ) / l%get_volume()
 
   ! Save the pot grid to file
-  Open ( 11, file = 'pot_grid.dat' )
-  Write( 11, * ) 'Sum over pot grid ', Sum( pot_grid ), Sum( pot_grid ) / l%get_volume()
-  Do i3 = 0, n_grid( 3 ) - 1
-     Do i2 = 0, n_grid( 2 ) - 1
-        Do i1 = 0, n_grid( 1 ) - 1
-           i_grid = [ i1, i2, i3 ]
-           f_point = Real( i_grid, wp ) / n_grid
-           Call l%to_direct( f_point, r_point )
-           Write( 11, '( 3( f6.2, 1x ), 5x, f15.12, 1x, f15.8 )' ) &
-                r_point, pot_grid( i1, i2, i3 ), pot_grid( i1, i2, i3 ) * r4pie0
-        End Do
-     End Do
-  End Do
-  Close( 11 )
+  Call save_grid( 11, 'pot_grid.dat', l, pot_grid )
 
   ! Minus Sign on charge grid as we integrate against the screening charge, which
   ! has opposite sign to the actual charge (as it is screening, Duh!
@@ -340,20 +319,7 @@ Program test
   Write( *, * ) 'norm of the residual = ', rnorm
 
   ! Save the SSP potential
-  Open ( 11, file = 'pot_grid_fd.dat' )
-  Write( 11, * ) 'Sum over pot grid ', Sum( pot_grid_fd ), Sum( pot_grid_fd ) / l%get_volume()
-  Do i3 = 0, n_grid( 3 ) - 1
-     Do i2 = 0, n_grid( 2 ) - 1
-        Do i1 = 0, n_grid( 1 ) - 1
-           i_grid = [ i1, i2, i3 ]
-           f_point = Real( i_grid, wp ) / n_grid
-           Call l%to_direct( f_point, r_point )
-           Write( 11, '( 3( f6.2, 1x ), 5x, f15.12, 1x, f15.8 )' ) &
-                r_point, pot_grid_fd( i1, i2, i3 ), pot_grid_fd( i1, i2, i3 ) * r4pie0
-        End Do
-     End Do
-  End Do
-  Close( 11 )
+  Call save_grid( 11, 'pot_grid_fd.dat', l, pot_grid_fd )
 
   ! Calculate from the potential the long range energy
   recip_E_ffp_fd = - 0.5_wp * Sum( - q_grid * pot_grid_fd ) * ( l%get_volume() / Product( n_grid ) )
@@ -625,6 +591,38 @@ Contains
 
   End Subroutine real_space_energy
 
+  Subroutine save_grid( unit, filename, l, grid )
+
+    Integer                            , Intent( In ) :: unit
+    Character( Len = * )               , Intent( In ) :: filename
+    Type( lattice )                    , Intent( In ) :: l
+    Real( wp ), Dimension( 0:, 0:, 0: ), Intent( In ) :: grid
+
+    Real( wp ), Dimension( 1:3 ) :: f_point
+    
+    Integer, Dimension( 1:3 ) :: n_grid
+    Integer, Dimension( 1:3 ) :: i_grid
+
+    Integer :: i1, i2, i3
+
+    n_grid = Ubound( grid ) + 1
+    
+    Open( unit, file = filename )
+    Write( unit, * ) 'Sum over grid           ', Sum( grid )
+    Write( unit, * ) 'Average per unit volume ', Sum( grid ) / l%get_volume()
+    Do i3 = 0, n_grid( 3 ) - 1
+       Do i2 = 0, n_grid( 2 ) - 1
+          Do i1 = 0, n_grid( 1 ) - 1
+             i_grid = [ i1, i2, i3 ]
+             f_point = Real( i_grid, wp ) / n_grid
+             Call l%to_direct( f_point, r_point )
+             Write( unit, '( 3( f6.2, 1x ), 5x, f15.12 )' ) r_point, grid( i1, i2, i3 )
+          End Do
+       End Do
+    End Do
+    Close( unit )
+    
+  End Subroutine save_grid
 
 End Program test
 
