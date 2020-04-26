@@ -117,10 +117,6 @@ Program test
   End Do
   Write( *, * ) 'r(1) after shift and reference = ', r( :, 1 )
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !
-  !  TRADITIONAL EWALD SECTION
-
   ! Generate the useful fourier space function
   Call system_clock( start, rate )
   Allocate( ew_func( 0:l%get_n_rec_vecs() - 1 ) )
@@ -128,45 +124,9 @@ Program test
   Call system_clock( finish, rate )
   Write( *, * ) 'ewfunc time ', Real( finish - start, wp ) / rate
 
-!!$  ! Calculate the fourier space energy
-!!$  Call system_clock( start, rate )
-!!$  recip_E = 0.0_wp
-!!$  !$omp parallel default( none ) shared( l, r, recip_E, q, n, ew_func ) &
-!!$  !$omp                          private( i, iG, pot, G, ri, cc, cy, ct, potg )
-!!$  cc = 0.0_wp
-!!$  !$omp do reduction( +:recip_E )
-!!$  Do i = 1, n
-!!$     pot = 0.0_wp
-!!$     ri = r( :, i )
-!!$     Do iG = 1, Ubound( ew_func, Dim = 1 )
-!!$        Call l%get_nth_rec_vec( ig + 1, G )
-!!$        G = G * 2.0_wp * pi
-!!$        potG = Exp( Cmplx( 0.0_wp, Dot_product(   G, ri ), wp ) ) *        ew_func( ig )
-!!$        pot = pot + potG + Conjg( potG )
-!!$     End Do
-!!$     cy = q( i ) * pot - cc
-!!$     ct = recip_E + cy
-!!$     cc = ( ct - recip_E ) - cy
-!!$     recip_E = ct
-!!$  End Do
-!!$  !$omp end do
-!!$  !$omp end parallel
-!!$  recip_E = recip_E * 0.5_wp
-!!$  Call system_clock( finish, rate )
-!!$  Write( *, * ) 'recip_E time ', Real( finish - start, wp ) / rate
-!!$
-!!$  ! Self interaction correction
-!!$  sic = - Sum( q * q ) * alpha / Sqrt( pi )
-!!$
-!!$  Call system_clock( start, rate )
-!!$  !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E )
-!!$  Call real_space_energy( l, q, r, alpha, max_G_shells, real_E )
-!!$  !$omp end parallel
-!!$  Call system_clock( finish, rate )
-!!$  Write( *, * ) 'real_E time ', Real( finish - start, wp ) / rate
-!!$
-!!$  tot_E = real_E + Real( recip_E, wp ) + sic
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !
+  !  TRADITIONAL EWALD SECTION
   Call trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_recip, t_real )
   Write( *, * ) 'Trad Ewald long  range time: ', t_recip
   Write( *, * ) 'Trad Ewald short range time: ', t_real
