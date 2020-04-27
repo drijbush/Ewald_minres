@@ -27,7 +27,7 @@ Program test
   
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid
-  Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_fd
+  Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ssp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ffp
   
   Real( wp ), Dimension( :, : ), Allocatable :: a
@@ -170,16 +170,16 @@ Program test
   ! Short range contribution and SIC same as SFP
   
   ! Calculate the long range term by finite difference methods
-  Allocate( pot_grid_fd( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid_fd, recip_E_ssp, t_grid, t_recip )
+  Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+  Call ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid_ssp, recip_E_ssp, t_grid, t_recip )
   Write( *, * ) 'SSP grid  time: ', t_grid
   Write( *, * ) 'SSP solve time: ', t_recip
 
   ! Save the SSP potential
-  Call grid_io_save( 11, 'pot_grid_fd.dat', l, pot_grid_fd )
+  Call grid_io_save( 11, 'pot_grid_ssp.dat', l, pot_grid_ssp )
 
   Write( *, * ) 'SSP: Sum of charge over grid: ', Sum( q_grid )
-  Write( *, * ) 'SSP: Sum over pot grid      : ', Sum( pot_grid )
+  Write( *, * ) 'SSP: Sum over pot grid      : ', Sum( pot_grid_ssp )
 
   ! SIC and long range same as for sfp
   sic_ssp    = sic_sfp
@@ -213,7 +213,7 @@ Program test
   Write( *, '( "Difference in energy SSP - EW: ", g30.16 )' ) tot_E_ssp - tot_E
 
   ! Add a line to the summary file
-  rms_delta_pot = Sum( ( pot_grid - pot_grid_fd ) ** 2 )
+  rms_delta_pot = Sum( ( pot_grid - pot_grid_ssp ) ** 2 )
   rms_delta_pot = Sqrt( rms_delta_pot ) / Size( pot_grid )
   Inquire( file = 'summary.dat', exist = fexist )
   Open( 11, file = 'summary.dat', position = 'append' )

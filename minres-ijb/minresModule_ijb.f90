@@ -50,7 +50,7 @@ Contains
 !!$       istop, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
   Subroutine MINRES( lb, ub, FD_operator, Msolve, b, shift, checkA, precon, &
        x, itnlim, nout, rtol,                      &
-       istop, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+       istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
 
     Use halo_module       , Only : halo_setter
     Use FD_template_module, Only : FD_template
@@ -64,6 +64,7 @@ Contains
     Real(wp), Intent(in)    :: shift, rtol
     Real(wp), Intent(out)   :: x( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
     Integer,  Intent(out)   :: istop, itn
+    Character( Len = * )    :: istop_message
     Real(wp), Intent(out)   :: Anorm, Acond, rnorm, Arnorm, ynorm
 
     Interface
@@ -708,6 +709,8 @@ Contains
             exitt, rnorm, ynorm, Arnorm
        Write(nout, 3000) exitt, msg(istop)
     End If
+
+    istop_message = msg(istop)
 
 1000 Format(// 1p,    a, 5x, 'Solution of symmetric   Ax = b'    &
          / ' lb      =', 3( i5, 1x ), 5x,                           &
