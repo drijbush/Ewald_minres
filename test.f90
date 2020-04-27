@@ -10,6 +10,7 @@ Program test
   Use symetrically_screened_poisson_module, Only : ssp_long_range
   Use grid_io_module, Only : grid_io_save
   Use real_space_module, Only : real_space_energy
+  Use sfp_module, Only : sfp_long_range
   
   Implicit None
 
@@ -20,8 +21,6 @@ Program test
 
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
-  Complex( wp ) :: pot
-  
   Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
   Real( wp ), Parameter :: r4pie0 = 138935.48350000000_wp
@@ -38,11 +37,8 @@ Program test
 
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: G, dG
-  Real( wp ), Dimension( 1:3 ) :: ri
-  Real( wp ), Dimension( 1:3 ) :: f_point, r_point
 
   Real( wp ) :: alpha
-  Real( wp ) :: potr
   Real( wp ) :: G_len_sq, G_fac
   Real( wp ) :: sic
   Real( wp ) :: recip_E, real_E, tot_E
@@ -53,14 +49,14 @@ Program test
   Real( wp ) :: rms_delta_pot, q_error
   Real( wp ) :: t_grid, t_real, t_recip
   
-  Integer, Dimension( 1:3 ) :: n_grid, i_point, i_grid
+  Integer, Dimension( 1:3 ) :: n_grid, i_point
   Integer, Dimension( 1:3 ) :: range_gauss
   Integer, Dimension( 1:3 ) :: iG_vec
 
   Integer :: FD_order
   Integer :: n, level
   Integer :: nd
-  Integer :: i, j, iG
+  Integer :: i, j
   Integer :: max_G_shells = 2
   Integer :: i1, i2, i3
   
@@ -126,20 +122,20 @@ Program test
   !
   ! CHARGE GRIDING
   
-  Call system_clock( start, rate )
-  Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  ! First find range of the gaussian along each of the axes of the grid
-  Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
-  ! Now grid the charge
-  Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
-  Call system_clock( finish, rate )
-  Write( *, * ) 'range_gauss = ', range_gauss
-  Write( *, * ) 'q grid time ', Real( finish - start, wp ) / rate, ( Real( finish - start, wp ) / rate ) / Product( n_grid )
-  q_error = Sum( q_grid )
-  Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
-
-  ! Save the q grid to file
-  Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
+!!$  Call system_clock( start, rate )
+!!$  Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+!!$  ! First find range of the gaussian along each of the axes of the grid
+!!$  Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
+!!$  ! Now grid the charge
+!!$  Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
+!!$  Call system_clock( finish, rate )
+!!$  Write( *, * ) 'range_gauss = ', range_gauss
+!!$  Write( *, * ) 'q grid time ', Real( finish - start, wp ) / rate, ( Real( finish - start, wp ) / rate ) / Product( n_grid )
+!!$  q_error = Sum( q_grid )
+!!$  Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
+!!$
+!!$  ! Save the q grid to file
+!!$  Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
 
   ! END CHARGE GRIDING
   !
@@ -150,39 +146,19 @@ Program test
   ! SLOW FOURIER POISSON SOLVER (SFP) i.e. no FFT
 
   ! Fourier space energy
+  Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call system_clock( start, rate )
-  !$omp parallel default( none ) shared( l, n_grid, ew_func, pot_grid ) &
-  !$omp                          private( i1, i2, i3, i_grid, f_point, r_point, &
-  !$omp                                   ri, potr, ig, G, pot )
-  !$omp do collapse( 3 )
-  Do i3 = 0, n_grid( 3 ) - 1
-     Do i2 = 0, n_grid( 2 ) - 1
-        Do i1 = 0, n_grid( 1 ) - 1
-           i_grid = [ i1, i2, i3 ]
-           f_point = Real( i_grid, wp ) / n_grid
-           Call l%to_direct( f_point, r_point )
-           ri = r_point
-           potr = 0.0_wp
-           Do iG = 1, Ubound( ew_func, Dim = 1 )
-              Call l%get_nth_rec_vec( ig + 1, G )
-              G = G * 2.0_wp * pi
-              pot = Exp( Cmplx( 0.0_wp, Dot_product( G, ri ), wp ) ) * ew_func( ig )
-              potr = potr + Real( pot + Conjg( pot ), wp )
-           End Do
-           potr = potr * 4.0_wp * pi / l%get_volume()
-           pot_grid( i1, i2, i3 ) = potr
-        End Do
-     End Do
-  End Do
-  !$omp end do
-  !$omp end parallel
-  !HACK
-  ! Where * V / 4 * pi come from ?
-  pot_grid = pot_grid * l%get_volume() / ( 4.0_wp * pi )
-  Call system_clock( finish, rate )
-  Write( *, * ) 'pot grid time ', Real( finish - start, wp ) / rate, ( Real( finish - start, wp ) / rate ) / Product( n_grid )
-  Write( *, * ) 'Sum over pot grid ', Sum( pot_grid ), Sum( pot_grid ) / l%get_volume()
+
+  Call sfp_long_range(  l, q, r, alpha, ew_func, q_grid, pot_grid, recip_E_ffp, t_grid, t_recip )
+
+  q_error = Sum( q_grid )
+  Write( *, * ) 'q grid time ', t_grid
+  Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
+  ! Save the q grid to file
+  Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
+
+  Write( *, * ) 'SFP time ', t_recip
+  Write( *, * ) 'Sum over pot grid ', Sum( pot_grid )
 
   ! Save the pot grid to file
   Call grid_io_save( 11, 'pot_grid.dat', l, pot_grid )
