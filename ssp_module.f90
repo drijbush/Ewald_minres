@@ -1,7 +1,5 @@
 Module symetrically_screened_poisson_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
-
   Implicit None
 
   Public :: ssp_long_range
@@ -11,6 +9,8 @@ Module symetrically_screened_poisson_module
 Contains
 
   Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid, recip_E, t_grid, t_recip )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
     Use lattice_module        , Only : lattice
     Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range
