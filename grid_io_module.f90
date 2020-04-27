@@ -47,7 +47,7 @@ Contains
              i_grid = [ i1, i2, i3 ]
              f_point = Real( i_grid, wp ) / n_grid
              Call l%to_direct( f_point, r_point )
-             Write( unit, '( 3( f6.2, 1x ), 5x, f15.12 )' ) r_point, grid( i1, i2, i3 )
+             Write( unit, '( 3( f6.2, 1x ), 5x, f30.16 )' ) r_point, grid( i1, i2, i3 )
           End Do
        End Do
     End Do
