@@ -1,14 +1,19 @@
 Module sfp_module
 
+  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
+
   Implicit None
 
   Public :: sfp_long_range
+  Public :: sfp_sic
   
   Private
 
+  Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
 Contains
 
-  Subroutine sfp_long_range(  l, q, r, alpha, ew_func, q_grid, pot_grid, recip_E, t_grid, t_recip )
+  Subroutine sfp_long_range(  l, q, r, alpha, ew_func, recip_E, q_grid, pot_grid, t_grid, t_recip )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
     
@@ -22,13 +27,11 @@ Contains
     Real( wp )   , Dimension( :, :  )     , Intent( In    ) :: r
     Real( wp )                            , Intent( In    ) :: alpha
     Complex( wp ), Dimension( 0: )        , Intent( In    ) :: ew_func
+    Real( wp )                            , Intent( Out   ) :: recip_E
     Real( wp )   , Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp )   , Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
-    Real( wp )                            , Intent( Out   ) :: recip_E
     Real( wp )                            , Intent( Out   ) :: t_grid
     Real( wp )                            , Intent( Out   ) :: t_recip
-
-    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
     Complex( wp ) :: pot
     
@@ -101,4 +104,17 @@ Contains
 
   End Subroutine sfp_long_range
   
+  Pure Function sfp_sic( q, alpha ) Result( sic )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Real( wp ), Dimension( : ), Intent( In    ) :: q
+    Real( wp )                , Intent( In    ) :: alpha
+
+    Real( wp ) :: sic
+
+    sic = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
+
+  End Function sfp_sic
+
 End Module sfp_module

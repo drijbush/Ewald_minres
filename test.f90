@@ -7,10 +7,10 @@ Program test
   Use lattice_module, Only : lattice
   Use charge_grid_module, Only : charge_grid_calculate, charge_grid_find_range
   Use fft_module, Only : fft_fft3d
-  Use symetrically_screened_poisson_module, Only : ssp_long_range
+  Use symetrically_screened_poisson_module, Only : ssp_long_range, ssp_sic
   Use grid_io_module, Only : grid_io_save
   Use real_space_module, Only : real_space_energy
-  Use sfp_module, Only : sfp_long_range
+  Use sfp_module, Only : sfp_long_range, sfp_sic
   
   Implicit None
 
@@ -130,7 +130,7 @@ Program test
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
 
-  Call sfp_long_range(  l, q, r, alpha, ew_func, q_grid, pot_grid, recip_E_sfp, t_grid, t_recip )
+  Call sfp_long_range(  l, q, r, alpha, ew_func, recip_E_sfp, q_grid, pot_grid, t_grid, t_recip )
 
   q_error = Sum( q_grid )
 
@@ -146,8 +146,9 @@ Program test
   Call grid_io_save( 11, 'pot_grid.dat', l, pot_grid )
 
   ! SFP self interaction correction
-  sic_sfp = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
-
+!!$  sic_sfp = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
+  sic_sfp = sfp_sic( q, alpha )
+  
   ! SFP Real Space
   Call system_clock( start, rate )
   !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E_sfp )
@@ -171,7 +172,7 @@ Program test
   
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid_ssp, recip_E_ssp, t_grid, t_recip )
+  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, t_grid, t_recip )
   Write( *, * ) 'SSP grid  time: ', t_grid
   Write( *, * ) 'SSP solve time: ', t_recip
 
@@ -181,8 +182,10 @@ Program test
   Write( *, * ) 'SSP: Sum of charge over grid: ', Sum( q_grid )
   Write( *, * ) 'SSP: Sum over pot grid      : ', Sum( pot_grid_ssp )
 
-  ! SIC and long range same as for sfp
-  sic_ssp    = sic_sfp
+  ! SIC ( Really same as sfp but let's be methodical ) 
+  sic_ssp = sfp_sic( q, alpha )
+
+  ! long range same as for sfp
   real_E_ssp = real_E_sfp
 
   ! And hence total energy 

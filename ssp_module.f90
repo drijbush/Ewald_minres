@@ -1,14 +1,19 @@
 Module symetrically_screened_poisson_module
 
+  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
+
   Implicit None
 
   Public :: ssp_long_range
+  Public :: ssp_sic
   
   Private
   
+  Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid, recip_E, t_grid, t_recip )
+  Subroutine ssp_long_range( l, q, r, alpha, FD_order, recip_E, q_grid, pot_grid, t_grid, t_recip )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -24,13 +29,11 @@ Contains
     Real( wp ), Dimension( :, :  )     , Intent( In    ) :: r
     Real( wp )                         , Intent( In    ) :: alpha
     Integer                            , Intent( In    ) :: FD_order
+    Real( wp )                         , Intent( Out   ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
-    Real( wp )                         , Intent( Out   ) :: recip_E
     Real( wp )                         , Intent( Out   ) :: t_grid
     Real( wp )                         , Intent( Out   ) :: t_recip
-
-    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
     Type( FD_Laplacian_3d ) :: FD
 
@@ -99,6 +102,19 @@ Contains
     recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
     
   End Subroutine ssp_long_range
+
+  Pure Function ssp_sic( q, alpha ) Result( sic )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Real( wp ), Dimension( : ), Intent( In    ) :: q
+    Real( wp )                , Intent( In    ) :: alpha
+
+    Real( wp ) :: sic
+
+    sic = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
+
+  End Function ssp_sic
 
   Subroutine dummy_msolve(lb,ub,x,y)                   ! Solve M*y = x
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
