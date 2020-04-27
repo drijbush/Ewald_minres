@@ -43,8 +43,8 @@ Program test
   Real( wp ) :: sic
   Real( wp ) :: recip_E, real_E, tot_E
   Real( wp ) :: recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp
-  Real( wp ) :: recip_E_ffp_fd, tot_E_ffp_fd
-  Real( wp ) :: recip_E_sfp, tot_E_sfp
+  Real( wp ) :: recip_E_ssp, sic_ssp, real_E_ssp, tot_E_ssp
+  Real( wp ) :: recip_E_sfp, sic_sfp, real_E_sfp, tot_E_sfp
   Real( wp ) :: xshift
   Real( wp ) :: rms_delta_pot, q_error
   Real( wp ) :: t_grid, t_real, t_recip
@@ -74,6 +74,7 @@ Program test
   Read ( *, * ) xshift
 
   Write( *, * ) 'Param, dims, order ', alpha, n_grid, FD_order, xshift
+  
 
   !$ Write( *, * ) 'Running on ', omp_get_max_threads(), ' threads'
   
@@ -99,6 +100,10 @@ Program test
   End Do
   Write( *, * ) 'r(1) after shift and reference = ', r( :, 1 )
 
+  ! How big is my gaussian?
+  Call  charge_grid_find_range( l, alpha, n_grid, range_gauss )
+  Write( *, * ) 'Gauss range: ', range_gauss
+  
   ! Generate the useful fourier space function
   Call system_clock( start, rate )
   Allocate( ew_func( 0:l%get_n_rec_vecs() - 1 ) )
@@ -117,30 +122,6 @@ Program test
   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-!!!!!!!!!!!!!!!!!!!!!
-  !
-  ! CHARGE GRIDING
-  
-!!$  Call system_clock( start, rate )
-!!$  Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-!!$  ! First find range of the gaussian along each of the axes of the grid
-!!$  Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
-!!$  ! Now grid the charge
-!!$  Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
-!!$  Call system_clock( finish, rate )
-!!$  Write( *, * ) 'range_gauss = ', range_gauss
-!!$  Write( *, * ) 'q grid time ', Real( finish - start, wp ) / rate, ( Real( finish - start, wp ) / rate ) / Product( n_grid )
-!!$  q_error = Sum( q_grid )
-!!$  Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
-!!$
-!!$  ! Save the q grid to file
-!!$  Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
-
-  ! END CHARGE GRIDING
-  !
-!!!!!!!!!!!!!!!!!!!!!!
-  
 !!!!!!!!!!!!!!!!!!!!!!
   !
   ! SLOW FOURIER POISSON SOLVER (SFP) i.e. no FFT
@@ -149,37 +130,34 @@ Program test
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
 
-  Call sfp_long_range(  l, q, r, alpha, ew_func, q_grid, pot_grid, recip_E_ffp, t_grid, t_recip )
+  Call sfp_long_range(  l, q, r, alpha, ew_func, q_grid, pot_grid, recip_E_sfp, t_grid, t_recip )
 
   q_error = Sum( q_grid )
-  Write( *, * ) 'q grid time ', t_grid
-  Write( *, * ) 'Sum of charge over grid ', Sum( q_grid )
+
+  Write( *, * ) 'SFP grid  time: ', t_grid
+  Write( *, * ) 'SFP solve time: ', t_recip
   ! Save the q grid to file
   Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
 
-  Write( *, * ) 'SFP time ', t_recip
-  Write( *, * ) 'Sum over pot grid ', Sum( pot_grid )
+  Write( *, * ) 'SFP: Sum of charge over grid: ', Sum( q_grid )
+  Write( *, * ) 'SFP: Sum over pot grid      : ', Sum( pot_grid )
 
   ! Save the pot grid to file
   Call grid_io_save( 11, 'pot_grid.dat', l, pot_grid )
 
-  ! Minus Sign on charge grid as we integrate against the screening charge, which
-  ! has opposite sign to the actual charge (as it is screening, Duh!
-  ! Minus sign on whole comes here just so can add up all contribs at end rather than confuse myself about signs
-  recip_E_sfp = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
-
   ! SFP self interaction correction
-  sic_ffp = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
+  sic_sfp = - alpha * Sum( q * q ) / Sqrt( 2.0_wp * pi )
 
   ! SFP Real Space
   Call system_clock( start, rate )
-  !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E_ffp )
-  Call real_space_energy( l, q, r, alpha / Sqrt( 2.0_wp ), max_G_shells, real_E_ffp )
+  !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E_sfp )
+  Call real_space_energy( l, q, r, alpha / Sqrt( 2.0_wp ), max_G_shells, real_E_sfp )
   !$omp end parallel
   Call system_clock( finish, rate )
-  Write( *, * ) 'real_E_ffp time ', Real( finish - start, wp ) / rate
+  Write( *, * ) 'SFP real time: ', Real( finish - start, wp ) / rate
 
-  tot_E_sfp = real_E_ffp + sic_ffp + recip_E_sfp
+  ! And hecne the total energy
+  tot_E_sfp = real_E_sfp + sic_sfp + recip_E_sfp
 
   ! END SFP SECTION
   !
@@ -193,15 +171,22 @@ Program test
   
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_fd( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid_fd, recip_E_ffp_fd, t_grid, t_recip )
+  Call ssp_long_range( l, q, r, alpha, FD_order, q_grid, pot_grid_fd, recip_E_ssp, t_grid, t_recip )
   Write( *, * ) 'SSP grid  time: ', t_grid
   Write( *, * ) 'SSP solve time: ', t_recip
 
   ! Save the SSP potential
   Call grid_io_save( 11, 'pot_grid_fd.dat', l, pot_grid_fd )
 
-  ! And hence total energy - SIC and long range same as for sfp
-  tot_E_ffp_fd = real_E_ffp + sic_ffp + recip_E_ffp_fd
+  Write( *, * ) 'SSP: Sum of charge over grid: ', Sum( q_grid )
+  Write( *, * ) 'SSP: Sum over pot grid      : ', Sum( pot_grid )
+
+  ! SIC and long range same as for sfp
+  sic_ssp    = sic_sfp
+  real_E_ssp = real_E_sfp
+
+  ! And hence total energy 
+  tot_E_ssp = real_E_ssp + sic_ssp + recip_E_ssp
 
   ! END SSP SECTION
   !
@@ -217,15 +202,15 @@ Program test
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) 'Ew  ', Real( recip_E, wp ), sic, real_E, tot_E, &
        Real( recip_E, wp ) * r4pie0, sic * r4pie0, real_E * r4pie0, tot_E * r4pie0
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
-       'SFP ', recip_E_sfp, sic_ffp, real_E_ffp, tot_E_sfp, &
-       recip_E_sfp * r4pie0, sic_ffp * r4pie0, real_E_ffp * r4pie0, tot_E_sfp * r4pie0
+       'SFP ', recip_E_sfp, sic_sfp, real_E_sfp, tot_E_sfp, &
+       recip_E_sfp * r4pie0, sic_sfp * r4pie0, real_E_sfp * r4pie0, tot_E_sfp * r4pie0
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
-       'SSP ', recip_E_ffp_fd, sic_ffp, real_E_ffp, tot_E_ffp_fd, &
-       recip_E_ffp_fd * r4pie0, sic_ffp * r4pie0, real_E_ffp * r4pie0, tot_E_ffp_fd * r4pie0
+       'SSP ', recip_E_ssp, sic_ssp, real_E_ssp, tot_E_ssp, &
+       recip_E_ssp * r4pie0, sic_ssp * r4pie0, real_E_ssp * r4pie0, tot_E_ssp * r4pie0
   
   Write( *, * )
   Write( *, '( "Difference in energy SFP - EW: ", g30.16 )' ) tot_E_sfp    - tot_E
-  Write( *, '( "Difference in energy SSP - EW: ", g30.16 )' ) tot_E_ffp_fd - tot_E
+  Write( *, '( "Difference in energy SSP - EW: ", g30.16 )' ) tot_E_ssp - tot_E
 
   ! Add a line to the summary file
   rms_delta_pot = Sum( ( pot_grid - pot_grid_fd ) ** 2 )
@@ -237,14 +222,14 @@ Program test
           & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14 )' ) &
           'alpha', 'dg', 'Od', 'xshift', 'Rg', 'Q error', &
           'tot E'  , 'tot E SSP'  , 'Delta tot E', &
-          'recip E FFP', 'recip E SSP', 'Delta recip E', &
+          'recip E SFP', 'recip E SSP', 'Delta recip E', &
           'RMS delta pot'
   End If
   Write( 11, '( f8.6, 1x, f6.4, 1x, i2, 1x, f6.4, 1x, i2, 1x, g9.2, &
        & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14 )' ) &
        alpha, dg( 1 ), FD_order, xshift, range_gauss( 1 ), q_error, &
-       tot_E, tot_E_ffp_fd, Abs( tot_E - tot_E_ffp_fd ), &
-       Real( recip_E_sfp, wp ), recip_E_ffp_fd, Abs( Real( recip_E_sfp, wp ) - recip_E_ffp_fd ), &
+       tot_E, tot_E_ssp, Abs( tot_E - tot_E_ssp ), &
+       Real( recip_E_sfp, wp ), recip_E_ssp, Abs( Real( recip_E_sfp, wp ) - recip_E_ssp ), &
        rms_delta_pot
   Close( 11 )
 
