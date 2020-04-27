@@ -97,8 +97,7 @@ Contains
     ! Minus Sign on charge grid as we integrate against the screening charge, which
     ! has opposite sign to the actual charge (as it is screening, Duh!
     ! Minus sign on whole comes here just so can add up all contribs at end rather than confuse myself about signs
-  recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
-
+    recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
 
   End Subroutine sfp_long_range
   
