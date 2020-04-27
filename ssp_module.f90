@@ -48,6 +48,8 @@ Contains
     
     Integer( li ) :: start, finish, rate
 
+    Character( Len = 132 ) :: istop_message
+
     n_grid = Ubound( q_grid ) + 1
 
     ! Grid the charge
@@ -74,7 +76,7 @@ Contains
     Call system_clock( start, rate )
     Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, dummy_Msolve, - 4.0_wp * pi * q_grid, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
-         istop, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+         istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
     ! Standardise to potential averages to zero over grid
     ! In real calculation don't need to do this!
     pot_grid = pot_grid  - Sum( pot_grid ) / Size( pot_grid )
@@ -88,7 +90,7 @@ Contains
     Write( *, * ) 'Grid size            = ', n_grid
     Write( *, * ) 'Order                = ', FD_order
     Write( *, * ) 'iterations           = ', itn
-    Write( *, * ) 'istop                = ', istop
+    Write( *, * ) 'istop                = ', istop, Trim( istop_message )
     Write( *, * ) 'norm of the residual = ', rnorm
 
     ! Calculate from the potential the long range energy
