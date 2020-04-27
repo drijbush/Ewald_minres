@@ -71,7 +71,6 @@ Program test
 
   Write( *, * ) 'Param, dims, order ', alpha, n_grid, FD_order, xshift
   
-
   !$ Write( *, * ) 'Running on ', omp_get_max_threads(), ' threads'
   
   nd = 3
@@ -94,7 +93,7 @@ Program test
      t( 1 ) = t( 1 ) + xshift
      Call l%to_reference( t, r( :, i ) ) 
   End Do
-  Write( *, * ) 'r(1) after shift and reference = ', r( :, 1 )
+  Write( *, * ) 'r(1) after  shift and reference = ', r( :, 1 )
 
   ! How big is my gaussian?
   Call  charge_grid_find_range( l, alpha, n_grid, range_gauss )
@@ -120,7 +119,7 @@ Program test
 
 !!!!!!!!!!
   !
-  ! FAST FOURIER POISSON (FFP) - purely real space methods used
+  ! FAST FOURIER POISSON (FFP) - grid charge, FFT, get pot in k space, FFT back, energy
   !
 
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
@@ -193,7 +192,7 @@ Program test
 
 !!!!!!!!!!
   !
-  ! SYMETRICALLY SCREENED POISSON (SSP) - purely real space methods used
+  ! SYMETRICALLY SCREENED POISSON (SSP) - purely real space methods used, finite difference to solve eqns
   !
   
   ! Calculate the long range term by finite difference methods
