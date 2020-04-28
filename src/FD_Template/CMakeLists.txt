@@ -21,7 +21,7 @@ endif()
 # Add OMP
 find_package(OpenMP)
 if (OpenMP_Fortran_FOUND)
-  set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS})
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
 endif()
 
 add_subdirectory(${FiniteD_SRC_DIR})
