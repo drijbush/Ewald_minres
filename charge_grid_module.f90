@@ -6,7 +6,7 @@ Module charge_grid_module
 
   Implicit None
 
-  Public :: charge_grid_calculate, charge_grid_find_range
+  Public :: charge_grid_calculate, charge_grid_find_range, charge_grid_forces
 
   Private
 
@@ -14,7 +14,7 @@ Module charge_grid_module
 
 Contains
 
-    Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
+  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -105,6 +105,99 @@ Contains
     !$omp end parallel
     
   End Subroutine charge_grid_calculate
+
+  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Use lattice_module, Only : lattice
+
+    Implicit none
+    
+    Type( lattice )                    , Intent( In    ) :: l
+    Real( wp ),                          Intent( In    ) :: alpha
+    Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
+    Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+    Real( wp ), Dimension( 0:, 0:, 0: ), Intent( In    ) :: q_grid
+    Real( wp ), Dimension( 0:, 0:, 0: ), Intent( In    ) :: pot_grid
+    Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
+    Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
+
+    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
+    Real( wp ), Dimension( 1:3 ) :: ri
+    Real( wp ), Dimension( 1:3 ) :: fi
+    Real( wp ), Dimension( 1:3 ) :: f_point
+    Real( wp ), Dimension( 1:3 ) :: r_point
+    Real( wp ), Dimension( 1:3 ) :: grid_vec
+
+    Real( wp ) :: q_norm
+    Real( wp ) :: qi_norm
+    Real( wp ) :: g_val
+    Real( wp ) :: dV
+    
+    Integer, Dimension( 1:3 ) :: n_grid
+    Integer, Dimension( 1:3 ) :: i_atom_centre
+    Integer, Dimension( 1:3 ) :: i_atom_grid
+    Integer, Dimension( 1:3 ) :: i_point
+    Integer, Dimension( 1:3 ) :: i_grid
+
+    Integer :: n
+    Integer :: i1, i2, i3
+    Integer :: i
+
+    n      = Size( q )
+    n_grid = Ubound( q_grid ) + 1
+    dV     = l%get_volume() / Product( n_grid )
+
+    q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
+    
+    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, pot_grid, range_gauss, dV, ei, f ) &
+    !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
+    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid )
+    ! Loop over atoms
+    !$omp do 
+    Do i = 1, n
+       ! Loop over points associated with atoms
+       ! Find point nearest to the atom, and call this the centre for the atom grid
+       ! Assumes atom in fractional 0 < ri < 1
+       ri = r( :, i )
+       qi_norm = q_norm * q( i ) * dV
+       Call l%to_fractional( ri, fi )
+       i_atom_centre = Nint( fi * n_grid )
+       !
+       ei(    i ) = 0.0_wp
+       f ( :, i ) = 0.0_wp
+       Do i3 = - range_gauss( 3 ), range_gauss( 3 )
+          Do i2 = - range_gauss( 2 ), range_gauss( 2 )
+             Do i1 = - range_gauss( 1 ), range_gauss( 1 )
+                i_atom_grid = [ i1, i2, i3 ]
+                ! The indices of the point in space
+                i_point = i_atom_centre + i_atom_grid
+                ! Transform to fractional coordinates
+                f_point = Real( i_point, wp ) / n_grid
+                ! And fractional to real
+                Call l%to_direct( f_point, r_point )
+                ! Vector to the point of interest from the centre of the gaussin
+                grid_vec = r_point - ri
+                ! Gaussian at that point times normalisation times the volume element
+                g_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+                ! Reflect grid indices into reference Cell
+                i_grid = Modulo( i_point, n_grid )
+                ! Include the potential term
+                g_val = g_val * pot_grid( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
+                ! Add into the per particle energy and the force
+                ei( i ) = ei( i ) + g_val
+                f( :, i ) = f( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
+             End Do
+          End Do
+       End Do
+    End Do
+    !$omp end do
+    !$omp end parallel
+    
+  End Subroutine charge_grid_forces
 
   Subroutine charge_grid_find_range( l, alpha, n_grid, range_gauss )
 
