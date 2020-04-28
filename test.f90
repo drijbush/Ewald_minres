@@ -23,6 +23,8 @@ Program test
   Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
   Real( wp ), Parameter :: r4pie0 = 138935.48350000000_wp
+
+  Real( wp ) :: gauss_tol = 1e-15_wp
   
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid
@@ -48,8 +50,8 @@ Program test
   Real( wp ) :: t_grid, t_real, t_recip
   
   Integer, Dimension( 1:3 ) :: n_grid
-  Integer, Dimension( 1:3 ) :: range_gauss
 
+  Integer :: range_gauss
   Integer :: FD_order
   Integer :: n, level
   Integer :: nd
@@ -62,14 +64,16 @@ Program test
   
   Write( *, * ) 'Ewald param ?'
   Read ( *, * ) alpha
-  Write( *, * ) 'Grid Dims ?'
-  Read ( *, * ) n_grid
+!!$  Write( *, * ) 'Grid Dims ?'
+!!$  Read ( *, * ) n_grid
+  Write( *, * ) 'Number of ppoints for gaussians?'
+  Read ( *, * ) range_gauss
   Write( *, * ) 'FD_order?'
   Read ( *, * ) FD_order
   Write( *, * ) 'xshift?'
   Read ( *, * ) xshift
 
-  Write( *, * ) 'Param, dims, order ', alpha, n_grid, FD_order, xshift
+  Write( *, * ) 'Param, dims, order ', alpha, range_gauss, FD_order, xshift
   
   !$ Write( *, * ) 'Running on ', omp_get_max_threads(), ' threads'
   
@@ -85,6 +89,10 @@ Program test
   Call read_config( level, 10, q, r )
   
   Call l%initialise( nd, a, alpha )
+
+  Call get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
+  Write( *, * ) 'N_grid = ', n_grid
+  
 !!$  Call l%print
   Do i = 1, 3
      dG( i ) = Sqrt( Dot_product( a( :, i ), a( :, i ) ) ) / n_grid( i )
@@ -99,8 +107,8 @@ Program test
   Write( *, * ) 'r(1) after  shift and reference = ', r( :, 1 )
 
   ! How big is my gaussian?
-  Call  charge_grid_find_range( l, alpha, n_grid, range_gauss )
-  Write( *, * ) 'Gauss range: ', range_gauss
+!!$  Call  charge_grid_find_range( l, alpha, n_grid, range_gauss )
+!!$  Write( *, * ) 'Gauss range: ', range_gauss
   
   ! Generate the useful fourier space function
   Call system_clock( start, rate )
@@ -267,7 +275,7 @@ Program test
   End If
   Write( 11, '( f8.6, 1x, f6.4, 1x, i2, 1x, f6.4, 1x, i2, 1x, g9.2, &
        & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14 )' ) &
-       alpha, dg( 1 ), FD_order, xshift, range_gauss( 1 ), q_error, &
+       alpha, dg( 1 ), FD_order, xshift, range_gauss, q_error, &
        tot_E, tot_E_ssp, Abs( tot_E - tot_E_ssp ), &
        Real( recip_E_ffp, wp ), recip_E_ssp, Abs( Real( recip_E_ffp, wp ) - recip_E_ssp ), &
        rms_delta_pot
@@ -446,6 +454,46 @@ Contains
 
   End Subroutine trad_ewald
 
+  Subroutine get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
+
+    Type( lattice ),              Intent( In    ) :: l
+    Real( wp ),                   Intent( In    ) :: alpha
+    Integer   ,                   Intent( In    ) :: range_gauss
+    Real( wp ),                   Intent( In    ) :: gauss_tol
+    Integer   , Dimension( 1:3 ), Intent(   Out ) :: n_grid
+
+    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
+    Real( wp ), Dimension( 1:3, 1:3 ) :: dir_vecs
+    
+    Real( wp ), Dimension( 1:3 ) :: dr
+
+    Real( wp ) :: Gsq
+    
+    Real( wp ) :: max_r
+
+    Integer :: i
+
+    ! Find range after which the NORMALISED gaussian decays to below the tolerance
+    max_r = pi * Sqrt( pi ) * gauss_tol / ( alpha * alpha * alpha )
+    max_r = - Log( max_r ) / ( alpha * alpha )
+    max_r = Sqrt( max_r )
+
+    ! Now work out what resolution that require given the number of grid points
+    ! we are using to represent the gaussian
+    dr = max_r / range_gauss
+
+    ! And so how many grid points along each lattice vector, rounding up
+    ! to ensure accuracy
+    dir_vecs = l%get_direct_vectors()
+
+    Do i = 1, 3
+       Gsq = Dot_product( dir_vecs( :, i ), dir_vecs( :, i ) )
+       n_grid( i ) = Ceiling( Sqrt( Gsq ) / dr( i ) )
+    End Do
+
+  End Subroutine get_n_grid
+  
 End Program test
 
 
