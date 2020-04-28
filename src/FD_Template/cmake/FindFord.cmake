@@ -5,9 +5,15 @@ if( Ford_EXECUTABLE )
   execute_process(
     COMMAND ${Ford_EXECUTABLE} --version
     OUTPUT_VARIABLE Ford_VERSION
+    ERROR_VARIABLE Ford_VERSION_BAK
     )
 
-  string(REGEX MATCH "[1-9]+(\.[0-9]+)+" Ford_VERSION ${Ford_VERSION})
+  if (Ford_VERSION)
+    string(REGEX MATCH "[1-9]+(\.[0-9]+)+" Ford_VERSION ${Ford_VERSION})
+  elseif(Ford_VERSION_BAK)
+    set(Ford_VERSION ${Ford_VERSION_BAK})
+    string(REGEX MATCH "[1-9]+(\.[0-9]+)+" Ford_VERSION ${Ford_VERSION})
+  endif()
 
   find_package_handle_standard_args(
     Ford
