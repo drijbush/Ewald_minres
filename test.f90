@@ -86,6 +86,9 @@ Program test
   
   Call l%initialise( nd, a, alpha )
 !!$  Call l%print
+  Do i = 1, 3
+     dG( i ) = Sqrt( Dot_product( a( :, i ), a( :, i ) ) ) / n_grid( i )
+  End Do
 
   Write( *, * ) 'r(1) before shift and reference = ', r( :, 1 )
   Do i = 1, n
@@ -129,6 +132,9 @@ Program test
   Write( *, * ) 'FFP grid  time: ', t_grid
   Write( *, * ) 'FFP solve time: ', t_recip
 
+  ! Check how well the charge grid adds up to zero
+  q_error = Sum( q_grid )
+
   ! Save the FFP potential
   Call grid_io_save( 11, 'pot_grid_FFP.dat', l, pot_grid_ffp )
 
@@ -162,8 +168,6 @@ Program test
      ! Fourier space energy
      Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
      Call sfp_long_range(  l, q, r, alpha, ew_func, recip_E_sfp, q_grid, pot_grid, t_grid, t_recip )
-
-     q_error = Sum( q_grid )
 
      Write( *, * ) 'SFP grid  time: ', t_grid
      Write( *, * ) 'SFP solve time: ', t_recip
