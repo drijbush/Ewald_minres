@@ -89,7 +89,10 @@ Program test
   Call read_config( level, 10, q, r )
   
   Call l%initialise( nd, a, alpha )
-
+  
+  Write( *, '( a, 3( t25, 3( f10.5, 1x ) / ) )' ) &
+       'Lattice vectors: ', l%get_direct_vectors()
+  
   Call get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
   Write( *, * ) 'N_grid = ', n_grid
   
