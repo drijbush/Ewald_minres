@@ -53,11 +53,9 @@ Contains
     Integer, Dimension( 1:3 ) :: range_gauss
 
     Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
-    Real( wp ) :: pot_sum
 
     Integer :: istop, itn
     Integer :: i
-    Integer :: i1, i2, i3
     
     Integer( li ) :: start, finish, rate
 

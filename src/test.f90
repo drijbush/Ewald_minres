@@ -33,8 +33,10 @@ Program test
   
   Real( wp ), Dimension( :, : ), Allocatable :: a
   Real( wp ), Dimension( :, : ), Allocatable :: r
+  Real( wp ), Dimension( :, : ), Allocatable :: f_ffp
 
   Real( wp ), Dimension( : ), Allocatable :: q
+  Real( wp ), Dimension( : ), Allocatable :: ei_ffp
 
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: dG
@@ -141,13 +143,23 @@ Program test
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   ! Calculate the long range term by fourier
   Allocate( pot_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, t_grid, t_recip, error )
+  Allocate( ei_ffp( 1:n ) )
+  Allocate(  f_ffp( 1:3, 1:n ) )
+  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, f_ffp, t_grid, t_recip, error )
+  Write( *, * ) '!!!!!!!!!!!!!!!!! ', Sum( ei_ffp ), Sum( f_ffp( 1, : ) ), Sum( f_ffp( 2, : ) ), Sum( f_ffp( 3, : ) )
+  Write( *, * ) f_ffp( :, 1 )
+  Write( *, * ) f_ffp( :, 2 )
+  Write( *, * ) f_ffp( :, 3 )
+  OPen( 11, file = 'forces.dat' )
+  Do i = 1, n
+     Write( 11, * ) i, f_ffp( :, i )
+  End Do
   Write( *, * ) 'FFP grid  time: ', t_grid
   Write( *, * ) 'FFP solve time: ', t_recip
   l_bad_charge = .False.
   Select Case( error )
   Case( -1 )
-     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance'
+     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance but "fixed" (for some value of fixed)'
      l_bad_charge = .True.
   Case( -2 )
      Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
@@ -194,7 +206,7 @@ Program test
      l_bad_charge = .False.
      Select Case( error )
      Case( -1 )
-        Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance'
+        Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance but "fixed" (for some value of fixed)'
         l_bad_charge = .True.
      Case( -2 )
         Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
@@ -240,7 +252,7 @@ Program test
   l_bad_charge = .False.
   Select Case( error )
   Case( -1 )
-     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance'
+     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance but "fixed" (for some value of fixed)'
      l_bad_charge = .True.
   Case( -2 )
      Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
@@ -309,7 +321,7 @@ Program test
           'RMS delta pot', 'Bad Charge'
   End If
   Write( 11, '( f8.6, 1x, f6.4, 1x, i2, 1x, f6.4, 1x, i2, 1x, g9.2, &
-       & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14, t230 l1 )' ) &
+       & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14, t230, l1 )' ) &
        alpha, dg( 1 ), FD_order, xshift, range_gauss, q_error, &
        tot_E, tot_E_ssp, Abs( tot_E - tot_E_ssp ), &
        Real( recip_E_ffp, wp ), recip_E_ssp, Abs( Real( recip_E_ffp, wp ) - recip_E_ssp ), &
