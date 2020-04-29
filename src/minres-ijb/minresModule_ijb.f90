@@ -332,13 +332,20 @@ Contains
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: grid_with_halo
 !!$      real(wp)  :: r1(n), r2(n), v(n), w(n), w1(n), w2(n), y(n)
-    Real(wp)  :: r1( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp)  :: r2( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp)  :: v ( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp)  :: w ( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp)  :: w1( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp)  :: w2( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp)  :: y ( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: r1( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: r2( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: v ( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: w ( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: w1( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: w2( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+!!$    Real(wp)  :: y ( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+    Real( wp ), Dimension( :, :, : ), Allocatable :: r1
+    Real( wp ), Dimension( :, :, : ), Allocatable :: r2
+    Real( wp ), Dimension( :, :, : ), Allocatable :: v
+    Real( wp ), Dimension( :, :, : ), Allocatable :: w
+    Real( wp ), Dimension( :, :, : ), Allocatable :: w1
+    Real( wp ), Dimension( :, :, : ), Allocatable :: w2
+    Real( wp ), Dimension( :, :, : ), Allocatable :: y
     Real(wp)  :: alfa  , beta  , beta1 , cs    ,          &
          dbar  , delta , denom , diag  ,          &
          eps   , epsa  , epsln , epsr  , epsx  ,  &
@@ -374,6 +381,8 @@ Contains
 
     Intrinsic       :: abs, dot_product, epsilon, min, max, sqrt
 
+    Allocate( r1, r2, v, w, w1, w2, y, mold = b )
+    
     ! Print heading and initialize.
 
     debug = .False.

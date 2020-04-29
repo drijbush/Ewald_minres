@@ -24,6 +24,8 @@ Contains
 
     Implicit None
 
+    Real( wp ), Dimension( :, :, : ), Allocatable :: rhs
+    
     Type( lattice )                    , Intent( In    ) :: l
     Real( wp ), Dimension( :     )     , Intent( In    ) :: q
     Real( wp ), Dimension( :, :  )     , Intent( In    ) :: r
@@ -35,6 +37,11 @@ Contains
     Real( wp )                         , Intent( Out   ) :: t_grid
     Real( wp )                         , Intent( Out   ) :: t_recip
 
+    ! Standardize the potential so it sums to zero over the cell
+    ! Not required, but useful for comparison of accuracy with Fourier methods.
+    ! This should be set to .False. for production
+    Logical, Parameter :: standardise = .True.
+    
     Type( FD_Laplacian_3d ) :: FD
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
@@ -45,9 +52,11 @@ Contains
     Integer, Dimension( 1:3 ) :: range_gauss
 
     Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
+    Real( wp ) :: pot_sum
 
     Integer :: istop, itn
     Integer :: i
+    Integer :: i1, i2, i3
     
     Integer( li ) :: start, finish, rate
 
@@ -64,7 +73,7 @@ Contains
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
-    ! Now calculate the long range term by Finite difference
+    ! Now calculate the long range potential by Finite difference
 
     ! Initialise the FD template
     dGrid_vecs = l%get_direct_vectors()
@@ -77,12 +86,15 @@ Contains
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
     Call system_clock( start, rate )
-    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, dummy_Msolve, - 4.0_wp * pi * q_grid, 0.0_wp, .True., .False., &
+    rhs = - 4.0_wp * pi * q_grid
+    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
          istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
-    ! Standardise to potential averages to zero over grid
-    ! In real calculation don't need to do this!
-    pot_grid = pot_grid  - Sum( pot_grid ) / Size( pot_grid )
+    If( standardise ) Then
+       ! Standardise to potential averages to zero over grid
+       ! In real calculation don't need to do this!
+       pot_grid = pot_grid  - Sum( pot_grid ) / Size( pot_grid )
+    End If
     Call system_clock( finish, rate )
     t_recip = Real( finish - start, wp ) / rate
 
