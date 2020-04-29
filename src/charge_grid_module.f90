@@ -14,7 +14,7 @@ Module charge_grid_module
 
 Contains
 
-  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
+  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -30,6 +30,7 @@ Contains
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
+    Integer                            , Intent(   Out ) :: error
 
     Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
@@ -65,6 +66,8 @@ Contains
     Integer :: n_th, iam
     Integer :: i1, i2, i3
     Integer :: i, i_th
+
+    error = 0
 
     n = Size( q )
     n_grid = Ubound( q_grid ) + 1
@@ -174,10 +177,11 @@ Contains
              End Do
           End Do
        End Do
-       Write( *, * ) 'Total charge before stabilisation ', q_tot
+!!$       Write( *, * ) 'Total charge before stabilisation ', q_tot
        If( Abs( q_tot ) > stabilise_q_tol ) Then
-          Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance, sum = ', &
-               q_tot, ' tol = ', stabilise_q_tol
+!!$          Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance, sum = ', &
+!!$               q_tot, ' tol = ', stabilise_q_tol
+          error = -1
        End If
        q_av = q_tot / Size( q_grid )
        Do i3 = 0, n_grid( 3 ) - 1
@@ -199,7 +203,10 @@ Contains
              End Do
           End Do
        End Do
-       Write( *, * ) 'Total charge after  stabilisation ', q_tot
+!!$       Write( *, * ) 'Total charge after  stabilisation ', q_tot
+       If( Abs( q_tot ) > stabilise_q_tol ) Then
+          error = -2
+       End If
     End If
 
   End Subroutine charge_grid_calculate

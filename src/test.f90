@@ -57,10 +57,12 @@ Program test
   Integer :: nd
   Integer :: i, j
   Integer :: max_G_shells = 2
+  Integer :: error
   
   Integer( li ) :: start, finish, rate
 
   Logical :: fexist
+  Logical :: l_bad_charge
   
   Write( *, * ) 'Ewald param ?'
   Read ( *, * ) alpha
@@ -139,9 +141,19 @@ Program test
   Allocate( q_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   ! Calculate the long range term by fourier
   Allocate( pot_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, t_grid, t_recip )
+  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, t_grid, t_recip, error )
   Write( *, * ) 'FFP grid  time: ', t_grid
   Write( *, * ) 'FFP solve time: ', t_recip
+  l_bad_charge = .False.
+  Select Case( error )
+  Case( -1 )
+     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance'
+     l_bad_charge = .True.
+  Case( -2 )
+     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
+     l_bad_charge = .True.
+     Stop
+  End Select
 
   ! Check how well the charge grid adds up to zero
   q_error = Sum( q_grid )
@@ -178,7 +190,17 @@ Program test
   If( do_sfp ) Then
      ! Fourier space energy
      Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-     Call sfp_long_range(  l, q, r, alpha, ew_func, recip_E_sfp, q_grid, pot_grid, t_grid, t_recip )
+     Call sfp_long_range(  l, q, r, alpha, ew_func, recip_E_sfp, q_grid, pot_grid, t_grid, t_recip, error )
+     l_bad_charge = .False.
+     Select Case( error )
+     Case( -1 )
+        Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance'
+        l_bad_charge = .True.
+     Case( -2 )
+        Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
+        l_bad_charge = .True.
+        Stop
+     End Select
 
      Write( *, * ) 'SFP grid  time: ', t_grid
      Write( *, * ) 'SFP solve time: ', t_recip
@@ -212,9 +234,19 @@ Program test
   
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, t_grid, t_recip )
+  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, t_grid, t_recip, error )
   Write( *, * ) 'SSP grid  time: ', t_grid
   Write( *, * ) 'SSP solve time: ', t_recip
+  l_bad_charge = .False.
+  Select Case( error )
+  Case( -1 )
+     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance'
+     l_bad_charge = .True.
+  Case( -2 )
+     Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
+     l_bad_charge = .True.
+     Stop
+  End Select
 
   ! Save the SSP potential
   Call grid_io_save( 11, 'pot_grid_SSP.dat', l, pot_grid_ssp )
@@ -270,18 +302,18 @@ Program test
   Open( 11, file = 'summary.dat', position = 'append' )
   If( .Not. fexist ) Then
      Write( 11, '( a7, 2x, a5, 2x, a2, 1x, a6, 1x, a2, 1x, a9, &
-          & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14 )' ) &
+          & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14, t230, a )' ) &
           'alpha', 'dg', 'Od', 'xshift', 'Rg', 'Q error', &
           'tot E'  , 'tot E SSP'  , 'Delta tot E', &
           'recip E FFP', 'recip E SSP', 'Delta recip E', &
-          'RMS delta pot'
+          'RMS delta pot', 'Bad Charge'
   End If
   Write( 11, '( f8.6, 1x, f6.4, 1x, i2, 1x, f6.4, 1x, i2, 1x, g9.2, &
-       & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14 )' ) &
+       & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14, t230 l1 )' ) &
        alpha, dg( 1 ), FD_order, xshift, range_gauss, q_error, &
        tot_E, tot_E_ssp, Abs( tot_E - tot_E_ssp ), &
        Real( recip_E_ffp, wp ), recip_E_ssp, Abs( Real( recip_E_ffp, wp ) - recip_E_ssp ), &
-       rms_delta_pot
+       rms_delta_pot, l_bad_charge
   Close( 11 )
 
   ! END REPORTING RESULTS SECTION
