@@ -34,9 +34,11 @@ Program test
   Real( wp ), Dimension( :, : ), Allocatable :: a
   Real( wp ), Dimension( :, : ), Allocatable :: r
   Real( wp ), Dimension( :, : ), Allocatable :: f_ffp
+  Real( wp ), Dimension( :, : ), Allocatable :: f_ssp
 
   Real( wp ), Dimension( : ), Allocatable :: q
   Real( wp ), Dimension( : ), Allocatable :: ei_ffp
+  Real( wp ), Dimension( : ), Allocatable :: ei_ssp
 
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: dG
@@ -144,13 +146,10 @@ Program test
   ! Calculate the long range term by fourier
   Allocate( pot_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( ei_ffp( 1:n ) )
-  Allocate(  f_ffp( 1:3, 1:n ) )
+  Allocate( f_ffp( 1:3, 1:n ) )
   Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, f_ffp, t_grid, t_recip, error )
   Write( *, * ) '!!!!!!!!!!!!!!!!! ', Sum( ei_ffp ), Sum( f_ffp( 1, : ) ), Sum( f_ffp( 2, : ) ), Sum( f_ffp( 3, : ) )
-  Write( *, * ) f_ffp( :, 1 )
-  Write( *, * ) f_ffp( :, 2 )
-  Write( *, * ) f_ffp( :, 3 )
-  OPen( 11, file = 'forces.dat' )
+  Open( 11, file = 'forces_ffp.dat' )
   Do i = 1, n
      Write( 11, * ) i, f_ffp( :, i )
   End Do
@@ -246,7 +245,14 @@ Program test
   
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, t_grid, t_recip, error )
+  Allocate( ei_ssp( 1:n ) )
+  Allocate( f_ssp( 1:3, 1:n ) )
+  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, f_ssp, t_grid, t_recip, error )
+  Write( *, * ) '!!!!!!!!!!!!!!!!! ', Sum( ei_ssp ), Sum( f_ssp( 1, : ) ), Sum( f_ssp( 2, : ) ), Sum( f_ssp( 3, : ) )
+  Open( 11, file = 'forces_ssp.dat' )
+  Do i = 1, n
+     Write( 11, * ) i, f_ssp( :, i )
+  End Do
   Write( *, * ) 'SSP grid  time: ', t_grid
   Write( *, * ) 'SSP solve time: ', t_recip
   l_bad_charge = .False.

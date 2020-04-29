@@ -13,12 +13,12 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD_order, recip_E, q_grid, pot_grid, t_grid, t_recip, error )
+  Subroutine ssp_long_range( l, q, r, alpha, FD_order, recip_E, q_grid, pot_grid, ei, f, t_grid, t_recip, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
     Use lattice_module        , Only : lattice
-    Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range
+    Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use FD_Laplacian_3d_module, Only : FD_Laplacian_3D
     Use minresmodule          , Only : minres
 
@@ -34,6 +34,8 @@ Contains
     Real( wp )                         , Intent(   Out ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
+    Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
+    Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
     Real( wp )                         , Intent(   Out ) :: t_grid
     Real( wp )                         , Intent(   Out ) :: t_recip
     Integer                            , Intent(   Out ) :: error
@@ -113,6 +115,9 @@ Contains
     ! Two minus signs as a) this is the SCREENED charge
     !                    b) I like to just add up the energies, having to subtract it is confusing
     recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
+
+    ! Calculate the forces and energy per site
+    Call charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
     
   End Subroutine ssp_long_range
 
