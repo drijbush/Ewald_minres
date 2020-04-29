@@ -293,8 +293,8 @@ Contains
                 ! Include the potential term
                 g_val = g_val * pot_grid( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
-                ei( i ) = ei( i ) + g_val
-                f( :, i ) = f( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
+                ei(    i ) = ei(    i ) + 0.5_wp *                            g_val
+                f ( :, i ) = f ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
              End Do
           End Do
        End Do
