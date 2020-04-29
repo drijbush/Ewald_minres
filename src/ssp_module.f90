@@ -13,7 +13,7 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD_order, recip_E, q_grid, pot_grid, t_grid, t_recip )
+  Subroutine ssp_long_range( l, q, r, alpha, FD_order, recip_E, q_grid, pot_grid, t_grid, t_recip, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -31,11 +31,12 @@ Contains
     Real( wp ), Dimension( :, :  )     , Intent( In    ) :: r
     Real( wp )                         , Intent( In    ) :: alpha
     Integer                            , Intent( In    ) :: FD_order
-    Real( wp )                         , Intent( Out   ) :: recip_E
+    Real( wp )                         , Intent(   Out ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
-    Real( wp )                         , Intent( Out   ) :: t_grid
-    Real( wp )                         , Intent( Out   ) :: t_recip
+    Real( wp )                         , Intent(   Out ) :: t_grid
+    Real( wp )                         , Intent(   Out ) :: t_recip
+    Integer                            , Intent(   Out ) :: error
 
     ! Standardize the potential so it sums to zero over the cell
     ! Not required, but useful for comparison of accuracy with Fourier methods.
@@ -62,6 +63,8 @@ Contains
 
     Character( Len = 132 ) :: istop_message
 
+    error = 0
+
     n_grid = Ubound( q_grid ) + 1
 
     ! Grid the charge
@@ -69,7 +72,7 @@ Contains
     ! First find range of the gaussian along each of the axes of the grid
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
-    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid )
+    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
