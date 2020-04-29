@@ -153,6 +153,7 @@ Program test
   Do i = 1, n
      Write( 11, * ) i, f_ffp( :, i )
   End Do
+  Close( 11 )
   Write( *, * ) 'FFP grid  time: ', t_grid
   Write( *, * ) 'FFP solve time: ', t_recip
   l_bad_charge = .False.
@@ -253,6 +254,7 @@ Program test
   Do i = 1, n
      Write( 11, * ) i, f_ssp( :, i )
   End Do
+  Close( 11 )
   Write( *, * ) 'SSP grid  time: ', t_grid
   Write( *, * ) 'SSP solve time: ', t_recip
   l_bad_charge = .False.
