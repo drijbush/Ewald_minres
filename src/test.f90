@@ -33,8 +33,8 @@ Program test
   
   Real( wp ), Dimension( :, : ), Allocatable :: a
   Real( wp ), Dimension( :, : ), Allocatable :: r
-  Real( wp ), Dimension( :, : ), Allocatable :: f_ffp
-  Real( wp ), Dimension( :, : ), Allocatable :: f_ssp
+  Real( wp ), Dimension( :, : ), Allocatable :: force_ffp
+  Real( wp ), Dimension( :, : ), Allocatable :: force_ssp
 
   Real( wp ), Dimension( : ), Allocatable :: q
   Real( wp ), Dimension( : ), Allocatable :: ei_ffp
@@ -50,7 +50,7 @@ Program test
   Real( wp ) :: recip_E_ssp, sic_ssp, real_E_ssp, tot_E_ssp
   Real( wp ) :: recip_E_sfp, sic_sfp, real_E_sfp, tot_E_sfp
   Real( wp ) :: xshift
-  Real( wp ) :: rms_delta_pot, q_error
+  Real( wp ) :: rms_delta_pot, rms_delta_force, q_error
   Real( wp ) :: t_grid, t_real, t_recip
   
   Integer, Dimension( 1:3 ) :: n_grid
@@ -146,12 +146,14 @@ Program test
   ! Calculate the long range term by fourier
   Allocate( pot_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( ei_ffp( 1:n ) )
-  Allocate( f_ffp( 1:3, 1:n ) )
-  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, f_ffp, t_grid, t_recip, error )
-  Write( *, * ) '!!!!!!!!!!!!!!!!! ', Sum( ei_ffp ), Sum( f_ffp( 1, : ) ), Sum( f_ffp( 2, : ) ), Sum( f_ffp( 3, : ) )
+  Allocate( force_ffp( 1:3, 1:n ) )
+  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, force_ffp, t_grid, t_recip, error )
+  Write( *, * ) 'Nett force ', Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) )
   Open( 11, file = 'forces_ffp.dat' )
+  Write( 11, * ) n, '     #number of particles'
+  Write( 11, * ) Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) ), '     #Nett force'
   Do i = 1, n
-     Write( 11, * ) i, f_ffp( :, i )
+     Write( 11, * ) i, force_ffp( :, i )
   End Do
   Close( 11 )
   Write( *, * ) 'FFP grid  time: ', t_grid
@@ -247,12 +249,14 @@ Program test
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( ei_ssp( 1:n ) )
-  Allocate( f_ssp( 1:3, 1:n ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, f_ssp, t_grid, t_recip, error )
-  Write( *, * ) '!!!!!!!!!!!!!!!!! ', Sum( ei_ssp ), Sum( f_ssp( 1, : ) ), Sum( f_ssp( 2, : ) ), Sum( f_ssp( 3, : ) )
+  Allocate( force_ssp( 1:3, 1:n ) )
+  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
+  Write( *, * ) 'Nett force ', Sum( force_ssp( 1, : ) ), Sum( force_ssp( 2, : ) ), Sum( force_ssp( 3, : ) )
   Open( 11, file = 'forces_ssp.dat' )
+  Write( 11, * ) n, '     #number of particles'
+  Write( 11, * ) Sum( force_ssp( 1, : ) ), Sum( force_ssp( 2, : ) ), Sum( force_ssp( 3, : ) ), '     #Nett force'
   Do i = 1, n
-     Write( 11, * ) i, f_ssp( :, i )
+     Write( 11, * ) i, force_ssp( :, i )
   End Do
   Close( 11 )
   Write( *, * ) 'SSP grid  time: ', t_grid
@@ -312,28 +316,34 @@ Program test
   If( do_sfp ) Then
      Write( *, '( "Difference in energy SFP - EW: ", g30.16 )' ) tot_E_sfp - tot_E
   End If
-  Write( *, '( "Difference in energy FFP - EW: ", g30.16 )' ) tot_E_ffp - tot_E
-  Write( *, '( "Difference in energy SSP - EW: ", g30.16 )' ) tot_E_ssp - tot_E
+  Write( *, '( "Difference in energy FFP - EW:  ", g30.16 )' ) tot_E_ffp - tot_E
+  Write( *, '( "Difference in energy SSP - EW:  ", g30.16 )' ) tot_E_ssp - tot_E
+  Write( *, '( "Difference in energy FFP - SSP: ", g30.16 )' ) tot_E_ffp - tot_E_ssp
+
+  rms_delta_pot   = Sum( ( pot_grid_ffp - pot_grid_ssp ) ** 2 )
+  rms_delta_pot   = Sqrt( rms_delta_pot ) / Size( pot_grid_ffp )
+  rms_delta_force = Sum( ( force_ffp - force_ssp ) ** 2 )
+  rms_delta_force = Sqrt( rms_delta_force ) / Size( force_ffp )
+  Write( *, '( a, g20.12 )' ) 'RMS (FFP-SSP) in potential: ', rms_delta_pot
+  Write( *, '( a, g20.12 )' ) 'RMS (FFP-SSP) in force    : ', rms_delta_force
 
   ! Add a line to the summary file
-  rms_delta_pot = Sum( ( pot_grid_ffp - pot_grid_ssp ) ** 2 )
-  rms_delta_pot = Sqrt( rms_delta_pot ) / Size( pot_grid_ffp )
   Inquire( file = 'summary.dat', exist = fexist )
   Open( 11, file = 'summary.dat', position = 'append' )
   If( .Not. fexist ) Then
      Write( 11, '( a7, 2x, a5, 2x, a2, 1x, a6, 1x, a2, 1x, a9, &
-          & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14, t230, a )' ) &
+          & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14, t230, a, t260, a )' ) &
           'alpha', 'dg', 'Od', 'xshift', 'Rg', 'Q error', &
           'tot E'  , 'tot E SSP'  , 'Delta tot E', &
           'recip E FFP', 'recip E SSP', 'Delta recip E', &
-          'RMS delta pot', 'Bad Charge'
+          'RMS delta pot', 'RMS Delta force', 'Bad Charge'
   End If
   Write( 11, '( f8.6, 1x, f6.4, 1x, i2, 1x, f6.4, 1x, i2, 1x, g9.2, &
-       & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14, t230, l1 )' ) &
+       & t40, 3( g24.14, 1x ), t120, 3( g24.14, 1x ), t200, g24.14, t230, g24.14, t260, l1 )' ) &
        alpha, dg( 1 ), FD_order, xshift, range_gauss, q_error, &
        tot_E, tot_E_ssp, Abs( tot_E - tot_E_ssp ), &
        Real( recip_E_ffp, wp ), recip_E_ssp, Abs( Real( recip_E_ffp, wp ) - recip_E_ssp ), &
-       rms_delta_pot, l_bad_charge
+       rms_delta_pot, rms_delta_force, l_bad_charge
   Close( 11 )
 
   ! END REPORTING RESULTS SECTION
