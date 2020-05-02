@@ -2,40 +2,27 @@ Module halo_module
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
+  Use Halo_base_module, Only : halo_base_class, halo_base_data_class
+  
   Implicit None
 
+  Type, Public, Extends( halo_base_data_class ) :: halo_data_class
+  End type halo_data_class
+  
   ! Mostly dummy type for the moment, eventually will contain things like MPI communicator
-  Type, Public :: halo_setter
+  Type, Public, Extends( halo_base_class ) :: halo_setter
      Private
    Contains
-     Procedure, Public :: allocate => halo_allocate
-     Procedure, Public :: fill     => halo_fill
-     Procedure, Public :: free     => halo_free
+     Procedure, Public :: fill => halo_fill
   End Type halo_setter
 
   Private
   
 Contains
 
-  Pure Subroutine halo_allocate( H, glb, gub, halo_width, hout )
-
-    Class( halo_setter )            ,              Intent( In    ) :: H
-    Integer   , Dimension( 1:3     ),              Intent( In    ) :: glb
-    Integer   , Dimension( 1:3     ),              Intent( In    ) :: gub
-    Integer   ,                                    Intent( In    ) :: halo_width
-    Real( wp ), Dimension( :, :, : ), Allocatable, Intent(   Out ) :: hout
-
-    Integer, Dimension( 1:3 ) :: hlb, hub
-
-    hlb       = glb - halo_width
-    hub       = gub + halo_width
-    Allocate( hout( hlb( 1 ):hub( 1 ), hlb( 2 ):hub( 2 ), hlb( 3 ):hub( 3 ) ) )
-  
-  End Subroutine halo_allocate
-
   Subroutine halo_fill( H, halo_width, hdlb, gin, hout )
 
-    Class( halo_setter ),                                        Intent( In    ) :: H
+    Class( halo_setter ),                                        Intent( InOut ) :: H
     Integer   ,                                                  Intent( In    ) :: halo_width
     Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
     Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
@@ -151,14 +138,5 @@ Contains
     End If
 
   End Subroutine halo_fill
-
-  Pure Subroutine halo_free( H, hout )
-
-    Class( halo_setter )            ,              Intent( In    ) :: H
-    Real( wp ), Dimension( :, :, : ), Allocatable, Intent(   Out ) :: hout
-
-    Deallocate( hout )
-
-  End Subroutine halo_free
 
 End Module halo_module
