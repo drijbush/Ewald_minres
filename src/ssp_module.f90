@@ -22,7 +22,8 @@ Contains
     Use FD_Laplacian_3d_module, Only : FD_Laplacian_3D
     Use minresmodule          , Only : minres
     Use halo_serial_module    , Only : halo_serial_setter, halo_serial_data
-
+    Use Halo_base_module      , Only : halo_base_class, halo_base_data_class
+    
     Implicit None
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: rhs
@@ -46,9 +47,10 @@ Contains
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
     
+    Class( halo_base_class      ), Allocatable :: halo_swapper
+    Class( halo_base_data_class ), Allocatable :: halo_data
+
     Type( FD_Laplacian_3d    ) :: FD
-    Type( halo_serial_setter ) :: halo_swapper
-    Type( halo_serial_data   ) :: halo_data
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
 
@@ -90,6 +92,8 @@ Contains
     Call FD%init( FD_order, dGrid_vecs )
 
     ! Initalise the halo swapper
+    Allocate( halo_serial_setter :: halo_swapper )
+    Allocate(  halo_serial_data  :: halo_data    )
     Call halo_swapper%init( halo_data, error )
 
     ! And solve  Possion equation on the grid by FDs
