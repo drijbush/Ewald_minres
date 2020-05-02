@@ -231,6 +231,8 @@ Contains
 
     Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
+    Real( wp ), Dimension( 1:3, 1:3 ) :: stress
+    
     Real( wp ), Dimension( 1:3 ) :: ri
     Real( wp ), Dimension( 1:3 ) :: fi
     Real( wp ), Dimension( 1:3 ) :: f_point
@@ -241,6 +243,7 @@ Contains
     Real( wp ) :: qi_norm
     Real( wp ) :: g_val
     Real( wp ) :: dV
+    Real( wp ) :: s
     
     Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_atom_centre
@@ -250,19 +253,22 @@ Contains
 
     Integer :: n
     Integer :: i1, i2, i3
-    Integer :: i
+    Integer :: i, i_alpha, i_beta
 
     n      = Size( q )
     n_grid = Ubound( q_grid ) + 1
     dV     = l%get_volume() / Product( n_grid )
 
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
+
+    stress = 0.0_wp
     
-    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, pot_grid, range_gauss, dV, ei, f ) &
+    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
-    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid )
+    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
     ! Loop over atoms
-    !$omp do 
+    ! Stress small array, size invariant, so reduction won't stack smash
+    !$omp do reduction( +:stress )
     Do i = 1, n
        ! Loop over points associated with atoms
        ! Find point nearest to the atom, and call this the centre for the atom grid
@@ -295,12 +301,29 @@ Contains
                 ! Add into the per particle energy and the force
                 ei(    i ) = ei(    i ) + 0.5_wp *                            g_val
                 f ( :, i ) = f ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
+                ! Stress term - TOTALLY UNTESTED AND PROBABLY INCOMPLETE
+                ! Need short range term due to differentiation of coulomb operator,
+                ! and SIC term
+                Do i_beta = 1, 3
+                   Do i_alpha = i_beta, 3
+                      s = - 2.0_wp * g_val * alpha * alpha * grid_vec( i_alpha ) * grid_vec( i_beta )
+                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s 
+                   End Do
+                End Do
              End Do
           End Do
        End Do
     End Do
     !$omp end do
     !$omp end parallel
+
+    ! Stress - Untested!
+    ! Symmetrize stress tensor
+    Do i_beta = 1, 2
+       Do i_alpha = i_beta + 1, 3
+          stress( i_beta, i_alpha ) = stress( i_alpha, i_beta )
+       End Do
+    End Do
     
   End Subroutine charge_grid_forces
 

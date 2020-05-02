@@ -50,7 +50,7 @@ Contains
     Integer, Dimension( 1:3 ) :: iG
     
     Integer :: iG1, iG2, iG3
-    
+
     Integer( li ) :: start, finish, rate
 
     error = 0
