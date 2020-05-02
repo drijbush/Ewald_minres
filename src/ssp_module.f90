@@ -21,8 +21,10 @@ Contains
     Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use minresmodule           , Only : minres
     Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
-    Use halo_serial_module     , Only : halo_serial_setter, halo_serial_data
-    Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
+!!$    Use halo_serial_module     , Only : halo_serial_setter, halo_serial_data
+!!$    Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
+    Use halo_serial_module     , Only : halo_serial_setter
+    Use halo_setter_base_module, Only : halo_setter_base_class
     
     Implicit None
 
@@ -48,7 +50,7 @@ Contains
     Logical, Parameter :: standardise = .True.
     
     Class( halo_setter_base_class      ), Allocatable :: halo_swapper
-    Class( halo_setter_base_data_class ), Allocatable :: halo_data
+!!$    Class( halo_setter_base_data_class ), Allocatable :: halo_data
 
     Type( FD_Laplacian_3d    ) :: FD
 
@@ -93,8 +95,8 @@ Contains
 
     ! Initalise the halo swapper
     Allocate( halo_serial_setter :: halo_swapper )
-    Allocate(  halo_serial_data  :: halo_data    )
-    Call halo_swapper%init( halo_data, error )
+!!$    Allocate(  halo_serial_data  :: halo_data    )
+    Call halo_swapper%init( error )
 
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp

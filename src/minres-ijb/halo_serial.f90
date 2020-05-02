@@ -2,12 +2,13 @@ Module halo_serial_module
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-  Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
+!!$  Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
+  Use halo_setter_base_module
   
   Implicit None
 
-  Type, Public, Extends( halo_setter_base_data_class ) :: halo_serial_data
-  End type halo_serial_data
+!!$  Type, Public, Extends( halo_setter_base_data_class ) :: halo_serial_data
+!!$  End type halo_serial_data
   
   ! Mostly dummy type for the moment, eventually will contain things like MPI communicator
   Type, Public, Extends( halo_setter_base_class ) :: halo_serial_setter

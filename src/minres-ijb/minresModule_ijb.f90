@@ -52,8 +52,8 @@ Contains
        x, itnlim, nout, rtol,                      &
        istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
 
-    Use halo_setter_base_module  , Only : halo_setter_base_class
-    Use FD_template_module, Only : FD_template
+    Use halo_setter_base_module , Only : halo_setter_base_class
+    Use FD_template_module      , Only : FD_template
   
 !!$    integer,  intent(in)    :: n, itnlim, nout
     Class( halo_setter_base_class ), Intent( In ) :: halo_swapper
