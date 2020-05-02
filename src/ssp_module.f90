@@ -17,12 +17,12 @@ Contains
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
-    Use lattice_module        , Only : lattice
-    Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
-    Use FD_Laplacian_3d_module, Only : FD_Laplacian_3D
-    Use minresmodule          , Only : minres
-    Use halo_serial_module    , Only : halo_serial_setter, halo_serial_data
-    Use Halo_base_module      , Only : halo_base_class, halo_base_data_class
+    Use lattice_module         , Only : lattice
+    Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
+    Use minresmodule           , Only : minres
+    Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
+    Use halo_serial_module     , Only : halo_serial_setter, halo_serial_data
+    Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
     
     Implicit None
 
@@ -47,8 +47,8 @@ Contains
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
     
-    Class( halo_base_class      ), Allocatable :: halo_swapper
-    Class( halo_base_data_class ), Allocatable :: halo_data
+    Class( halo_setter_base_class      ), Allocatable :: halo_swapper
+    Class( halo_setter_base_data_class ), Allocatable :: halo_data
 
     Type( FD_Laplacian_3d    ) :: FD
 
