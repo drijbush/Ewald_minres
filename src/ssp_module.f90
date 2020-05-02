@@ -21,6 +21,7 @@ Contains
     Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use FD_Laplacian_3d_module, Only : FD_Laplacian_3D
     Use minresmodule          , Only : minres
+    Use halo_serial_module    , Only : halo_serial_setter, halo_serial_data
 
     Implicit None
 
@@ -45,7 +46,9 @@ Contains
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
     
-    Type( FD_Laplacian_3d ) :: FD
+    Type( FD_Laplacian_3d    ) :: FD
+    Type( halo_serial_setter ) :: halo_swapper
+    Type( halo_serial_data   ) :: halo_data
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
 
@@ -86,11 +89,14 @@ Contains
     End Do
     Call FD%init( FD_order, dGrid_vecs )
 
+    ! Initalise the halo swapper
+    Call halo_swapper%init( halo_data, error )
+
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
     Call system_clock( start, rate )
     rhs = - 4.0_wp * pi * q_grid
-    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
+    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, halo_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
          istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
     If( standardise ) Then

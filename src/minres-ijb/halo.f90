@@ -1,4 +1,4 @@
-Module halo_module
+Module halo_serial_module
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -6,15 +6,15 @@ Module halo_module
   
   Implicit None
 
-  Type, Public, Extends( halo_base_data_class ) :: halo_data_class
-  End type halo_data_class
+  Type, Public, Extends( halo_base_data_class ) :: halo_serial_data
+  End type halo_serial_data
   
   ! Mostly dummy type for the moment, eventually will contain things like MPI communicator
-  Type, Public, Extends( halo_base_class ) :: halo_setter
+  Type, Public, Extends( halo_base_class ) :: halo_serial_setter
      Private
    Contains
      Procedure, Public :: fill => halo_fill
-  End Type halo_setter
+  End Type halo_serial_setter
 
   Private
   
@@ -22,7 +22,7 @@ Contains
 
   Subroutine halo_fill( H, halo_width, hdlb, gin, hout )
 
-    Class( halo_setter ),                                        Intent( InOut ) :: H
+    Class( halo_serial_setter ),                                 Intent( In    ) :: H
     Integer   ,                                                  Intent( In    ) :: halo_width
     Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
     Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
@@ -139,4 +139,4 @@ Contains
 
   End Subroutine halo_fill
 
-End Module halo_module
+End Module halo_serial_module

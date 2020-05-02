@@ -48,14 +48,15 @@ Contains
 !!$  Subroutine MINRES( lb, ub, Aprod, Msolve, b, shift, checkA, precon, &
 !!$       x, itnlim, nout, rtol,                      &
 !!$       istop, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
-  Subroutine MINRES( lb, ub, FD_operator, Msolve, b, shift, checkA, precon, &
+  Subroutine MINRES( lb, ub, FD_operator, halo_swapper, Msolve, b, shift, checkA, precon, &
        x, itnlim, nout, rtol,                      &
        istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
 
-    Use halo_module       , Only : halo_setter
+    Use halo_base_module  , Only : halo_base_class
     Use FD_template_module, Only : FD_template
   
 !!$    integer,  intent(in)    :: n, itnlim, nout
+    Class( halo_base_class ), Intent( In ) :: halo_swapper
     Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
     Class( FD_template ), Intent( In ) :: FD_operator
     Integer,  Intent(in)    :: itnlim, nout
@@ -355,8 +356,6 @@ Contains
          Arnorml,        relArnorml,              &
          s     , sn    , t     , tnorm2, ynorm2, z
 
-    Type( halo_setter ) :: halo
-    
     Integer :: FD_order, halo_width
     
     Logical   :: debug, prnt
@@ -407,7 +406,7 @@ Contains
 
     ! Looks like a bug in get order!
     halo_width = FD_order 
-    Call halo%allocate( lb, ub, halo_width, grid_with_halo )
+    Call halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
 
     ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
     ! due to errors before the iteration starts
@@ -463,10 +462,10 @@ Contains
 !!$       Call Aprod ( lb, ub, w, r2 )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, y, w  )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, w, r2 )
-       Call halo%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
             grid_with_halo, w  )
-       Call halo%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
             grid_with_halo, r2  )
 !!$       s      = dot_product(w,w )
@@ -484,7 +483,7 @@ Contains
        ! NEED TO FIX ARGUMENTS - especially lb of grid
 !!$       Call Aprod ( lb, ub, y, w )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, y, w  )
-       Call halo%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
             grid_with_halo, w  )
 !!$       Arnorml = sqrt( dot_product(w,w) )
@@ -550,7 +549,7 @@ Contains
        ! NEED TO FIX ARGUMENTS - especially lb of grid
 !!$       Call Aprod ( lb, ub, v, y )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, v, y  )
-       Call halo%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
             grid_with_halo, y  )
        y      = y - shift*v           ! call daxpy ( n, (- shift), v, 1, y, 1 )
