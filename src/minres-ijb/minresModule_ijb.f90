@@ -56,7 +56,7 @@ Contains
     Use FD_template_module      , Only : FD_template
   
 !!$    integer,  intent(in)    :: n, itnlim, nout
-    Class( halo_setter_base_class ), Intent( In ) :: halo_swapper
+    Class( halo_setter_base_class ), Intent( InOut ) :: halo_swapper
     Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
     Class( FD_template ), Intent( In ) :: FD_operator
     Integer,  Intent(in)    :: itnlim, nout
@@ -359,7 +359,8 @@ Contains
     Integer :: FD_order, halo_width
     
     Logical   :: debug, prnt
-
+    Integer :: error
+    
     ! Local constants
     Real(wp),         Parameter :: zero =  0.0_wp,  one = 1.0_wp
     Real(wp),         Parameter :: ten  = 10.0_wp
@@ -462,10 +463,10 @@ Contains
 !!$       Call Aprod ( lb, ub, w, r2 )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, y, w  )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, w, r2 )
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
             grid_with_halo, w  )
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
             grid_with_halo, r2  )
 !!$       s      = dot_product(w,w )
@@ -483,7 +484,7 @@ Contains
        ! NEED TO FIX ARGUMENTS - especially lb of grid
 !!$       Call Aprod ( lb, ub, y, w )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, y, w  )
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
             grid_with_halo, w  )
 !!$       Arnorml = sqrt( dot_product(w,w) )
@@ -549,7 +550,7 @@ Contains
        ! NEED TO FIX ARGUMENTS - especially lb of grid
 !!$       Call Aprod ( lb, ub, v, y )
 !!$       Call FD_operator%apply( lb, lb, lb, ub, v, y  )
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo )
+       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo, error )
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
             grid_with_halo, y  )
        y      = y - shift*v           ! call daxpy ( n, (- shift), v, 1, y, 1 )

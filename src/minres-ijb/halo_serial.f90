@@ -2,14 +2,10 @@ Module halo_serial_module
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-!!$  Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
-  Use halo_setter_base_module
+  Use halo_setter_base_module, Only : halo_setter_base_class
   
   Implicit None
 
-!!$  Type, Public, Extends( halo_setter_base_data_class ) :: halo_serial_data
-!!$  End type halo_serial_data
-  
   ! Mostly dummy type for the moment, eventually will contain things like MPI communicator
   Type, Public, Extends( halo_setter_base_class ) :: halo_serial_setter
      Private
@@ -21,14 +17,15 @@ Module halo_serial_module
   
 Contains
 
-  Subroutine halo_fill( H, halo_width, hdlb, gin, hout )
+  Subroutine halo_fill( H, halo_width, hdlb, gin, hout, error )
 
-    Class( halo_serial_setter ),                                 Intent( In    ) :: H
+    Class( halo_serial_setter ),                                 Intent( InOut ) :: H
     Integer   ,                                                  Intent( In    ) :: halo_width
     Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
     Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
     Real( wp ), Dimension( hdlb( 1 ):, hdlb( 2 ):, hdlb( 3 ): ), Intent(   Out ) :: hout
-
+    Integer                                                    , Intent(   Out ) :: error
+    
     Integer, Dimension( 1:3 ) :: gub, gn
     Integer, Dimension( 1:3 ) :: hub, hlb
 
@@ -37,6 +34,10 @@ Contains
     Integer :: hi1, hi2, hi3
 
     Logical, Parameter :: debug = .True.
+
+    error = 0
+
+    Call H%inc_n_calls()
 
     ! Bounds on grid without halo - we know the lower bound is zero from declaration
     gub = Ubound( gin )
