@@ -1,5 +1,10 @@
 Module domains_module
 
+  ! NEED to think how better to map domains onto DL_POLY domains
+  ! Here we map purely using the grid
+  ! DLP (effectively) maps using the fractional coordinates
+  ! Use this for debugging for the moment
+  
   Implicit None
 
   Public :: domain_get_params
@@ -45,7 +50,8 @@ Contains
     Allocate( i_domain( 1:0 ) )
 
     Do i = 1, n
-       If( domain_is_in_grid_volume( l, r( :, i ), n_grid, domain_base_coords, domain_base_coords + n_grid_domain ) ) Then
+       If( domain_is_in_grid_volume( l, r( :, i ), n_grid, domain_base_coords, &
+            domain_base_coords + n_grid_domain ) ) Then
           i_domain = [ i_domain, i ]
        End If
     End Do
@@ -55,7 +61,7 @@ Contains
     
   End Subroutine domain_build
 
-  Pure Subroutine domain_halo_build( l, q, r, n_grid, n_proc, domain_coords, halo_width, q_domain, r_domain )
+  Pure Subroutine domain_halo_build( l, q, r, n_grid, n_proc, domain_coords, halo_width, q_halo, r_halo )
 
     ! GRIDS START AT ZERO
 
@@ -72,9 +78,11 @@ Contains
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: n_proc
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: domain_coords
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: halo_width
-    Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_domain
-    Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_domain
+    Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_halo
+    Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_halo
 
+    Real( wp ), Dimension( 1:3 ) :: G, ri, riG
+    
     Integer, Dimension( : ), Allocatable :: i_halo
 
     Integer, Dimension( 1:3 ) :: domain_base_coords
@@ -82,6 +90,7 @@ Contains
     
     Integer :: n
     Integer :: i
+    Integer :: iGx, iGy, iGz
     
     n = Size( q )
 
@@ -90,19 +99,30 @@ Contains
     Allocate( i_halo( 1:0 ) )
 
     Do i = 1, n
-       ! Is it in the volume including the domain and the halo
-       If( domain_is_in_grid_volume( l, r( :, i ), n_grid, &
-            domain_base_coords - halo_width, domain_base_coords + n_grid_domain + halo_width ) ) Then
-          ! If it is and it is not in the domain it is in the halo
-          If( .Not. domain_is_in_grid_volume( l, r( :, i ), n_grid, &
-               domain_base_coords, domain_base_coords + n_grid_domain ) ) Then
-             i_halo = [ i_halo, i ]
-          End If
-       End If
+       ! For the halo we have to consider periodic images
+       ri = r( :, i )
+       Do iGz = -1, 1
+          Do iGy = -1, 1
+             Do iGx = -1, 1
+                Call l%get_dir_vec( [ iGz, iGy, iGz ], G )
+                riG = ri + G
+                ! HACK assume we only need look at most one lattice vector away
+                ! Is it in the volume including the domain and the halo
+                If( domain_is_in_grid_volume( l, riG, n_grid, &
+                     domain_base_coords - halo_width, domain_base_coords + n_grid_domain + halo_width ) ) Then
+                   ! If it is and it is not in the domain it is in the halo
+                   If( .Not. domain_is_in_grid_volume( l, riG, n_grid, &
+                        domain_base_coords, domain_base_coords + n_grid_domain ) ) Then
+                      i_halo = [ i_halo, i ]
+                   End If
+                End If
+             End Do
+          End Do
+       End Do
     End Do
 
-    q_domain = q(    i_halo )
-    r_domain = r( :, i_halo )
+    q_halo = q(    i_halo )
+    r_halo = r( :, i_halo )
     
   End Subroutine domain_halo_build
 

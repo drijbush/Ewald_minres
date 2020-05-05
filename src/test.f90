@@ -11,6 +11,7 @@ Program test
   Use sfp_module                          , Only : sfp_long_range, sfp_sic
   Use real_space_module                   , Only : real_space_energy
   Use grid_io_module                      , Only : grid_io_save
+  Use domains_module                      , Only : domain_build, domain_halo_build
   
   Implicit None
 
@@ -35,8 +36,12 @@ Program test
   Real( wp ), Dimension( :, : ), Allocatable :: r
   Real( wp ), Dimension( :, : ), Allocatable :: force_ffp
   Real( wp ), Dimension( :, : ), Allocatable :: force_ssp
+  Real( wp ), Dimension( :, : ), Allocatable :: r_domain
+  Real( wp ), Dimension( :, : ), Allocatable :: r_halo
 
   Real( wp ), Dimension( : ), Allocatable :: q
+  Real( wp ), Dimension( : ), Allocatable :: q_domain
+  Real( wp ), Dimension( : ), Allocatable :: q_halo
   Real( wp ), Dimension( : ), Allocatable :: ei_ffp
   Real( wp ), Dimension( : ), Allocatable :: ei_ssp
 
@@ -55,6 +60,8 @@ Program test
   
   Integer, Dimension( 1:3 ) :: n_grid
 
+  Integer, Dimension( 1:3 ) :: np = [ 3, 3, 3 ]
+
   Integer :: range_gauss
   Integer :: FD_order
   Integer :: n, level
@@ -62,6 +69,8 @@ Program test
   Integer :: i, j
   Integer :: max_G_shells = 2
   Integer :: error
+  Integer :: nat_tot
+  Integer :: ipx, ipy, ipz
   
   Integer( li ) :: start, finish, rate
 
@@ -245,6 +254,23 @@ Program test
   !
   ! SYMETRICALLY SCREENED POISSON (SSP) - purely real space methods used, finite difference to solve eqns
   !
+
+  !
+  ! Work out which atoms are in this procs domain, and which are in the halo
+  nat_tot = 0
+  Do ipz = 0, np( 3 ) - 1
+     Do ipy = 0, np( 2 ) - 1
+        Do ipx = 0, np( 1 ) - 1
+           Call domain_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], q_domain, r_domain )
+           Write( *, * ) 'nat domain ', ipx, ipy, ipz, Size( q_domain ), Size( r_domain )
+           nat_tot = nat_tot + Size( q_domain )
+        End Do
+     End Do
+  End Do
+  Write( *, * ) 'nat_tot ', nat_tot      
+  Call domain_halo_build( l, q, r, n_grid, np, [ 0, 0, 0 ], [ range_gauss, range_gauss, range_gauss ], &
+       q_halo, r_halo )
+  Write( *, * ) 'nat halo ', Size( q_halo ), Size( r_halo )
   
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
