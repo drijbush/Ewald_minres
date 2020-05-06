@@ -81,10 +81,10 @@ Contains
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_halo
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_halo
 
+    Real( wp ), Dimension( :, : ), Allocatable :: rtmp
+    
     Real( wp ), Dimension( 1:3 ) :: G, ri, riG
     
-    Integer, Dimension( : ), Allocatable :: i_halo
-
     Integer, Dimension( 1:3 ) :: domain_base_coords
     Integer, Dimension( 1:3 ) :: n_grid_domain
     
@@ -95,9 +95,10 @@ Contains
     n = Size( q )
 
     Call domain_get_params( n_grid, n_proc, domain_coords, n_grid_domain, domain_base_coords )
-    
-    Allocate( i_halo( 1:0 ) )
 
+    Allocate( q_halo( 1:0 ) )
+    Allocate( r_halo( 1:3, 1:0 ) )
+    
     Do i = 1, n
        ! For the halo we have to consider periodic images
        ri = r( :, i )
@@ -113,16 +114,18 @@ Contains
                    ! If it is and it is not in the domain it is in the halo
                    If( .Not. domain_is_in_grid_volume( l, riG, n_grid, &
                         domain_base_coords, domain_base_coords + n_grid_domain ) ) Then
-                      i_halo = [ i_halo, i ]
+                      ! Need to store shifted position of atom
+                      q_halo = [ q_halo, q( i ) ]
+                      Allocate( rtmp( 1:3, 1:Size( r_halo, Dim = 2 ) + 1 ) )
+                      rtmp( :, 1:Size( r_halo, Dim = 2 ) ) = r_halo
+                      rtmp( :, Size( r_halo, Dim = 2 ) + 1 ) = riG
+                      Call move_alloc( rtmp, r_halo )
                    End If
                 End If
              End Do
           End Do
        End Do
     End Do
-
-    q_halo = q(    i_halo )
-    r_halo = r( :, i_halo )
     
   End Subroutine domain_halo_build
 

@@ -60,7 +60,7 @@ Program test
   
   Integer, Dimension( 1:3 ) :: n_grid
 
-  Integer, Dimension( 1:3 ) :: np = [ 3, 3, 3 ]
+  Integer, Dimension( 1:3 ) :: np = [ 2, 2, 2 ]
 
   Integer :: range_gauss
   Integer :: FD_order
@@ -263,14 +263,14 @@ Program test
         Do ipx = 0, np( 1 ) - 1
            Call domain_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], q_domain, r_domain )
            Write( *, * ) 'nat domain ', ipx, ipy, ipz, Size( q_domain ), Size( r_domain )
+           Call domain_halo_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], [ range_gauss, range_gauss, range_gauss ], &
+                q_halo, r_halo )
+           Write( *, * ) 'nat halo   ', ipx, ipy, ipz, Size( q_halo ), Size( r_halo )
            nat_tot = nat_tot + Size( q_domain )
         End Do
      End Do
   End Do
   Write( *, * ) 'nat_tot ', nat_tot      
-  Call domain_halo_build( l, q, r, n_grid, np, [ 0, 0, 0 ], [ range_gauss, range_gauss, range_gauss ], &
-       q_halo, r_halo )
-  Write( *, * ) 'nat halo ', Size( q_halo ), Size( r_halo )
   
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
