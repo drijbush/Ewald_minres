@@ -13,8 +13,9 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
-       recip_E, q_grid, pot_grid, ei, f, t_grid, t_recip, error )
+  Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo,      &
+       recip_E, q_grid, pot_grid, fd_swapper, pot_swapper, grid_integrator, &
+       ei, f, t_grid, t_recip, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -22,10 +23,10 @@ Contains
     Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use minresmodule           , Only : minres
     Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
-    Use halo_serial_module     , Only : halo_serial_setter
     Use halo_setter_base_module, Only : halo_setter_base_class
+!!$    Use halo_serial_module     , Only : halo_serial_setter
     Use quadrature_base_module , Only : quadrature_base_class
-    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
+!!$    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
     
     Implicit None
 
@@ -41,6 +42,9 @@ Contains
     Real( wp )                         , Intent(   Out ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
+    Class( halo_setter_base_class  )   , Intent( InOut ) :: fd_swapper
+    Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper
+    Class( quadrature_base_class   )   , Intent( InOut ) :: grid_integrator
     Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
     Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
     Real( wp )                         , Intent(   Out ) :: t_grid
@@ -51,10 +55,10 @@ Contains
     ! Not required, but useful for comparison of accuracy with Fourier methods.
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
-    
-    Class( halo_setter_base_class  ), Allocatable :: fd_swapper
-    Class( halo_setter_base_class  ), Allocatable :: pot_swapper
-    Class( quadrature_base_class   ), Allocatable :: grid
+
+!!$    Class( halo_setter_base_class  ), Allocatable :: fd_swapper
+!!$    Class( halo_setter_base_class  ), Allocatable :: pot_swapper
+!!$    Class( quadrature_base_class   ), Allocatable :: grid    
 
     Type( FD_Laplacian_3d    ) :: FD
 
@@ -105,11 +109,11 @@ Contains
     Call FD%init( FD_order, dGrid_vecs )
 
     ! Initalise the halo swapper
-    Allocate( halo_serial_setter :: fd_swapper )
-    Call fd_swapper%init( error )
+!!$    Allocate( halo_serial_setter :: fd_swapper )
+!!$    Call fd_swapper%init( error )
 
-    ! Set up the integrator
-    Allocate( quadrature_trapezium_serial :: grid )
+!!$    ! Set up the integrator
+!!$    Allocate( quadrature_trapezium_serial :: grid )
     
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
@@ -121,7 +125,7 @@ Contains
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
-       pot_grid = pot_grid - grid%integrate( l, n_grid, pot_grid ) / l%get_volume()
+       pot_grid = pot_grid - grid_integrator%integrate( l, n_grid, pot_grid ) / l%get_volume()
     End If
     Call system_Clock( finish, rate )
     t_recip = Real( finish - start, wp ) / rate
@@ -139,11 +143,11 @@ Contains
     ! Calculate from the potential the long range energy
     ! Two minus signs as a) this is the SCREENED charge
     !                    b) I like to just add up the energies, having to subtract it is confusing
-    recip_E = - 0.5_wp * grid%integrate( l, n_grid, - q_grid * pot_grid )
+    recip_E = - 0.5_wp * grid_integrator%integrate( l, n_grid, - q_grid * pot_grid )
     
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
-    Allocate( halo_serial_setter :: pot_swapper )
+!!$    Allocate( halo_serial_setter :: pot_swapper )
     Call pot_swapper%init( error )
     Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
