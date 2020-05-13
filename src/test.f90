@@ -11,10 +11,15 @@ Program test
   Use real_space_module                   , Only : real_space_energy
   Use grid_io_module                      , Only : grid_io_save
   Use domains_module                      , Only : domain_build, domain_halo_build
+  Use halo_serial_module                  , Only : halo_serial_setter
+  Use quadrature_trapezium_serial_module  , Only : quadrature_trapezium_serial
   
   Implicit None
 
   Type( lattice ) :: l
+
+  Type( halo_serial_setter          ) :: fd_swapper, pot_swapper
+  Type( quadrature_trapezium_serial ) :: grid_integrator
 
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
@@ -63,9 +68,9 @@ Program test
   Integer :: nd
   Integer :: i, j
   Integer :: max_G_shells = 2
-  Integer :: error
   Integer :: nat_tot
   Integer :: ipx, ipy, ipz
+  Integer :: error
   
   Integer( li ) :: start, finish, rate
 
@@ -245,8 +250,11 @@ Program test
   Allocate( force_ssp( 1:3, 1:n ) )
 !!$  Call ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
 !!$       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
+  Call fd_swapper%init ( error )
+  Call pot_swapper%init( error )
   Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
-       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
+       recip_E_ssp, q_grid, pot_grid_ssp, fd_swapper, pot_swapper, grid_integrator, &
+       ei_ssp, force_ssp, t_grid, t_recip, error )
   Write( *, * ) 'Nett force ', Sum( force_ssp( 1, : ) ), Sum( force_ssp( 2, : ) ), Sum( force_ssp( 3, : ) )
   Open( 11, file = 'forces_ssp.dat' )
   Write( 11, * ) n, '     #number of particles'
