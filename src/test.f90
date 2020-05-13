@@ -60,7 +60,7 @@ Program test
   
   Integer, Dimension( 1:3 ) :: n_grid
 
-  Integer, Dimension( 1:3 ) :: np = [ 2, 2, 2 ]
+  Integer, Dimension( 1:3 ) :: np = [ 1, 1, 1 ]
 
   Integer :: range_gauss
   Integer :: FD_order
@@ -124,6 +124,37 @@ Program test
   End Do
   Write( *, * ) 'r(1) after  shift and reference = ', r( :, 1 )
 
+  !
+  ! Work out which atoms are in this procs domain, and which are in the halo
+  nat_tot = 0
+  Do ipz = 0, np( 3 ) - 1
+     Do ipy = 0, np( 2 ) - 1
+        Do ipx = 0, np( 1 ) - 1
+           Call domain_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], q_domain, r_domain )
+           Write( *, * ) 'nat domain ', ipx, ipy, ipz, Size( q_domain ), Size( r_domain )
+           Call domain_halo_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], [ range_gauss, range_gauss, range_gauss ], &
+                q_halo, r_halo )
+           Write( *, * ) 'nat halo   ', ipx, ipy, ipz, Size( q_halo ), Size( r_halo )
+           nat_tot = nat_tot + Size( q_domain )
+        End Do
+     End Do
+  End Do
+  Write( *, * ) 'nat_tot ', nat_tot
+  Open( 11, file = 'domain.dat' )
+  Do i = 1, Size( q_domain )
+     Call l%to_fractional( r_domain( :, i ), t )
+     Write( 11, '( i4, 1x, sp, f3.0, 1x, ss, 3( f7.3, 1x ), 3( f6.4, 1x ) )' ) &
+          i, q_domain( i ), r_domain( :, i ), t 
+  End Do
+  Close( 11 )
+  Open( 11, file = 'halo.dat' )
+  Do i = 1, Size( q_halo )
+     Call l%to_fractional( r_halo( :, i ), t )
+     Write( 11, '( i4, 1x, sp, f3.0, 1x, ss, 3( f7.3, 1x ), 3( f6.4, 1x ) )' ) &
+          i, q_halo( i ), r_halo( :, i ), t 
+  End Do
+  Close( 11 )
+  
   ! How big is my gaussian?
 !!$  Call  charge_grid_find_range( l, alpha, n_grid, range_gauss )
 !!$  Write( *, * ) 'Gauss range: ', range_gauss
@@ -156,7 +187,8 @@ Program test
   Allocate( pot_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( ei_ffp( 1:n ) )
   Allocate( force_ffp( 1:3, 1:n ) )
-  Call ffp_long_range( l, q, r, alpha, FD_order, recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, force_ffp, t_grid, t_recip, error )
+  Call ffp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
+       recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, force_ffp, t_grid, t_recip, error )
   Write( *, * ) 'Nett force ', Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) )
   Open( 11, file = 'forces_ffp.dat' )
   Write( 11, * ) n, '     #number of particles'
@@ -177,6 +209,8 @@ Program test
      l_bad_charge = .True.
      Stop
   End Select
+  ! Save the q grid to file
+  Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
 
   ! Check how well the charge grid adds up to zero
   q_error = Sum( q_grid )
@@ -255,28 +289,14 @@ Program test
   ! SYMETRICALLY SCREENED POISSON (SSP) - purely real space methods used, finite difference to solve eqns
   !
 
-  !
-  ! Work out which atoms are in this procs domain, and which are in the halo
-  nat_tot = 0
-  Do ipz = 0, np( 3 ) - 1
-     Do ipy = 0, np( 2 ) - 1
-        Do ipx = 0, np( 1 ) - 1
-           Call domain_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], q_domain, r_domain )
-           Write( *, * ) 'nat domain ', ipx, ipy, ipz, Size( q_domain ), Size( r_domain )
-           Call domain_halo_build( l, q, r, n_grid, np, [ ipx, ipy, ipz ], [ range_gauss, range_gauss, range_gauss ], &
-                q_halo, r_halo )
-           Write( *, * ) 'nat halo   ', ipx, ipy, ipz, Size( q_halo ), Size( r_halo )
-           nat_tot = nat_tot + Size( q_domain )
-        End Do
-     End Do
-  End Do
-  Write( *, * ) 'nat_tot ', nat_tot      
-  
   ! Calculate the long range term by finite difference methods
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( ei_ssp( 1:n ) )
   Allocate( force_ssp( 1:3, 1:n ) )
-  Call ssp_long_range( l, q, r, alpha, FD_order, recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
+!!$  Call ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
+!!$       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
+  Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
+       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
   Write( *, * ) 'Nett force ', Sum( force_ssp( 1, : ) ), Sum( force_ssp( 2, : ) ), Sum( force_ssp( 3, : ) )
   Open( 11, file = 'forces_ssp.dat' )
   Write( 11, * ) n, '     #number of particles'

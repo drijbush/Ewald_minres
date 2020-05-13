@@ -13,7 +13,8 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD_order, recip_E, q_grid, pot_grid, ei, f, t_grid, t_recip, error )
+  Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
+       recip_E, q_grid, pot_grid, ei, f, t_grid, t_recip, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -31,10 +32,12 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: rhs
     
     Type( lattice )                    , Intent( In    ) :: l
-    Real( wp ), Dimension( :     )     , Intent( In    ) :: q
-    Real( wp ), Dimension( :, :  )     , Intent( In    ) :: r
+    Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q
+    Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r
     Real( wp )                         , Intent( In    ) :: alpha
     Integer                            , Intent( In    ) :: FD_order
+    Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
+    Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r_halo
     Real( wp )                         , Intent(   Out ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
@@ -54,6 +57,8 @@ Contains
 
     Type( FD_Laplacian_3d    ) :: FD
 
+    Real( wp ), Dimension( :, : ), Allocatable :: r_full
+    
     Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
 
     Real( wp ), Dimension( 1:3 ) :: dG
@@ -70,6 +75,10 @@ Contains
 
     Character( Len = 132 ) :: istop_message
 
+    Allocate( r_full( 1:3, 1:Size( q ) + Size( q_halo ) ) )
+    r_full( :, 1:Size( q )    ) = r
+    r_full( :, Size( q ) + 1: ) = r_halo
+
     error = 0
 
     n_grid = Ubound( q_grid ) + 1
@@ -79,7 +88,8 @@ Contains
     ! First find range of the gaussian along each of the axes of the grid
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
-    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
+!!$    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
+    Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, q_grid, error )
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
