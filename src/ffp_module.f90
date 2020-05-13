@@ -20,6 +20,8 @@ Contains
     Use lattice_module        , Only : lattice
     Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use FFT_module            , Only : fft_fft3d
+    Use halo_serial_module     , Only : halo_serial_setter
+    Use halo_setter_base_module, Only : halo_setter_base_class
 
     Implicit None
 
@@ -39,6 +41,8 @@ Contains
     Real( wp )                         , Intent(   Out ) :: t_recip
     Integer                            , Intent(   Out ) :: error
 
+    Class( halo_setter_base_class      ), Allocatable :: pot_swapper
+    
     Complex( wp ), Dimension( :, :, : ), Allocatable :: sfac
     Complex( wp ), Dimension( :, :, : ), Allocatable :: pot_k
 
@@ -114,8 +118,15 @@ Contains
     recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
     
     ! Calculate the forces and energy per site
-    Call charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
-  
+    ! For now while implementing halos
+!!$    Call charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
+!!$    ei = 0.0_wp
+!!$    f  = 0.0_wp
+   Allocate( halo_serial_setter :: pot_swapper )
+   Call pot_swapper%init( error )
+   Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( q_grid ), Ubound( q_grid ), &
+         q_grid, pot_grid, ei, f )
+    
   End Subroutine ffp_long_range
 
   Pure Function ffp_sic( q, alpha ) Result( sic )

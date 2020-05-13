@@ -405,7 +405,7 @@ Contains
     
 !!$    halo_width = FD_order / 2
 
-    ! Looks like a bug in get order!
+    ! Looks like a bug in get order! Returns twice what expected ...
     halo_width = FD_order 
     Call halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
 

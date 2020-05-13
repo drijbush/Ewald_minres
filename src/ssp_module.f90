@@ -52,7 +52,8 @@ Contains
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
     
-    Class( halo_setter_base_class      ), Allocatable :: halo_swapper
+    Class( halo_setter_base_class      ), Allocatable :: fd_swapper
+    Class( halo_setter_base_class      ), Allocatable :: pot_swapper
 !!$    Class( halo_setter_base_data_class ), Allocatable :: halo_data
 
     Type( FD_Laplacian_3d    ) :: FD
@@ -104,15 +105,15 @@ Contains
     Call FD%init( FD_order, dGrid_vecs )
 
     ! Initalise the halo swapper
-    Allocate( halo_serial_setter :: halo_swapper )
+    Allocate( halo_serial_setter :: fd_swapper )
 !!$    Allocate(  halo_serial_data  :: halo_data    )
-    Call halo_swapper%init( error )
+    Call fd_swapper%init( error )
 
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
     Call system_clock( start, rate )
     rhs = - 4.0_wp * pi * q_grid
-    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, halo_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
+    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
          istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
     If( standardise ) Then
@@ -139,7 +140,12 @@ Contains
     recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
 
     ! Calculate the forces and energy per site
-    Call charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
+    ! Initalise the halo swapper
+    Allocate( halo_serial_setter :: pot_swapper )
+!!$    Allocate(  halo_serial_data  :: halo_data    )
+    Call pot_swapper%init( error )
+    Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( q_grid ), Ubound( q_grid ), &
+         q_grid, pot_grid, ei, f )
     
   End Subroutine ssp_long_range
 
