@@ -90,7 +90,8 @@ Contains
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
 !!$    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
-    Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, q_grid, error )
+    Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
+         Lbound( q_grid ), Ubound( q_grid ), q_grid, error )
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 

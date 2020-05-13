@@ -14,7 +14,7 @@ Module charge_grid_module
 
 Contains
 
-  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
+  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, lb, ub, q_grid, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -29,7 +29,9 @@ Contains
     Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
-    Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
+    Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent(   Out ) :: q_grid
     Integer                            , Intent(   Out ) :: error
 
     Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
@@ -106,18 +108,24 @@ Contains
     !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th,   &
     !$omp                                   i_g_lo, i_g_hi )
     !$omp do collapse( 3 )
-    Do i3 = 0, n_grid( 3 ) - 1
-       Do i2 = 0, n_grid( 2 ) - 1
-          Do i1 = 0, n_grid( 1 ) - 1
+!!$    Do i3 = 0, n_grid( 3 ) - 1
+!!$       Do i2 = 0, n_grid( 2 ) - 1
+!!$          Do i1 = 0, n_grid( 1 ) - 1
+    Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
+       Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
+          Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
              q_grid( i1, i2, i3 ) = 0.0_wp
           End Do
        End Do
     End Do
     iam = 0
     !$ iam = omp_get_thread_num()
-    Do i3 = 0, n_grid( 3 ) - 1
-       Do i2 = 0, n_grid( 2 ) - 1
-          Do i1 = 0, n_grid( 1 ) - 1
+!!$    Do i3 = 0, n_grid( 3 ) - 1
+!!$       Do i2 = 0, n_grid( 2 ) - 1
+!!$          Do i1 = 0, n_grid( 1 ) - 1
+    Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
+       Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
+          Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
              q_grid_red_hack( i1, i2, i3, iam ) = 0.0_wp
           End Do
        End Do
@@ -168,9 +176,12 @@ Contains
     ! Now do the reduction manually - not needed once hacky way is fixed
     Do i_th = 0, n_th - 1
        !$omp do collapse( 3 )
-       Do i3 = 0, n_grid( 3 ) - 1
-          Do i2 = 0, n_grid( 2 ) - 1
-             Do i1 = 0, n_grid( 1 ) - 1
+!!$       Do i3 = 0, n_grid( 3 ) - 1
+!!$          Do i2 = 0, n_grid( 2 ) - 1
+!!$             Do i1 = 0, n_grid( 1 ) - 1
+       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
+          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
+             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
                 q_grid( i1, i2, i3 ) = q_grid( i1, i2, i3 ) + q_grid_red_hack( i1, i2, i3, i_th )
              End Do
           End Do
@@ -186,9 +197,12 @@ Contains
        ! Use Kahan summation as adding lots of very small values
        q_tot = 0.0_wp
        c = 0.0_wp
-       Do i3 = 0, n_grid( 3 ) - 1
-          Do i2 = 0, n_grid( 2 ) - 1
-             Do i1 = 0, n_grid( 1 ) - 1
+!!$       Do i3 = 0, n_grid( 3 ) - 1
+!!$          Do i2 = 0, n_grid( 2 ) - 1
+!!$             Do i1 = 0, n_grid( 1 ) - 1
+       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
+          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
+             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
                 y = q_grid( i1, i2, i3 ) - c
                 t = q_tot + y
                 c = ( t - q_tot ) - y
@@ -203,18 +217,24 @@ Contains
           error = -1
        End If
        q_av = q_tot / Size( q_grid )
-       Do i3 = 0, n_grid( 3 ) - 1
-          Do i2 = 0, n_grid( 2 ) - 1
-             Do i1 = 0, n_grid( 1 ) - 1
+!!$       Do i3 = 0, n_grid( 3 ) - 1
+!!$          Do i2 = 0, n_grid( 2 ) - 1
+!!$             Do i1 = 0, n_grid( 1 ) - 1
+       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
+          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
+             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
                 q_grid( i1, i2, i3 ) = q_grid( i1, i2, i3 ) - q_av
              End Do
           End Do
        End Do
        q_tot = 0.0_wp
        c = 0.0_wp
-       Do i3 = 0, n_grid( 3 ) - 1
-          Do i2 = 0, n_grid( 2 ) - 1
-             Do i1 = 0, n_grid( 1 ) - 1
+!!$       Do i3 = 0, n_grid( 3 ) - 1
+!!$          Do i2 = 0, n_grid( 2 ) - 1
+!!$             Do i1 = 0, n_grid( 1 ) - 1
+       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
+          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
+             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
                 y = q_grid( i1, i2, i3 ) - c
                 t = q_tot + y
                 c = ( t - q_tot ) - y
@@ -245,7 +265,8 @@ Contains
     Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
     Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 ), ub( 1:3 )
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: q_grid
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: pot_grid
     Real( wp ), Dimension( 1:         ), Intent(   Out ) :: ei

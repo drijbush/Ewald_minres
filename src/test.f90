@@ -8,15 +8,12 @@ Program test
   Use charge_grid_module                  , Only : charge_grid_find_range
   Use fast_fourier_poisson_module         , Only : ffp_long_range, ffp_sic
   Use symetrically_screened_poisson_module, Only : ssp_long_range, ssp_sic
-  Use sfp_module                          , Only : sfp_long_range, sfp_sic
   Use real_space_module                   , Only : real_space_energy
   Use grid_io_module                      , Only : grid_io_save
   Use domains_module                      , Only : domain_build, domain_halo_build
   
   Implicit None
 
-  Logical, Parameter :: do_sfp = .False.
-  
   Type( lattice ) :: l
 
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
@@ -53,7 +50,6 @@ Program test
   Real( wp ) :: recip_E, real_E, tot_E
   Real( wp ) :: recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp
   Real( wp ) :: recip_E_ssp, sic_ssp, real_E_ssp, tot_E_ssp
-  Real( wp ) :: recip_E_sfp, sic_sfp, real_E_sfp, tot_E_sfp
   Real( wp ) :: xshift
   Real( wp ) :: rms_delta_pot, rms_delta_force, q_error
   Real( wp ) :: t_grid, t_real, t_recip
@@ -239,51 +235,6 @@ Program test
   !
 !!!!!!!!!!!!!!!!!!!!!
   
-!!!!!!!!!!!!!!!!!!!!!!
-  !
-  ! SLOW FOURIER POISSON SOLVER (SFP) i.e. no FFT
-  ! Can be slow so optional
-
-  If( do_sfp ) Then
-     ! Fourier space energy
-     Allocate( pot_grid( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-     Call sfp_long_range(  l, q, r, alpha, ew_func, recip_E_sfp, q_grid, pot_grid, t_grid, t_recip, error )
-     l_bad_charge = .False.
-     Select Case( error )
-     Case( -1 )
-        Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance but "fixed" (for some value of fixed)'
-        l_bad_charge = .True.
-     Case( -2 )
-        Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance AND could not be fixed'
-        l_bad_charge = .True.
-        Stop
-     End Select
-
-     Write( *, * ) 'SFP grid  time: ', t_grid
-     Write( *, * ) 'SFP solve time: ', t_recip
-     ! Save the q grid to file
-     Call grid_io_save( 11, 'q_grid.dat', l, q_grid )
-     
-     Write( *, * ) 'SFP: Sum of charge over grid: ', Sum( q_grid )
-     Write( *, * ) 'SFP: Sum over pot grid      : ', Sum( pot_grid )
-
-     ! Save the pot grid to file
-     Call grid_io_save( 11, 'pot_grid.dat', l, pot_grid )
-
-     ! SFP self interaction correction
-     sic_sfp = sfp_sic( q, alpha )
-     
-     ! SFP Real Space - same as FFP
-     real_E_sfp = real_E_ffp
-  
-     ! And hence the total energy
-     tot_E_sfp = real_E_sfp + sic_sfp + recip_E_sfp
-  End If
-
-  ! END SFP SECTION
-  !
-!!!!!!!!!!!!!
-
 !!!!!!!!!!
   !
   ! SYMETRICALLY SCREENED POISSON (SSP) - purely real space methods used, finite difference to solve eqns
@@ -346,11 +297,6 @@ Program test
        'Reciprocal', 'SIC', 'Real', 'Total', 'Reciprocal', 'SIC', 'Real', 'Total' 
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) 'Ew  ', Real( recip_E, wp ), sic, real_E, tot_E, &
        Real( recip_E, wp ) * r4pie0, sic * r4pie0, real_E * r4pie0, tot_E * r4pie0
-  If( do_sfp ) Then
-     Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
-          'SFP ', recip_E_sfp, sic_sfp, real_E_sfp, tot_E_sfp, &
-          recip_E_sfp * r4pie0, sic_sfp * r4pie0, real_E_sfp * r4pie0, tot_E_sfp * r4pie0
-  End If
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
        'FFP ', recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp, &
        recip_E_ffp * r4pie0, sic_ffp * r4pie0, real_E_ffp * r4pie0, tot_E_ffp * r4pie0
@@ -359,9 +305,6 @@ Program test
        recip_E_ssp * r4pie0, sic_ssp * r4pie0, real_E_ssp * r4pie0, tot_E_ssp * r4pie0
   
   Write( *, * )
-  If( do_sfp ) Then
-     Write( *, '( "Difference in energy SFP - EW: ", g30.16 )' ) tot_E_sfp - tot_E
-  End If
   Write( *, '( "Difference in energy FFP - EW:  ", g30.16 )' ) tot_E_ffp - tot_E
   Write( *, '( "Difference in energy SSP - EW:  ", g30.16 )' ) tot_E_ssp - tot_E
   Write( *, '( "Difference in energy FFP - SSP: ", g30.16 )' ) tot_E_ffp - tot_E_ssp
