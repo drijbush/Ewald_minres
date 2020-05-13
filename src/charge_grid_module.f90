@@ -21,6 +21,8 @@ Contains
     !$ Use omp_lib
 
     Use lattice_module, Only : lattice
+    Use quadrature_base_module , Only : quadrature_base_class
+    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
 
     Implicit none
 
@@ -41,11 +43,13 @@ Contains
     ! has no component of the null space of the LHS matrix
     ! If we have to do this this really tells us that our representation of the charge density
     ! is not good enough, so print a warning
-!!$    Logical   , Parameter :: stabilise_q     = .True.
-    Logical   , Parameter :: stabilise_q     = .False.
+    Logical   , Parameter :: stabilise_q     = .True.
+!!$    Logical   , Parameter :: stabilise_q     = .False.
 
     Real( wp ), Parameter :: stabilise_q_tol = 1e-10_wp
 
+    Class( quadrature_base_class   ), Allocatable :: grid
+    
     Real( wp ), Dimension( :, :, :, : ), Allocatable :: q_grid_red_hack
 
     Real( wp ), Dimension( 1:3 ) :: ri
@@ -57,7 +61,7 @@ Contains
     Real( wp ) :: q_norm
     Real( wp ) :: qi_norm
     Real( wp ) :: q_val
-    Real( wp ) :: q_tot, q_av, c, y, t
+    Real( wp ) :: q_tot, q_av
 
     Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
     
@@ -108,9 +112,6 @@ Contains
     !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th,   &
     !$omp                                   i_g_lo, i_g_hi )
     !$omp do collapse( 3 )
-!!$    Do i3 = 0, n_grid( 3 ) - 1
-!!$       Do i2 = 0, n_grid( 2 ) - 1
-!!$          Do i1 = 0, n_grid( 1 ) - 1
     Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
        Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
           Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
@@ -120,9 +121,6 @@ Contains
     End Do
     iam = 0
     !$ iam = omp_get_thread_num()
-!!$    Do i3 = 0, n_grid( 3 ) - 1
-!!$       Do i2 = 0, n_grid( 2 ) - 1
-!!$          Do i1 = 0, n_grid( 1 ) - 1
     Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
        Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
           Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
@@ -144,8 +142,6 @@ Contains
        i_atom_centre = Nint( fi * n_grid )
        i_g_lo = Max( i_atom_centre - range_gauss, domain_lo )
        i_g_hi = Min( i_atom_centre + range_gauss, domain_hi )
-!!$       Write( 12, '( i2, 1x, 3( f6.3, 1x ), sp, i2, ss, 1x, 3( 3( i2, 1x ), 2x ) )' ) &
-!!$            i, ri, Nint( q( i ) ), i_atom_centre, i_g_lo, i_g_hi
        Do i3 = i_g_lo( 3 ), i_g_hi( 3 )
           Do i2 = i_g_lo( 2 ), i_g_hi( 2 )
              Do i1 = i_g_lo( 1 ), i_g_hi( 1 )
@@ -159,12 +155,8 @@ Contains
                 ! R_POINT due to the charge distribution I
                 grid_vec = r_point - ri
                 q_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
-                ! Reflect grid indices into reference Cell
-                If( Any( Modulo( i_point, n_grid ) /= i_point ) ) Then
-                   Error Stop "POINTS BEING REFLECTED!!!!"
-                End If
-                i_grid = i_point
                 ! And add in
+                i_grid = i_point
                 q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) = &
                      q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) + q_val
              End Do
@@ -176,9 +168,6 @@ Contains
     ! Now do the reduction manually - not needed once hacky way is fixed
     Do i_th = 0, n_th - 1
        !$omp do collapse( 3 )
-!!$       Do i3 = 0, n_grid( 3 ) - 1
-!!$          Do i2 = 0, n_grid( 2 ) - 1
-!!$             Do i1 = 0, n_grid( 1 ) - 1
        Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
           Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
              Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
@@ -190,59 +179,16 @@ Contains
     End Do
     !$omp end parallel
 
-    Write( *, * ) 'Sum q grid', Sum( q_grid )
-    
     ! If required carefully make sure the charge on the grid adds to zero
     If( stabilise_q ) Then
-       ! Use Kahan summation as adding lots of very small values
-       q_tot = 0.0_wp
-       c = 0.0_wp
-!!$       Do i3 = 0, n_grid( 3 ) - 1
-!!$          Do i2 = 0, n_grid( 2 ) - 1
-!!$             Do i1 = 0, n_grid( 1 ) - 1
-       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
-          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
-             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
-                y = q_grid( i1, i2, i3 ) - c
-                t = q_tot + y
-                c = ( t - q_tot ) - y
-                q_tot = t
-             End Do
-          End Do
-       End Do
-!!$       Write( *, * ) 'Total charge before stabilisation ', q_tot
+       Allocate( quadrature_trapezium_serial :: grid )
+       q_tot = grid%integrate( l, n_grid, q_grid ) * Product( n_grid ) / l%get_volume()
        If( Abs( q_tot ) > stabilise_q_tol ) Then
-!!$          Write( *, * ) 'WARNING: Sum of charge on grid greater than tolerance, sum = ', &
-!!$               q_tot, ' tol = ', stabilise_q_tol
           error = -1
        End If
-       q_av = q_tot / Size( q_grid )
-!!$       Do i3 = 0, n_grid( 3 ) - 1
-!!$          Do i2 = 0, n_grid( 2 ) - 1
-!!$             Do i1 = 0, n_grid( 1 ) - 1
-       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
-          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
-             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
-                q_grid( i1, i2, i3 ) = q_grid( i1, i2, i3 ) - q_av
-             End Do
-          End Do
-       End Do
-       q_tot = 0.0_wp
-       c = 0.0_wp
-!!$       Do i3 = 0, n_grid( 3 ) - 1
-!!$          Do i2 = 0, n_grid( 2 ) - 1
-!!$             Do i1 = 0, n_grid( 1 ) - 1
-       Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
-          Do i2 = Lbound( q_grid, Dim = 2 ), Ubound( q_grid, Dim = 2 )
-             Do i1 = Lbound( q_grid, Dim = 1 ), Ubound( q_grid, Dim = 1 )
-                y = q_grid( i1, i2, i3 ) - c
-                t = q_tot + y
-                c = ( t - q_tot ) - y
-                q_tot = t
-             End Do
-          End Do
-       End Do
-!!$       Write( *, * ) 'Total charge after  stabilisation ', q_tot
+       q_av = q_tot / Product( n_grid )
+       q_grid = q_grid - q_av
+       q_tot = grid%integrate( l, n_grid, q_grid ) * Product( n_grid ) / l%get_volume()
        If( Abs( q_tot ) > stabilise_q_tol ) Then
           error = -2
        End If
@@ -352,12 +298,8 @@ Contains
                 grid_vec = r_point - ri
                 ! Gaussian at that point times normalisation times the volume element
                 g_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
-!!$                ! Reflect grid indices into reference Cell
-!!$                i_grid = Modulo( i_point, n_grid )
-                ! As using halo no need for reflection
                 i_grid = i_point
                 ! Include the potential term
-!!$                g_val = g_val * pot_grid( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
                 ei(    i ) = ei(    i ) + 0.5_wp *                            g_val

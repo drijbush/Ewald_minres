@@ -22,10 +22,10 @@ Contains
     Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use minresmodule           , Only : minres
     Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
-!!$    Use halo_serial_module     , Only : halo_serial_setter, halo_serial_data
-!!$    Use halo_setter_base_module, Only : halo_setter_base_class, halo_setter_base_data_class
     Use halo_serial_module     , Only : halo_serial_setter
     Use halo_setter_base_module, Only : halo_setter_base_class
+    Use quadrature_base_module , Only : quadrature_base_class
+    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
     
     Implicit None
 
@@ -52,9 +52,9 @@ Contains
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
     
-    Class( halo_setter_base_class      ), Allocatable :: fd_swapper
-    Class( halo_setter_base_class      ), Allocatable :: pot_swapper
-!!$    Class( halo_setter_base_data_class ), Allocatable :: halo_data
+    Class( halo_setter_base_class  ), Allocatable :: fd_swapper
+    Class( halo_setter_base_class  ), Allocatable :: pot_swapper
+    Class( quadrature_base_class   ), Allocatable :: grid
 
     Type( FD_Laplacian_3d    ) :: FD
 
@@ -85,14 +85,13 @@ Contains
     n_grid = Ubound( q_grid ) + 1
 
     ! Grid the charge
-    Call system_clock( start, rate )
+    Call system_Clock( start, rate )
     ! First find range of the gaussian along each of the axes of the grid
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
-!!$    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
          Lbound( q_grid ), Ubound( q_grid ), q_grid, error )
-    Call system_clock( finish, rate )
+    Call system_Clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
     ! Now calculate the long range potential by Finite difference
@@ -101,18 +100,20 @@ Contains
     dGrid_vecs = l%get_direct_vectors()
     Do i = 1, 3
        dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
-       dG( i )            = Sqrt( Dot_product( dGrid_vecs( :, i ), dGrid_vecs( :, i ) ) )
+       dG( i )            = Sqrt( Dot_Product( dGrid_vecs( :, i ), dGrid_vecs( :, i ) ) )
     End Do
     Call FD%init( FD_order, dGrid_vecs )
 
     ! Initalise the halo swapper
     Allocate( halo_serial_setter :: fd_swapper )
-!!$    Allocate(  halo_serial_data  :: halo_data    )
     Call fd_swapper%init( error )
 
+    ! Set up the integrator
+    Allocate( quadrature_trapezium_serial :: grid )
+    
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
-    Call system_clock( start, rate )
+    Call system_Clock( start, rate )
     rhs = - 4.0_wp * pi * q_grid
     Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
@@ -120,9 +121,9 @@ Contains
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
-       pot_grid = pot_grid  - Sum( pot_grid ) / Size( pot_grid )
+       pot_grid = pot_grid - grid%integrate( l, n_grid, pot_grid ) / l%get_volume()
     End If
-    Call system_clock( finish, rate )
+    Call system_Clock( finish, rate )
     t_recip = Real( finish - start, wp ) / rate
 
     ! Summarise the iterative solver
@@ -138,12 +139,11 @@ Contains
     ! Calculate from the potential the long range energy
     ! Two minus signs as a) this is the SCREENED charge
     !                    b) I like to just add up the energies, having to subtract it is confusing
-    recip_E = - 0.5_wp * Sum( - q_grid * pot_grid ) * ( l%get_volume() / Product( n_grid ) )
-
+    recip_E = - 0.5_wp * grid%integrate( l, n_grid, - q_grid * pot_grid )
+    
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
     Allocate( halo_serial_setter :: pot_swapper )
-!!$    Allocate(  halo_serial_data  :: halo_data    )
     Call pot_swapper%init( error )
     Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
@@ -163,11 +163,11 @@ Contains
 
   End Function ssp_sic
 
-  Subroutine dummy_msolve(lb,ub,x,y)                   ! Solve M*y = x
+  Subroutine dummy_msolve( lb, ub, x, y )                   ! Solve M*y = x
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-    Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
-    Real(wp), Intent(in)    :: x( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp), Intent(out)   :: y( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+    Integer,    Intent( In    )   :: lb( 1:3 ), ub( 1:3 )
+    Real( wp ), Intent( In    )   :: x( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+    Real( wp ), Intent(   out )   :: y( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
     
     ! Shut up compiler
     y = x
