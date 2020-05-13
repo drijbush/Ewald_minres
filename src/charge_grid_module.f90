@@ -39,7 +39,8 @@ Contains
     ! has no component of the null space of the LHS matrix
     ! If we have to do this this really tells us that our representation of the charge density
     ! is not good enough, so print a warning
-    Logical   , Parameter :: stabilise_q     = .True.
+!!$    Logical   , Parameter :: stabilise_q     = .True.
+    Logical   , Parameter :: stabilise_q     = .False.
 
     Real( wp ), Parameter :: stabilise_q_tol = 1e-10_wp
 
@@ -56,11 +57,14 @@ Contains
     Real( wp ) :: q_val
     Real( wp ) :: q_tot, q_av, c, y, t
 
+    Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
+    
     Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_atom_grid
     Integer, Dimension( 1:3 ) :: i_point
     Integer, Dimension( 1:3 ) :: i_grid
+    Integer, Dimension( 1:3 ) :: i_g_lo, i_g_hi
 
     Integer :: n
     Integer :: n_th, iam
@@ -72,6 +76,12 @@ Contains
     n = Size( q )
     n_grid = Ubound( q_grid ) + 1
 
+    !HACK - test in serial before parallel
+    domain_lo = [ 0, 0, 0 ]
+    n_domain = n_grid
+    
+    domain_hi = domain_lo + n_domain - 1
+    
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
 
     ! What follows is a complete HACK to avoid gfortran stupidly putting
@@ -91,9 +101,11 @@ Contains
          Lbound( q_grid, Dim = 2 ):Ubound( q_grid, Dim = 2 ), &
          Lbound( q_grid, Dim = 3 ):Ubound( q_grid, Dim = 3 ), 0:n_th - 1 ) )
 
-    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, range_gauss, q_grid_red_hack, n_th ) &
+    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, range_gauss, q_grid_red_hack, n_th, &
+    !$omp                                  domain_lo, domain_hi ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
-    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th )
+    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th,   &
+    !$omp                                   i_g_lo, i_g_hi )
     !$omp do collapse( 3 )
     Do i3 = 0, n_grid( 3 ) - 1
        Do i2 = 0, n_grid( 2 ) - 1
@@ -116,19 +128,22 @@ Contains
     ! Loop over atoms
     !$omp do 
     Do i = 1, n
-       ! Loop over points associated with atoms
+       ! Loop over points associated with this atom which are in this domain
        ! Find point nearest to the atom, and call this the centre for the atom grid
        ! Assumes atom in fractional 0 < ri < 1
        ri = r( :, i )
        qi_norm = q_norm * q( i )
        Call l%to_fractional( ri, fi )
        i_atom_centre = Nint( fi * n_grid )
-       Do i3 = - range_gauss( 3 ), range_gauss( 3 )
-          Do i2 = - range_gauss( 2 ), range_gauss( 2 )
-             Do i1 = - range_gauss( 1 ), range_gauss( 1 )
-                i_atom_grid = [ i1, i2, i3 ]
+       i_g_lo = Max( i_atom_centre - range_gauss, domain_lo )
+       i_g_hi = Min( i_atom_centre + range_gauss, domain_hi )
+!!$       Write( 12, '( i2, 1x, 3( f6.3, 1x ), sp, i2, ss, 1x, 3( 3( i2, 1x ), 2x ) )' ) &
+!!$            i, ri, Nint( q( i ) ), i_atom_centre, i_g_lo, i_g_hi
+       Do i3 = i_g_lo( 3 ), i_g_hi( 3 )
+          Do i2 = i_g_lo( 2 ), i_g_hi( 2 )
+             Do i1 = i_g_lo( 1 ), i_g_hi( 1 )
                 ! The indices of the point in space
-                i_point = i_atom_centre + i_atom_grid
+                i_point = [ i1, i2, i3 ]
                 ! Transform to fractional coordinates
                 f_point = Real( i_point, wp ) / n_grid
                 ! And fractional to real
@@ -138,7 +153,10 @@ Contains
                 grid_vec = r_point - ri
                 q_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
                 ! Reflect grid indices into reference Cell
-                i_grid = Modulo( i_point, n_grid )
+                If( Any( Modulo( i_point, n_grid ) /= i_point ) ) Then
+                   Error Stop "POINTS BEING REFLECTED!!!!"
+                End If
+                i_grid = i_point
                 ! And add in
                 q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) = &
                      q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) + q_val
@@ -162,6 +180,8 @@ Contains
     End Do
     !$omp end parallel
 
+    Write( *, * ) 'Sum q grid', Sum( q_grid )
+    
     ! If required carefully make sure the charge on the grid adds to zero
     If( stabilise_q ) Then
        ! Use Kahan summation as adding lots of very small values
