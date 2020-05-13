@@ -61,7 +61,6 @@ Contains
     
     Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_atom_centre
-    Integer, Dimension( 1:3 ) :: i_atom_grid
     Integer, Dimension( 1:3 ) :: i_point
     Integer, Dimension( 1:3 ) :: i_grid
     Integer, Dimension( 1:3 ) :: i_g_lo, i_g_hi
@@ -231,25 +230,30 @@ Contains
 
   End Subroutine charge_grid_calculate
 
-  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
+  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, lb, ub, q_grid, pot_grid, ei, f )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Use lattice_module, Only : lattice
+    Use lattice_module          , Only : lattice
+    Use halo_setter_base_module , Only : halo_setter_base_class
 
     Implicit none
     
     Type( lattice )                    , Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
-    Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
-    Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
+    Real( wp ), Dimension( 1:         ), Intent( In    ) :: q
+    Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
-    Real( wp ), Dimension( 0:, 0:, 0: ), Intent( In    ) :: q_grid
-    Real( wp ), Dimension( 0:, 0:, 0: ), Intent( In    ) :: pot_grid
-    Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
-    Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
+    Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 ), ub( 1:3 )
+    Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: q_grid
+    Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: pot_grid
+    Real( wp ), Dimension( 1:         ), Intent(   Out ) :: ei
+    Real( wp ), Dimension( 1:, 1:     ), Intent(   Out ) :: f
 
     Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
+    Real( wp ), Dimension( :, :, : ), Allocatable :: pot_with_halo
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: stress
     
@@ -274,6 +278,7 @@ Contains
     Integer :: n
     Integer :: i1, i2, i3
     Integer :: i, i_alpha, i_beta
+    Integer :: error
 
     n      = Size( q )
     n_grid = Ubound( q_grid ) + 1
@@ -282,6 +287,19 @@ Contains
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
 
     stress = 0.0_wp
+
+    ! Set up the pot_grid with a halo
+    ! PROBLEM - Should range_gauss should be an array? do we need different ranges in each direction?
+    ! PROBLEM - Why +1? I think it may be because while an atom is in the current domain the nearest
+    !           grid point could belong to the neighbouring domain if the atom is very close to
+    !           the upper edge of the domain. But need to think this through. An alternative
+    !           would be to use Floor instead of Nint in finding the centre grid point below,
+    !           but this would be less accurate
+    Call pot_swapper%allocate( lb, ub, range_gauss( 1 ) + 1, pot_with_halo )
+    Call pot_swapper%fill( range_gauss( 1 ) + 1, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
+    If( error /= 0 ) Then
+       Error Stop "halo filler problem in forces"
+    End If
     
     !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
@@ -314,10 +332,13 @@ Contains
                 grid_vec = r_point - ri
                 ! Gaussian at that point times normalisation times the volume element
                 g_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
-                ! Reflect grid indices into reference Cell
-                i_grid = Modulo( i_point, n_grid )
+!!$                ! Reflect grid indices into reference Cell
+!!$                i_grid = Modulo( i_point, n_grid )
+                ! As using halo no need for reflection
+                i_grid = i_point
                 ! Include the potential term
-                g_val = g_val * pot_grid( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
+!!$                g_val = g_val * pot_grid( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
+                g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
                 ei(    i ) = ei(    i ) + 0.5_wp *                            g_val
                 f ( :, i ) = f ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
