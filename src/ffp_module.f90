@@ -126,8 +126,8 @@ Contains
 !!$    f  = 0.0_wp
    Allocate( halo_serial_setter :: pot_swapper )
    Call pot_swapper%init( error )
-   Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( q_grid ), Ubound( q_grid ), &
-         q_grid, pot_grid, ei, f )
+   Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
+         pot_grid, ei, f )
     
   End Subroutine ffp_long_range
 
