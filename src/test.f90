@@ -25,7 +25,6 @@ Program test
   Real( wp ) :: gauss_tol = 1e-15_wp
   
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid
-  Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ssp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ffp
   

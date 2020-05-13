@@ -250,7 +250,7 @@ Contains
 
   End Subroutine charge_grid_calculate
 
-  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, lb, ub, q_grid, pot_grid, ei, f )
+  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, lb, ub, pot_grid, ei, f )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -267,7 +267,6 @@ Contains
     Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
     Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
-    Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: q_grid
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: pot_grid
     Real( wp ), Dimension( 1:         ), Intent(   Out ) :: ei
     Real( wp ), Dimension( 1:, 1:     ), Intent(   Out ) :: f
@@ -302,7 +301,7 @@ Contains
     Integer :: error
 
     n      = Size( q )
-    n_grid = Ubound( q_grid ) + 1
+    n_grid = Ubound( pot_grid ) + 1
     dV     = l%get_volume() / Product( n_grid )
 
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
@@ -322,7 +321,7 @@ Contains
        Error Stop "halo filler problem in forces"
     End If
     
-    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
+    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
     !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
     ! Loop over atoms
