@@ -9,22 +9,25 @@ Module quadrature_trapezium_serial_module
   Type, Public, Extends( quadrature_base_class ) :: quadrature_trapezium_serial
      Private
    Contains
-     Procedure, NoPass, Public :: integrate => trapezium_serial
+     Procedure, Public :: integrate => trapezium_serial
   End type quadrature_trapezium_serial
 
 Contains
 
-  Function trapezium_serial( l, n_grid, grid ) Result( r )
+  Function trapezium_serial( q, comms, l, n_grid, grid ) Result( r )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Use lattice_module, Only : lattice
+    Use comms_base_class_module, Only : comms_base_class
+    Use lattice_module         , Only : lattice
 
     Real( wp ) :: r
 
-    Type( lattice )                 , Intent( In ) :: l
-    Integer   , Dimension( :       ), Intent( In ) :: n_grid
-    Real( wp ), Dimension( :, :, : ), Intent( In ) :: grid
+    Class( quadrature_trapezium_serial ), Intent( In ) :: q
+    Class( comms_base_class            ), Intent( In ) :: comms
+    Type( lattice )                     , Intent( In ) :: l
+    Integer   , Dimension( :       )    , Intent( In ) :: n_grid
+    Real( wp ), Dimension( :, :, : )    , Intent( In ) :: grid
 
     Real( wp ) :: dV
     Real( wp ) :: c, y, t
@@ -50,7 +53,9 @@ Contains
     End Do
     !$omp end do
     !$omp end parallel
-    r = r * dV    
+    r = r * dV
+
+    Call comms%reduce( r )
     
   End Function trapezium_serial
   

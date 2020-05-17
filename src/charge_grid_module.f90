@@ -14,15 +14,15 @@ Module charge_grid_module
 
 Contains
 
-  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, lb, ub, q_grid, error )
+  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, lb, ub, comms, grid_integrator, q_grid,error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     !$ Use omp_lib
 
-    Use lattice_module, Only : lattice
+    Use lattice_module         , Only : lattice
+    Use comms_base_class_module, Only : comms_base_class
     Use quadrature_base_module , Only : quadrature_base_class
-    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
 
     Implicit none
 
@@ -33,6 +33,8 @@ Contains
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
     Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
+    Class( quadrature_base_class      ), Intent( In    ) :: grid_integrator
+    Class( comms_base_class           ), Intent( In    ) :: comms
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent(   Out ) :: q_grid
     Integer                            , Intent(   Out ) :: error
 
@@ -48,8 +50,6 @@ Contains
 
     Real( wp ), Parameter :: stabilise_q_tol = 1e-10_wp
 
-    Class( quadrature_base_class   ), Allocatable :: grid
-    
     Real( wp ), Dimension( :, :, :, : ), Allocatable :: q_grid_red_hack
 
     Real( wp ), Dimension( 1:3 ) :: ri
@@ -182,14 +182,13 @@ Contains
 
     ! If required carefully make sure the charge on the grid adds to zero
     If( stabilise_q ) Then
-       Allocate( quadrature_trapezium_serial :: grid )
-       q_tot = grid%integrate( l, n_grid, q_grid ) * Product( n_grid ) / l%get_volume()
+       q_tot = grid_integrator%integrate( comms, l, n_grid, q_grid ) * Product( n_grid ) / l%get_volume()
        If( Abs( q_tot ) > stabilise_q_tol ) Then
           error = -1
        End If
        q_av = q_tot / Product( n_grid )
        q_grid = q_grid - q_av
-       q_tot = grid%integrate( l, n_grid, q_grid ) * Product( n_grid ) / l%get_volume()
+       q_tot = grid_integrator%integrate( comms, l, n_grid, q_grid ) * Product( n_grid ) / l%get_volume()
        If( Abs( q_tot ) > stabilise_q_tol ) Then
           error = -2
        End If
