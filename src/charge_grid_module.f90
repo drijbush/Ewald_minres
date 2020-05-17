@@ -106,10 +106,11 @@ Contains
          Lbound( q_grid, Dim = 2 ):Ubound( q_grid, Dim = 2 ), &
          Lbound( q_grid, Dim = 3 ):Ubound( q_grid, Dim = 3 ), 0:n_th - 1 ) )
 
-    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, range_gauss, q_grid_red_hack, n_th, &
+    ! Should have default none - unfortunately bug in gfortran 7 stops this working
+    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, range_gauss, q_grid_red_hack, n_th, &
     !$omp                                  domain_lo, domain_hi ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
-    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th,   &
+    !$omp                                   i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th,   &
     !$omp                                   i_g_lo, i_g_hi )
     !$omp do collapse( 3 )
     Do i3 = Lbound( q_grid, Dim = 3 ), Ubound( q_grid, Dim = 3 )
@@ -267,7 +268,7 @@ Contains
        Error Stop "halo filler problem in forces"
     End If
     
-    !$omp parallel default( none ) shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
+    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
     !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
     ! Loop over atoms

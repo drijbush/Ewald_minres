@@ -4,12 +4,14 @@ cmake_minimum_required(VERSION 3.1)
 # Project name
 project(Ewald_minres Fortran)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${Ewald_minres_BINARY_DIR})
+find_package(MPI REQUIRED)
+
 
 # Add OMP
 #find_package(OpenMP)
-#if (OpenMP_Fortran_FOUND)
-#  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
-#endif()
+if (OpenMP_Fortran_FOUND)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+endif()
 find_library(fftw3 REQUIRED)
 
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")

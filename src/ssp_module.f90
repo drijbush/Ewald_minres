@@ -24,9 +24,7 @@ Contains
     Use minresmodule           , Only : minres
     Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
     Use halo_setter_base_module, Only : halo_setter_base_class
-!!$    Use halo_serial_module     , Only : halo_serial_setter
     Use quadrature_base_module , Only : quadrature_base_class
-!!$    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
     
     Implicit None
 
@@ -55,10 +53,6 @@ Contains
     ! Not required, but useful for comparison of accuracy with Fourier methods.
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
-
-!!$    Class( halo_setter_base_class  ), Allocatable :: fd_swapper
-!!$    Class( halo_setter_base_class  ), Allocatable :: pot_swapper
-!!$    Class( quadrature_base_class   ), Allocatable :: grid    
 
     Type( FD_Laplacian_3d    ) :: FD
 
@@ -108,13 +102,6 @@ Contains
     End Do
     Call FD%init( FD_order, dGrid_vecs )
 
-    ! Initalise the halo swapper
-!!$    Allocate( halo_serial_setter :: fd_swapper )
-!!$    Call fd_swapper%init( error )
-
-!!$    ! Set up the integrator
-!!$    Allocate( quadrature_trapezium_serial :: grid )
-    
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
     Call system_Clock( start, rate )
@@ -147,7 +134,6 @@ Contains
     
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
-!!$    Allocate( halo_serial_setter :: pot_swapper )
     Call pot_swapper%init( error )
     Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
