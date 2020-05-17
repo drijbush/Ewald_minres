@@ -2,11 +2,11 @@ Module quadrature_trapezium_parallel_module
 
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-  Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
+  Use quadrature_base_module, Only : quadrature_base_class
 
   Implicit None
 
-  Type, Public, Extends( quadrature_trapezium_serial ) :: quadrature_trapezium_parallel
+  Type, Public, Extends( quadrature_base_class ) :: quadrature_trapezium_parallel
      Private
    Contains
      Procedure, Public :: integrate => trapezium_parallel
