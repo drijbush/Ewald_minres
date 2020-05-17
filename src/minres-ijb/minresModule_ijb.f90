@@ -37,9 +37,9 @@ Module minresModule
   Implicit None
   Public   :: MINRES
 
-  Interface Operator ( .DDot. )
-     Module Procedure double_dot
-  End Interface Operator ( .DDot. )
+!!$  Interface Operator ( .DDot. )
+!!$     Module Procedure double_dot
+!!$  End Interface Operator ( .DDot. )
   
 Contains
 
@@ -48,17 +48,19 @@ Contains
 !!$  Subroutine MINRES( lb, ub, Aprod, Msolve, b, shift, checkA, precon, &
 !!$       x, itnlim, nout, rtol,                      &
 !!$       istop, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
-  Subroutine MINRES( lb, ub, FD_operator, halo_swapper, Msolve, b, shift, checkA, precon, &
+  Subroutine MINRES( lb, ub, FD_operator, comms, halo_swapper, Msolve, b, shift, checkA, precon, &
        x, itnlim, nout, rtol,                      &
        istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
 
-    Use halo_setter_base_module , Only : halo_setter_base_class
-    Use FD_template_module      , Only : FD_template
+    Use comms_base_class_module, Only : comms_base_class
+    Use halo_setter_base_module, Only : halo_setter_base_class
+    Use FD_template_module     , Only : FD_template
   
 !!$    integer,  intent(in)    :: n, itnlim, nout
-    Class( halo_setter_base_class ), Intent( InOut ) :: halo_swapper
     Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
     Class( FD_template ), Intent( In ) :: FD_operator
+    Class( halo_setter_base_class ), Intent( InOut ) :: halo_swapper
+    Class( comms_base_class       ), Intent( In    ) :: comms
     Integer,  Intent(in)    :: itnlim, nout
     Logical,  Intent(in)    :: checkA, precon
     Real(wp), Intent(in)    :: b( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
@@ -422,8 +424,9 @@ Contains
     r1     = b
     If ( precon ) Call Msolve( lb, ub, b, y )
 !!$    beta1  = dot_product(b,y)
-    beta1 = b .ddot. y
-
+!!$    beta1 = b .ddot. y
+    beta1 = contract( comms, b, y )
+    
     If (beta1 < zero) Then     ! M must be indefinite.
        istop = 8
        go to 900
@@ -444,8 +447,10 @@ Contains
        Call Msolve( lb, ub, y, r2 )
 !!$       s      = dot_product(y ,y )
 !!$       t      = dot_product(r1,r2)
-       s = y  .ddot. y
-       t = r1 .ddot. r2
+!!$       s = y  .ddot. y
+!!$       t = r1 .ddot. r2
+       s = contract( comms, y , y  )
+       t = contract( comms, r1, r2 )
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
        If (z > epsa) Then
@@ -471,8 +476,10 @@ Contains
             grid_with_halo, r2  )
 !!$       s      = dot_product(w,w )
 !!$       t      = dot_product(y,r2)
-       s = w .ddot. w
-       t = y .ddot. r2
+!!$       s = w .ddot. w
+!!$       t = y .ddot. r2
+       s = contract( comms, w, w  )
+       t = contract( comms, y, r2 )       
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
        If (z > epsa) Then
@@ -488,7 +495,8 @@ Contains
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
             grid_with_halo, w  )
 !!$       Arnorml = sqrt( dot_product(w,w) )
-       Arnorml = Sqrt( w .ddot. w )
+!!$       Arnorml = Sqrt( w .ddot. w )
+       Arnorml = Sqrt( contract( comms, w, w  ) )
     End If
 
     !-------------------------------------------------------------------
@@ -559,7 +567,8 @@ Contains
        End If
 
 !!$       alfa   = dot_product(v,y)      ! alphak
-       alfa   = v .ddot. y
+!!$       alfa   = v .ddot. y
+       alfa = contract( comms, v, y  )
        y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
        r1     = r2
        r2     = y
@@ -567,7 +576,8 @@ Contains
 
        oldb   = beta                  ! oldb = betak
 !!$       beta   = dot_product(r2,y)     ! beta = betak+1^2
-       beta   = r2 .ddot. y
+!!$       beta   = r2 .ddot. y
+       beta = contract( comms, r2, y  )
        If (beta < zero) Then
           istop = 6
           go to 900
@@ -739,10 +749,15 @@ Contains
 
   End Subroutine MINRES
 
-  Pure Function double_dot( x, y ) Result( d )
+  Function contract( comms, x, y ) Result( d )
+
+    Use comms_base_class_module, Only : comms_base_class
+
+    Implicit None
 
     Real( wp ) :: d
 
+    Class( comms_base_class )       , Intent( In    ) :: comms
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: x
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: y
 
@@ -750,7 +765,9 @@ Contains
     ! but get it working first
     ! Could also Kahan it once optimised
     d = Sum( x * y )
+
+    Call comms%reduce( d )
     
-  End Function double_dot
+  End Function contract
   
 End Module minresModule

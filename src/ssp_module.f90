@@ -14,7 +14,7 @@ Module symetrically_screened_poisson_module
 Contains
 
   Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo,      &
-       recip_E, q_grid, pot_grid, fd_swapper, pot_swapper, grid_integrator, &
+       recip_E, q_grid, pot_grid, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei, f, t_grid, t_recip, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
@@ -23,6 +23,7 @@ Contains
     Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use minresmodule           , Only : minres
     Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
+    Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use quadrature_base_module , Only : quadrature_base_class
     
@@ -40,6 +41,7 @@ Contains
     Real( wp )                         , Intent(   Out ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
+    Class( comms_base_class        )   , Intent( InOut ) :: comms
     Class( halo_setter_base_class  )   , Intent( InOut ) :: fd_swapper
     Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper
     Class( quadrature_base_class   )   , Intent( InOut ) :: grid_integrator
@@ -106,7 +108,7 @@ Contains
     rtol = 1.0e-12_wp
     Call system_Clock( start, rate )
     rhs = - 4.0_wp * pi * q_grid
-    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
+    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
          istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
     If( standardise ) Then

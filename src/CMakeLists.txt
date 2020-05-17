@@ -2,7 +2,7 @@ add_subdirectory("FD_Template")
 add_subdirectory("minres-ijb")
 
 
-add_library(ewald-minres STATIC fft.f90 charge_grid_module.f90 vec_utilities.f90 sort.f90 lattice.f90 ffp_module.f90 real_space_module.f90 grid_io_module.f90 ssp_module.f90 domains_module.f90 quadrature_base_class.f90 quadrature_trapezium_serial.f90 quadrature_trapezium_parallel.f90 comms_base_class.f90 comms_serial.f90 comms_parallel.f90 )
+add_library(ewald-minres STATIC fft.f90 charge_grid_module.f90 vec_utilities.f90 sort.f90 lattice.f90 ffp_module.f90 real_space_module.f90 grid_io_module.f90 ssp_module.f90 domains_module.f90 quadrature_base_class.f90 quadrature_trapezium_serial.f90 quadrature_trapezium_parallel.f90 )
 add_dependencies(ewald-minres minres-ijb fd)
 
 target_include_directories(ewald-minres PUBLIC ${CMAKE_BINARY_DIR}/src/minres-ijb)

@@ -1,6 +1,6 @@
 Module comms_parallel_module
 
-  Use comms_base_module, Only : comms_base_class
+  Use comms_base_class_module, Only : comms_base_class
 
   Implicit None
 

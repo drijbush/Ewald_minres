@@ -1,4 +1,4 @@
-Module comms_base_module
+Module comms_base_class_module
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -84,4 +84,4 @@ Module comms_base_module
 
 Contains
   
-End Module comms_base_module
+End Module comms_base_class_module
