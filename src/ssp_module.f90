@@ -90,7 +90,7 @@ Contains
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
-         Lbound( q_grid ), Ubound( q_grid ), q_grid, error )
+         Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call system_Clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
@@ -114,7 +114,7 @@ Contains
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
-       pot_grid = pot_grid - grid_integrator%integrate( l, n_grid, pot_grid ) / l%get_volume()
+       pot_grid = pot_grid - grid_integrator%integrate( comms, l, n_grid, pot_grid ) / l%get_volume()
     End If
     Call system_Clock( finish, rate )
     t_recip = Real( finish - start, wp ) / rate
@@ -132,7 +132,7 @@ Contains
     ! Calculate from the potential the long range energy
     ! Two minus signs as a) this is the SCREENED charge
     !                    b) I like to just add up the energies, having to subtract it is confusing
-    recip_E = - 0.5_wp * grid_integrator%integrate( l, n_grid, - q_grid * pot_grid )
+    recip_E = - 0.5_wp * grid_integrator%integrate( comms, l, n_grid, - q_grid * pot_grid )
     
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper

@@ -17,11 +17,15 @@ Contains
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
-    Use lattice_module        , Only : lattice
-    Use charge_grid_module    , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
-    Use FFT_module            , Only : fft_fft3d
-    Use halo_serial_module     , Only : halo_serial_setter
+    Use lattice_module         , Only : lattice
+    Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
+    Use FFT_module             , Only : fft_fft3d
+    Use comms_base_class_module, Only : comms_base_class
+    Use comms_serial_module    , Only : comms_serial
+    Use quadrature_base_module , Only : quadrature_base_class
+    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
     Use halo_setter_base_module, Only : halo_setter_base_class
+    Use halo_serial_module     , Only : halo_serial_setter
 
     Implicit None
 
@@ -41,7 +45,9 @@ Contains
     Real( wp )                         , Intent(   Out ) :: t_recip
     Integer                            , Intent(   Out ) :: error
 
-    Class( halo_setter_base_class      ), Allocatable :: pot_swapper
+    Class( comms_base_class             ), Allocatable :: comms
+    Class( quadrature_base_class        ), Allocatable :: grid_integrator
+    Class( halo_setter_base_class       ), Allocatable :: pot_swapper
     
     Complex( wp ), Dimension( :, :, : ), Allocatable :: sfac
     Complex( wp ), Dimension( :, :, : ), Allocatable :: pot_k
@@ -74,8 +80,10 @@ Contains
     ! First find range of the gaussian along each of the axes of the grid
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
+    Allocate( comms_serial :: comms )
+    Allocate( quadrature_trapezium_serial :: grid_integrator )
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
-         Lbound( q_grid ), Ubound( q_grid ), q_grid, error )
+         Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
