@@ -107,11 +107,6 @@ Contains
              Do iGx = -1, 1
                 Call l%get_dir_vec( [ iGx, iGy, iGz ], G )
                 riG = ri + G
-!!$                Write( 13, '( i2, 1x, 6( f7.3, 1x ), l1, 1x, l1 )' ) &
-!!$                     i, ri, riG, domain_is_in_grid_volume( l, riG, n_grid, &
-!!$                     domain_base_coords - halo_width, domain_base_coords + n_grid_domain + halo_width ), &
-!!$                     domain_is_in_grid_volume( l, riG, n_grid, &
-!!$                        domain_base_coords, domain_base_coords + n_grid_domain )
                 ! HACK assume we only need look at most one lattice vector away
                 ! Is it in the volume including the domain and the halo
                 If( domain_is_in_grid_volume( l, riG, n_grid, &
@@ -155,6 +150,7 @@ Contains
     Integer, Dimension( 1:3 ) :: i_grid
 
     Call l%to_fractional( ri, fi )
+    ! Floor NOT Int as the domain includes the lower bound but not the upper
     i_grid = Floor( fi * n_grid )
     in_volume = All( i_grid >= lo ) .And. All( i_grid < hi )
     

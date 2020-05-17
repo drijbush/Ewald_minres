@@ -74,8 +74,6 @@ Contains
     ! First find range of the gaussian along each of the axes of the grid
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
-!!$    Call charge_grid_calculate( l, alpha, q, r, range_gauss, q_grid, error )
-!!$    Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, q_grid, error )
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
          Lbound( q_grid ), Ubound( q_grid ), q_grid, error )
     Call system_clock( finish, rate )
@@ -121,9 +119,6 @@ Contains
     
     ! Calculate the forces and energy per site
     ! For now while implementing halos
-!!$    Call charge_grid_forces( l, alpha, q, r, range_gauss, q_grid, pot_grid, ei, f )
-!!$    ei = 0.0_wp
-!!$    f  = 0.0_wp
    Allocate( halo_serial_setter :: pot_swapper )
    Call pot_swapper%init( error )
    Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &

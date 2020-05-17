@@ -14,7 +14,7 @@ Module quadrature_trapezium_serial_module
 
 Contains
 
-  Pure Function trapezium_serial( l, n_grid, grid ) Result( r )
+  Function trapezium_serial( l, n_grid, grid ) Result( r )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -31,12 +31,11 @@ Contains
 
     Integer :: i1, i2, i3
 
-
     dV =  l%get_volume() / Product( n_grid )
-!!$    r  = Sum( grid ) * dV
+
     ! Integrate using Kahan summation for accuracy
     r = 0.0_wp
-    !$ omp parallel default( none ) shared( grid, r ) private( c, y, t, i1, i2, i3 )
+    !$omp parallel default( none ) shared( grid, r ) private( c, y, t, i1, i2, i3 )
     c = 0.0_wp
     !$omp do collapse( 3 ) reduction( +:r )
     Do i3 = Lbound( grid, Dim = 3 ), Ubound( grid, Dim = 3 )

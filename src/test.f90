@@ -226,7 +226,8 @@ Program test
 
   ! Calculate short range
   Call system_clock( start, rate )
-  !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E_ffp )
+  ! Unfortunately bug in gfortran 7 stop default( none ) working
+  !$omp parallel shared( l, q, r, alpha, max_G_shells, real_E_ffp )
   Call real_space_energy( l, q, r, alpha / Sqrt( 2.0_wp ), max_G_shells, real_E_ffp )
   !$omp end parallel
   Call system_clock( finish, rate )
@@ -417,7 +418,8 @@ Contains
     Integer :: iG
     
     ew_func( 0 ) = 0.0_wp
-    !$omp parallel default( none ) shared( n, ew_func, l, alpha, q, r ) &
+    ! Bug in gfortran 7 stops default none working
+    !$omp parallel shared( n, ew_func, l, alpha, q, r ) &
     !$omp                          private( s_fac, ig, G, G_len_sq, G_fac )
     !$omp do
     Do iG = 1, Ubound( ew_func, Dim = 1 )
@@ -477,7 +479,8 @@ Contains
     
     Call system_clock( start, rate )
     recip_E = 0.0_wp
-    !$omp parallel default( none ) shared( l, r, recip_E, q, n, ew_func ) &
+    ! Bug in gfortran 7 stops default none working
+    !$omp parallel shared( l, r, recip_E, q, n, ew_func ) &
     !$omp                          private( i, iG, pot, G, ri, cc, cy, ct, potg )
     cc = 0.0_wp
     !$omp do reduction( +:recip_E )
@@ -505,7 +508,8 @@ Contains
     sic = - Sum( q * q ) * alpha / Sqrt( pi )
 
     Call system_clock( start, rate )
-    !$omp parallel default( none ) shared( l, q, r, alpha, max_G_shells, real_E )
+    ! Bug in gfortran 7 stops default( none ) working
+    !$omp parallel shared( l, q, r, alpha, max_G_shells, real_E )
     Call real_space_energy( l, q, r, alpha, max_G_shells, real_E )
     !$omp end parallel
     Call system_clock( finish, rate )

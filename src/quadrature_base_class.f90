@@ -12,7 +12,7 @@ Module quadrature_base_module
 
   Abstract Interface
      
-     Pure Function integrate( l, n_grid, grid ) Result( r )
+     Function integrate( l, n_grid, grid ) Result( r )
        Use lattice_module, Only : lattice
        Import :: wp
        Real( wp ) :: r
