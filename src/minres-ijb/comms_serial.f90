@@ -1,6 +1,6 @@
 Module comms_serial_module
 
-  Use comms_base_module, Only : comms_base_class
+  Use comms_base_class_module, Only : comms_base_class
 
   Implicit None
 
@@ -89,6 +89,4 @@ Contains
     
   End Subroutine reduce_real
 
-
-  
 End Module comms_serial_module
