@@ -14,6 +14,8 @@ Program test
   Use comms_serial_module                 , Only : comms_serial
   Use halo_serial_module                  , Only : halo_serial_setter
   Use quadrature_trapezium_serial_module  , Only : quadrature_trapezium_serial
+  Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
+
   
   Implicit None
 
@@ -22,6 +24,7 @@ Program test
   Type( halo_serial_setter          ) :: fd_swapper, pot_swapper
   Type( quadrature_trapezium_serial ) :: grid_integrator
   Type( comms_serial                ) :: comms
+  Type( FD_Laplacian_3D             ) :: FD
   
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
@@ -47,6 +50,8 @@ Program test
   Real( wp ), Dimension( : ), Allocatable :: q_halo
   Real( wp ), Dimension( : ), Allocatable :: ei_ffp
   Real( wp ), Dimension( : ), Allocatable :: ei_ssp
+
+  Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
 
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: dG
@@ -255,7 +260,16 @@ Program test
 !!$       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
   Call fd_swapper%init ( error )
   Call pot_swapper%init( error )
-  Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
+    ! Initialise the FD template
+    dGrid_vecs = l%get_direct_vectors()
+    Do i = 1, 3
+       dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
+    End Do
+    Call FD%init( FD_order, dGrid_vecs )
+!!$  Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
+!!$       recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
+!!$       ei_ssp, force_ssp, t_grid, t_recip, error )
+  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, &
        recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid, t_recip, error )
   Write( *, * ) 'Nett force ', Sum( force_ssp( 1, : ) ), Sum( force_ssp( 2, : ) ), Sum( force_ssp( 3, : ) )
