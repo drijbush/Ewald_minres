@@ -13,7 +13,7 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo,      &
+  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo,      &
        recip_E, q_grid, pot_grid, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei, f, t_grid, t_recip, error )
 
@@ -22,7 +22,8 @@ Contains
     Use lattice_module         , Only : lattice
     Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
     Use minresmodule           , Only : minres
-    Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
+!!$    Use FD_Laplacian_3d_module , Only : FD_Laplacian_3D
+    Use FD_template_module     , Only : FD_template
     Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use quadrature_base_module , Only : quadrature_base_class
@@ -35,7 +36,8 @@ Contains
     Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r
     Real( wp )                         , Intent( In    ) :: alpha
-    Integer                            , Intent( In    ) :: FD_order
+!!$    Integer                            , Intent( In    ) :: FD_order
+    Class( FD_template )               , Intent( In    ) :: FD
     Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
     Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r_halo
     Real( wp )                         , Intent(   Out ) :: recip_E
@@ -56,8 +58,6 @@ Contains
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
 
-    Type( FD_Laplacian_3d    ) :: FD
-
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
     
     Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
@@ -69,6 +69,7 @@ Contains
 
     Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
 
+    Integer :: fd_order
     Integer :: istop, itn
     Integer :: i
     
@@ -81,6 +82,8 @@ Contains
     r_full( :, Size( q ) + 1: ) = r_halo
 
     error = 0
+
+    fd_order = FD%get_order()
 
     n_grid = Ubound( q_grid ) + 1
 
@@ -102,7 +105,7 @@ Contains
        dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
        dG( i )            = Sqrt( Dot_Product( dGrid_vecs( :, i ), dGrid_vecs( :, i ) ) )
     End Do
-    Call FD%init( FD_order, dGrid_vecs )
+!!$    Call FD%init( FD_order, dGrid_vecs )
 
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
