@@ -16,7 +16,7 @@ Module domains_module
 
 Contains  
 
-  Pure Subroutine domain_build( l, q, r, n_grid, n_proc, domain_coords, q_domain, r_domain )
+  Pure Subroutine domain_build( l, q, r, n_grid, n_proc, domain_coords, q_domain, r_domain, id, id_domain )
 
     ! GRIDS START AT ZERO
 
@@ -34,6 +34,8 @@ Contains
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: domain_coords
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_domain
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_domain
+    Integer   , Dimension(      : ), Allocatable, Intent( In    ), Optional :: id
+    Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_domain
 
     Integer, Dimension( : ), Allocatable :: i_domain
 
@@ -58,10 +60,14 @@ Contains
 
     q_domain = q(    i_domain )
     r_domain = r( :, i_domain )
+
+    If( Present( id ) .And. Present( id_domain ) ) Then
+       id_domain = id( i_domain )
+    End If
     
   End Subroutine domain_build
 
-  Subroutine domain_halo_build( l, q, r, n_grid, n_proc, domain_coords, halo_width, q_halo, r_halo )
+  Subroutine domain_halo_build( l, q, r, n_grid, n_proc, domain_coords, halo_width, q_halo, r_halo, id, id_halo )
 
     ! GRIDS START AT ZERO
 
@@ -80,6 +86,8 @@ Contains
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: halo_width
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_halo
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_halo
+    Integer   , Dimension(      : ), Allocatable, Intent( In    ), Optional :: id
+    Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_halo
 
     Real( wp ), Dimension( :, : ), Allocatable :: rtmp
     
@@ -120,6 +128,9 @@ Contains
                       rtmp( :, 1:Size( r_halo, Dim = 2 ) ) = r_halo
                       rtmp( :, Size( r_halo, Dim = 2 ) + 1 ) = riG
                       Call move_alloc( rtmp, r_halo )
+                      If( Present( id ) .And. Present( id_halo ) ) Then
+                         id_halo = [ id_halo, id( i ) ]
+                      End If
                    End If
                 End If
              End Do
