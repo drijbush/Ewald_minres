@@ -389,9 +389,9 @@ Contains
 
     debug = .False.
     eps   = Epsilon(eps)
-    If (nout > 0) Then
-       Write(nout, 1000) enter, lb, ub, checkA, precon, itnlim, rtol, shift
-    End If
+!!$    If (nout > 0) Then
+!!$       Write(nout, 1000) enter, lb, ub, checkA, precon, itnlim, rtol, shift
+!!$    End If
     istop  = 0
     itn    = 0
     Anorm  = zero
@@ -525,12 +525,12 @@ Contains
     gmin =   Huge( gmin )
     gmax = - Huge( gmax )
 
-    If (debug) Then
-       Write(*,*) ' '
-       Write(*,*) 'b    ', b
-       Write(*,*) 'beta ', beta
-       Write(*,*) ' '
-    End If
+!!$    If (debug) Then
+!!$       Write(*,*) ' '
+!!$       Write(*,*) 'b    ', b
+!!$       Write(*,*) 'beta ', beta
+!!$       Write(*,*) ' '
+!!$    End If
 
     !===================================================================
     ! Main iteration loop.
@@ -613,20 +613,20 @@ Contains
        phi    = cs * phibar                 ! phik
        phibar = sn * phibar                 ! phibark+1
 
-       If (debug) Then
-          Write(*,*) ' '
-          Write(*,*) 'v    ', v
-          Write(*,*) 'alfa ', alfa
-          Write(*,*) 'beta ', beta
-          Write(*,*) 'gamma', gamma
-          Write(*,*) 'delta', delta
-          Write(*,*) 'gbar ', gbar
-          Write(*,*) 'epsln', epsln
-          Write(*,*) 'dbar ', dbar
-          Write(*,*) 'phi  ', phi
-          Write(*,*) 'phiba', phibar
-          Write(*,*) ' '
-       End If
+!!$       If (debug) Then
+!!$          Write(*,*) ' '
+!!$          Write(*,*) 'v    ', v
+!!$          Write(*,*) 'alfa ', alfa
+!!$          Write(*,*) 'beta ', beta
+!!$          Write(*,*) 'gamma', gamma
+!!$          Write(*,*) 'delta', delta
+!!$          Write(*,*) 'gbar ', gbar
+!!$          Write(*,*) 'epsln', epsln
+!!$          Write(*,*) 'dbar ', dbar
+!!$          Write(*,*) 'phi  ', phi
+!!$          Write(*,*) 'phiba', phibar
+!!$          Write(*,*) ' '
+!!$       End If
 
        ! Update  x.
 
@@ -706,11 +706,11 @@ Contains
           If (Acond  >= 1.0_wp/eps ) prnt = .True.
           If (istop  /=  0         ) prnt = .True.
 
-          If ( prnt ) Then
-             If (    itn     == 1) Write(nout, 1200)
-             Write(nout, 1300) itn, x( lb( 1 ), lb( 2 ), lb( 3 ) ), qrnorm, Anorm, Acond
-             If (Mod(itn,10) == 0) Write(nout, 1500)
-          End If
+!!$          If ( prnt ) Then
+!!$             If (    itn     == 1) Write(nout, 1200)
+!!$             Write(nout, 1300) itn, x( lb( 1 ), lb( 2 ), lb( 3 ) ), qrnorm, Anorm, Acond
+!!$             If (Mod(itn,10) == 0) Write(nout, 1500)
+!!$          End If
        End If
        If (istop /= 0) Exit
 
@@ -722,12 +722,12 @@ Contains
     ! Display final status.
 
 900 Arnorm = Arnorml
-    If (nout  > 0) Then
-       Write(nout, 2000) exitt, istop, itn,   &
-            exitt, Anorm, Acond, &
-            exitt, rnorm, ynorm, Arnorm
-       Write(nout, 3000) exitt, msg(istop)
-    End If
+!!$    If (nout  > 0) Then
+!!$       Write(nout, 2000) exitt, istop, itn,   &
+!!$            exitt, Anorm, Acond, &
+!!$            exitt, rnorm, ynorm, Arnorm
+!!$       Write(nout, 3000) exitt, msg(istop)
+!!$    End If
 
     istop_message = msg(istop)
 

@@ -15,7 +15,6 @@ Program test
   Use halo_serial_module                  , Only : halo_serial_setter
   Use quadrature_trapezium_serial_module  , Only : quadrature_trapezium_serial
   Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
-
   
   Implicit None
 
@@ -63,7 +62,8 @@ Program test
   Real( wp ) :: recip_E_ssp, sic_ssp, real_E_ssp, tot_E_ssp
   Real( wp ) :: xshift
   Real( wp ) :: rms_delta_pot, rms_delta_force, q_error
-  Real( wp ) :: t_grid, t_real, t_recip
+  Real( wp ) :: t_grid, t_real, t_pot_solve, t_forces
+  Real( wp ) :: rnorm
   
   Integer, Dimension( 1:3 ) :: n_grid
 
@@ -77,12 +77,15 @@ Program test
   Integer :: max_G_shells = 2
   Integer :: nat_tot
   Integer :: ipx, ipy, ipz
+  Integer :: itn, istop
   Integer :: error
   
   Integer( li ) :: start, finish, rate
 
   Logical :: fexist
   Logical :: l_bad_charge
+
+  Character( Len = 132 ) :: istop_message
   
   Write( *, * ) 'Ewald param ?'
   Read ( *, * ) alpha
@@ -176,8 +179,8 @@ Program test
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !
   !  TRADITIONAL EWALD SECTION
-  Call trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_recip, t_real )
-  Write( *, * ) 'Trad Ewald long  range time: ', t_recip
+  Call trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_pot_solve, t_real )
+  Write( *, * ) 'Trad Ewald long  range time: ', t_pot_solve
   Write( *, * ) 'Trad Ewald short range time: ', t_real
 
   ! END TRADITIONAL EWALD SECTION
@@ -195,7 +198,7 @@ Program test
   Allocate( ei_ffp( 1:n ) )
   Allocate( force_ffp( 1:3, 1:n ) )
   Call ffp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
-       recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, force_ffp, t_grid, t_recip, error )
+       recip_E_ffp, q_grid, pot_grid_ffp, ei_ffp, force_ffp, t_grid, t_pot_solve, error )
   Write( *, * ) 'Nett force ', Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) )
   Open( 11, file = 'forces_ffp.dat' )
   Write( 11, * ) n, '     #number of particles'
@@ -205,7 +208,7 @@ Program test
   End Do
   Close( 11 )
   Write( *, * ) 'FFP grid  time: ', t_grid
-  Write( *, * ) 'FFP solve time: ', t_recip
+  Write( *, * ) 'FFP solve time: ', t_pot_solve
   l_bad_charge = .False.
   Select Case( error )
   Case( -1 )
@@ -257,7 +260,7 @@ Program test
   Allocate( ei_ssp( 1:n ) )
   Allocate( force_ssp( 1:3, 1:n ) )
 !!$  Call ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
-!!$       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_recip, error )
+!!$       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_pot_solve, error )
   Call fd_swapper%init ( error )
   Call pot_swapper%init( error )
     ! Initialise the FD template
@@ -268,10 +271,18 @@ Program test
     Call FD%init( FD_order, dGrid_vecs )
 !!$  Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
 !!$       recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
-!!$       ei_ssp, force_ssp, t_grid, t_recip, error )
-  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, &
+!!$       ei_ssp, force_ssp, t_grid, t_pot_solve, error )
+  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, n_grid, Lbound( q_grid ), &
        recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
-       ei_ssp, force_ssp, t_grid, t_recip, error )
+       ei_ssp, force_ssp, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
+    Write( *, * ) 'Iterative solver summary:'
+    Write( *, * ) 'alpha                = ', alpha
+    Write( *, * ) 'Grid resolution      = ', dG
+    Write( *, * ) 'Grid size            = ', n_grid
+    Write( *, * ) 'Order                = ', FD_order
+    Write( *, * ) 'iterations           = ', itn
+    Write( *, * ) 'istop                = ', istop, Trim( istop_message )
+    Write( *, * ) 'norm of the residual = ', rnorm
   Write( *, * ) 'Nett force ', Sum( force_ssp( 1, : ) ), Sum( force_ssp( 2, : ) ), Sum( force_ssp( 3, : ) )
   Open( 11, file = 'forces_ssp.dat' )
   Write( 11, * ) n, '     #number of particles'
@@ -280,8 +291,9 @@ Program test
      Write( 11, * ) i, force_ssp( :, i )
   End Do
   Close( 11 )
-  Write( *, * ) 'SSP grid  time: ', t_grid
-  Write( *, * ) 'SSP solve time: ', t_recip
+  Write( *, * ) 'SSP grid   time: ', t_grid
+  Write( *, * ) 'SSP solve  time: ', t_pot_solve
+  Write( *, * ) 'SSP forces time: ', t_forces
   l_bad_charge = .False.
   Select Case( error )
   Case( -1 )
@@ -459,7 +471,7 @@ Contains
 
   End Subroutine generate_ew_func
 
-  Subroutine trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_recip, t_real )
+  Subroutine trad_ewald( l, q, r, alpha, ew_func, recip_E, sic, real_E, tot_E, t_pot_solve, t_real )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -474,7 +486,7 @@ Contains
     Real( wp )                    , Intent( Out   ) :: SIC
     Real( wp )                    , Intent( Out   ) :: real_E
     Real( wp )                    , Intent( Out   ) :: tot_E
-    Real( wp )                    , Intent( Out   ) :: t_recip
+    Real( wp )                    , Intent( Out   ) :: t_pot_solve
     Real( wp )                    , Intent( Out   ) :: t_real
 
     Complex( wp ) :: potg
@@ -518,7 +530,7 @@ Contains
     !$omp end parallel
     recip_E = recip_E * 0.5_wp
     Call system_clock( finish, rate )
-    t_recip = Real( finish - start, wp ) / rate
+    t_pot_solve = Real( finish - start, wp ) / rate
 
     ! Self interaction correction
     sic = - Sum( q * q ) * alpha / Sqrt( pi )

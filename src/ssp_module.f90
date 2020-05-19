@@ -13,9 +13,9 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo,      &
+  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo, n_grid, lb,     &
        recip_E, q_grid, pot_grid, comms, fd_swapper, pot_swapper, grid_integrator, &
-       ei, f, t_grid, t_recip, error )
+       ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -40,9 +40,13 @@ Contains
     Class( FD_template )               , Intent( In    ) :: FD
     Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
     Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r_halo
+    Integer   , Dimension( 1:3 )       , Intent( In    ) :: n_grid
+    Integer   , Dimension( 1:3 )       , Intent( In    ) :: lb
     Real( wp )                         , Intent(   Out ) :: recip_E
-    Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
-    Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
+!!$    Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
+!!$    Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
+    Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: q_grid
+    Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: pot_grid
     Class( comms_base_class        )   , Intent( InOut ) :: comms
     Class( halo_setter_base_class  )   , Intent( InOut ) :: fd_swapper
     Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper
@@ -50,7 +54,12 @@ Contains
     Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
     Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
     Real( wp )                         , Intent(   Out ) :: t_grid
-    Real( wp )                         , Intent(   Out ) :: t_recip
+    Real( wp )                         , Intent(   Out ) :: t_pot_solve
+    Real( wp )                         , Intent(   Out ) :: t_forces
+    Integer                            , Intent(   Out ) :: itn
+    Integer                            , Intent(   Out ) :: istop
+    Character( Len = * )               , Intent(   Out ) :: istop_message
+    Real( wp )                         , Intent(   Out ) :: rnorm
     Integer                            , Intent(   Out ) :: error
 
     ! Standardize the potential so it sums to zero over the cell
@@ -64,18 +73,15 @@ Contains
 
     Real( wp ), Dimension( 1:3 ) :: dG
 
-    Integer, Dimension( 1:3 ) :: n_grid
+!!$    Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: range_gauss
 
-    Real( wp ) :: Anorm, Arnorm, Acond, rnorm, ynorm, rtol
+    Real( wp ) :: Anorm, Arnorm, Acond, ynorm, rtol
 
     Integer :: fd_order
-    Integer :: istop, itn
     Integer :: i
     
     Integer( li ) :: start, finish, rate
-
-    Character( Len = 132 ) :: istop_message
 
     Allocate( r_full( 1:3, 1:Size( q ) + Size( q_halo ) ) )
     r_full( :, 1:Size( q )    ) = r
@@ -85,16 +91,17 @@ Contains
 
     fd_order = FD%get_order()
 
-    n_grid = Ubound( q_grid ) + 1
+!!$    n_grid = Ubound( q_grid ) + 1
 
     ! Grid the charge
-    Call system_Clock( start, rate )
+    Call System_clock( start, rate )
     ! First find range of the gaussian along each of the axes of the grid
+    ! NEED TO CHANGE THIS - rnage_gauss should be input as one of the basic params of the method
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
-         Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
-    Call system_Clock( finish, rate )
+         n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
+    Call System_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
     ! Now calculate the long range potential by Finite difference
@@ -109,7 +116,7 @@ Contains
 
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
-    Call system_Clock( start, rate )
+    Call System_clock( start, rate )
     rhs = - 4.0_wp * pi * q_grid
     Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
@@ -119,18 +126,8 @@ Contains
        ! In real calculation don't need to do this!
        pot_grid = pot_grid - grid_integrator%integrate( comms, l, n_grid, pot_grid ) / l%get_volume()
     End If
-    Call system_Clock( finish, rate )
-    t_recip = Real( finish - start, wp ) / rate
-
-    ! Summarise the iterative solver
-    Write( *, * ) 'Iterative solver summary:'
-    Write( *, * ) 'alpha                = ', alpha
-    Write( *, * ) 'Grid resolution      = ', dG
-    Write( *, * ) 'Grid size            = ', n_grid
-    Write( *, * ) 'Order                = ', FD_order
-    Write( *, * ) 'iterations           = ', itn
-    Write( *, * ) 'istop                = ', istop, Trim( istop_message )
-    Write( *, * ) 'norm of the residual = ', rnorm
+    Call System_clock( finish, rate )
+    t_pot_solve = Real( finish - start, wp ) / rate
 
     ! Calculate from the potential the long range energy
     ! Two minus signs as a) this is the SCREENED charge
@@ -139,9 +136,12 @@ Contains
     
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
+    Call System_clock( start, rate )
     Call pot_swapper%init( error )
     Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
+    Call System_clock( finish, rate )
+    t_forces = Real( finish - start, wp ) / rate
     
   End Subroutine ssp_long_range
 
