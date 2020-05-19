@@ -9,4 +9,7 @@ target_include_directories(ewald-minres PUBLIC ${CMAKE_BINARY_DIR}/src/minres-ij
 target_include_directories(ewald-minres PUBLIC ${FiniteD_BINARY_DIR}/src)
 
 add_executable(test-ewald test.f90)
+add_executable(test-ewald_mpi test_mpi.f90)
+
 target_link_libraries(test-ewald ewald-minres minres-ijb fd fftw3)
+target_link_libraries(test-ewald_mpi ewald-minres minres-ijb fd fftw3)

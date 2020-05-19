@@ -14,7 +14,7 @@ Module charge_grid_module
 
 Contains
 
-  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, lb, ub, comms, grid_integrator, q_grid,error )
+  Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, n_grid, lb, ub, comms, grid_integrator, q_grid,error )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -24,13 +24,14 @@ Contains
     Use comms_base_class_module, Only : comms_base_class
     Use quadrature_base_module , Only : quadrature_base_class
 
-    Implicit none
+    Implicit None
 
     Type( lattice )                    , Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
     Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Class( quadrature_base_class      ), Intent( In    ) :: grid_integrator
@@ -65,25 +66,26 @@ Contains
 
     Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
     
-    Integer, Dimension( 1:3 ) :: n_grid
+!!$    Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_point
     Integer, Dimension( 1:3 ) :: i_grid
     Integer, Dimension( 1:3 ) :: i_g_lo, i_g_hi
 
-    Integer :: n
     Integer :: n_th, iam
     Integer :: i1, i2, i3
     Integer :: i, i_th
 
     error = 0
 
-    n = Size( q )
-    n_grid = Ubound( q_grid ) + 1
+!!$    n = Size( q )
+!!$    n_grid = Ubound( q_grid ) + 1
 
     !HACK - test in serial before parallel
-    domain_lo = [ 0, 0, 0 ]
-    n_domain = n_grid
+!!$    domain_lo = [ 0, 0, 0 ]
+!!$    n_domain = n_grid
+    domain_lo = Lbound( q_grid )
+    n_domain  = Ubound( q_grid ) - Lbound( q_grid ) + 1
     
     domain_hi = domain_lo + n_domain - 1
     
@@ -133,7 +135,7 @@ Contains
     ! bit we have just initalised
     ! Loop over atoms
     !$omp do 
-    Do i = 1, n
+    Do i = 1, Size( q )
        ! Loop over points associated with this atom which are in this domain
        ! Find point nearest to the atom, and call this the centre for the atom grid
        ! Assumes atom in fractional 0 < ri < 1
@@ -307,12 +309,12 @@ Contains
                 ! Stress term - TOTALLY UNTESTED AND PROBABLY INCOMPLETE
                 ! Need short range term due to differentiation of coulomb operator,
                 ! and SIC term
-                Do i_beta = 1, 3
-                   Do i_alpha = i_beta, 3
-                      s = - 2.0_wp * g_val * alpha * alpha * grid_vec( i_alpha ) * grid_vec( i_beta )
-                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s 
-                   End Do
-                End Do
+!!$                Do i_beta = 1, 3
+!!$                   Do i_alpha = i_beta, 3
+!!$                      s = - 2.0_wp * g_val * alpha * alpha * grid_vec( i_alpha ) * grid_vec( i_beta )
+!!$                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s 
+!!$                   End Do
+!!$                End Do
              End Do
           End Do
        End Do
@@ -322,11 +324,11 @@ Contains
 
     ! Stress - Untested!
     ! Symmetrize stress tensor
-    Do i_beta = 1, 2
-       Do i_alpha = i_beta + 1, 3
-          stress( i_beta, i_alpha ) = stress( i_alpha, i_beta )
-       End Do
-    End Do
+!!$    Do i_beta = 1, 2
+!!$       Do i_alpha = i_beta + 1, 3
+!!$          stress( i_beta, i_alpha ) = stress( i_alpha, i_beta )
+!!$       End Do
+!!$    End Do
     
   End Subroutine charge_grid_forces
 

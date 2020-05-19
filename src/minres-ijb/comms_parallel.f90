@@ -24,8 +24,8 @@ Contains
     Implicit None
 
     Class( comms_parallel ), Intent(   Out ) :: c
-    Integer              , Intent( In    ) :: comm
-    Integer              , Intent(   Out ) :: error
+    Integer                , Intent( In    ) :: comm
+    Integer                , Intent(   Out ) :: error
 
     Type( mpi_comm ) :: comm_f08
 

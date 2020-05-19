@@ -83,7 +83,7 @@ Contains
     Allocate( comms_serial :: comms )
     Allocate( quadrature_trapezium_serial :: grid_integrator )
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
-         Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
+         n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
