@@ -103,6 +103,7 @@ Contains
          n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call System_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
+    Return
 
     ! Now calculate the long range potential by Finite difference
 
