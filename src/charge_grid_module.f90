@@ -6,7 +6,7 @@ Module charge_grid_module
 
   Implicit None
 
-  Public :: charge_grid_calculate, charge_grid_find_range, charge_grid_forces
+  Public :: charge_grid_calculate, charge_grid_find_range, charge_grid_forces, charge_grid_get_n_grid
 
   Private
 
@@ -30,7 +30,8 @@ Contains
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+!!$    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+    Integer   ,                          Intent( In    ) :: range_gauss
     Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
     Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
@@ -211,7 +212,8 @@ Contains
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1:         ), Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+!!$    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+    Integer   ,                          Intent( In    ) :: range_gauss
     Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
     Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
@@ -262,8 +264,10 @@ Contains
     !           the upper edge of the domain. But need to think this through. An alternative
     !           would be to use Floor instead of Nint in finding the centre grid point below,
     !           but this would be less accurate
-    Call pot_swapper%allocate( lb, ub, range_gauss( 1 ) + 1, pot_with_halo )
-    Call pot_swapper%fill( range_gauss( 1 ) + 1, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
+    Call pot_swapper%allocate( lb, ub, range_gauss + 1, pot_with_halo )
+    Call pot_swapper%fill( range_gauss + 1, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
+!!$    Call pot_swapper%allocate( lb, ub, range_gauss, pot_with_halo )
+!!$    Call pot_swapper%fill( range_gauss, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
     If( error /= 0 ) Then
        Error Stop "halo filler problem in forces"
     End If
@@ -285,9 +289,12 @@ Contains
        !
        ei(    i ) = 0.0_wp
        f ( :, i ) = 0.0_wp
-       Do i3 = - range_gauss( 3 ), range_gauss( 3 )
-          Do i2 = - range_gauss( 2 ), range_gauss( 2 )
-             Do i1 = - range_gauss( 1 ), range_gauss( 1 )
+!!$       Do i3 = - range_gauss( 3 ), range_gauss( 3 )
+!!$          Do i2 = - range_gauss( 2 ), range_gauss( 2 )
+!!$             Do i1 = - range_gauss( 1 ), range_gauss( 1 )
+       Do i3 = - range_gauss, range_gauss
+          Do i2 = - range_gauss, range_gauss
+             Do i1 = - range_gauss, range_gauss
                 i_atom_grid = [ i1, i2, i3 ]
                 ! The indices of the point in space
                 i_point = i_atom_centre + i_atom_grid
@@ -333,6 +340,9 @@ Contains
 
   Subroutine charge_grid_find_range( l, alpha, n_grid, range_gauss )
 
+    ! DEPRECATED!!!!  -base all on range_gauss now, not n_grid
+    ! i.e. invert the argument
+    
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
     Use lattice_module, Only : lattice
@@ -369,5 +379,45 @@ Contains
     End Do
 
   End Subroutine charge_grid_find_range
+
+  Subroutine charge_grid_get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
+
+    Type( lattice ),              Intent( In    ) :: l
+    Real( wp ),                   Intent( In    ) :: alpha
+    Integer   ,                   Intent( In    ) :: range_gauss
+    Real( wp ),                   Intent( In    ) :: gauss_tol
+    Integer   , Dimension( 1:3 ), Intent(   Out ) :: n_grid
+
+    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+
+    Real( wp ), Dimension( 1:3, 1:3 ) :: dir_vecs
+    
+    Real( wp ), Dimension( 1:3 ) :: dr
+
+    Real( wp ) :: Gsq
+    
+    Real( wp ) :: max_r
+
+    Integer :: i
+
+    ! Find range after which the NORMALISED gaussian decays to below the tolerance
+    max_r = pi * Sqrt( pi ) * gauss_tol / ( alpha * alpha * alpha )
+    max_r = - Log( max_r ) / ( alpha * alpha )
+    max_r = Sqrt( max_r )
+
+    ! Now work out what resolution that require given the number of grid points
+    ! we are using to represent the gaussian
+    dr = max_r / range_gauss
+
+    ! And so how many grid points along each lattice vector, rounding up
+    ! to ensure accuracy
+    dir_vecs = l%get_direct_vectors()
+
+    Do i = 1, 3
+       Gsq = Dot_product( dir_vecs( :, i ), dir_vecs( :, i ) )
+       n_grid( i ) = Ceiling( Sqrt( Gsq ) / dr( i ) )
+    End Do
+
+  End Subroutine charge_grid_get_n_grid
 
 End Module charge_grid_module

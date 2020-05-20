@@ -82,7 +82,8 @@ Contains
     ! Now grid the charge
     Allocate( comms_serial :: comms )
     Allocate( quadrature_trapezium_serial :: grid_integrator )
-    Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
+    ! ( 1 ) on range gauss hold over from when we allowed different ranges in each direction
+    Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss( 1 ), &
          n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call system_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
@@ -129,7 +130,8 @@ Contains
     ! For now while implementing halos
    Allocate( halo_serial_setter :: pot_swapper )
    Call pot_swapper%init( error )
-   Call charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
+   ! ( 1 ) on range gauss hold over from when we allowed different ranges in each direction
+   Call charge_grid_forces( l, alpha, q, r, range_gauss( 1 ), n_grid, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
     
   End Subroutine ffp_long_range
