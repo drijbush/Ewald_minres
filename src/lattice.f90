@@ -53,7 +53,6 @@ Contains
     Real( wp )      ,                    Intent( In    ) :: alpha
 
     Real( wp ), Parameter :: default_dir_vec_cutoff = 500.0_wp
-!!$    Real( wp ), Parameter :: default_dir_vec_cutoff = 5000.0_wp
     Real( wp ), Parameter :: default_rec_vec_cutoff = 100.0_wp
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: Q12, Q23, Q
@@ -165,7 +164,6 @@ Contains
     ! NEED TO THIK ABOUT STORAGE OF RECIP VECS
     Do While( 4.0_wp * pi * Exp( - 4.0_wp * pi * vec_cutoff * vec_cutoff / ( 4.0_wp * alpha * alpha ) ) / &
          ( 4.0_wp * pi * vec_cutoff * vec_cutoff * l%V ) < 1e-12_wp )
-!!$         ( 4.0_wp * pi * vec_cutoff * vec_cutoff * l%V ) < 1e-15_wp )
        vec_cutoff = vec_cutoff - 0.1_wp
     End Do
     Call generate_vec_list( l%dim, vec_cutoff, l%rec_vecs, l%rec_vec_list )
