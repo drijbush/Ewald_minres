@@ -13,7 +13,7 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo, n_grid, lb,     &
+  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo, range_gauss, n_grid, lb,     &
        recip_E, q_grid, pot_grid, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
 
@@ -40,6 +40,7 @@ Contains
     Class( FD_template )               , Intent( In    ) :: FD
     Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
     Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r_halo
+    Integer   ,                          Intent( In    ) :: range_gauss
     Integer   , Dimension( 1:3 )       , Intent( In    ) :: n_grid
     Integer   , Dimension( 1:3 )       , Intent( In    ) :: lb
     Real( wp )                         , Intent(   Out ) :: recip_E
@@ -69,7 +70,7 @@ Contains
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
     
-    Integer, Dimension( 1:3 ) :: range_gauss
+!!$    Integer, Dimension( 1:3 ) :: range_gauss
 
     Real( wp ) :: Anorm, Arnorm, Acond, ynorm, rtol
 
@@ -85,14 +86,8 @@ Contains
 
     fd_order = FD%get_order()
 
-!!$    n_grid = Ubound( q_grid ) + 1
-
     ! Grid the charge
     Call System_clock( start, rate )
-    ! First find range of the gaussian along each of the axes of the grid
-    ! NEED TO CHANGE THIS - rnage_gauss should be input as one of the basic params of the method
-    Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
-    ! Now grid the charge
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
          n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call System_clock( finish, rate )
