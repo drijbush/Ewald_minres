@@ -10,12 +10,10 @@ Program test_mpi
   Use charge_grid_module                  , Only : charge_grid_get_n_grid
   Use fast_fourier_poisson_module         , Only : ffp_long_range, ffp_sic
   Use symetrically_screened_poisson_module, Only : ssp_long_range, ssp_sic
-!!$  Use real_space_module                   , Only : real_space_energy
   Use grid_io_module                      , Only : grid_io_save
   Use domains_module                      , Only : domain_build, domain_halo_build, domain_get_params
   Use comms_parallel_module               , Only : comms_parallel
   Use halo_parallel_module                , Only : halo_parallel_setter
-!!$  Use halo_serial_module                , Only : halo_serial_setter
   Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
   Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
   
@@ -24,7 +22,6 @@ Program test_mpi
   Type( lattice  ) :: l
   Type( mpi_comm ) :: cart_comm
   Type( halo_parallel_setter          ) :: fd_swapper
-!!$  Type( halo_serial_setter          ) :: fd_swapper
   Type( halo_parallel_setter          ) :: pot_swapper
   Type( quadrature_trapezium_rule     ) :: grid_integrator
   Type( comms_parallel                ) :: comms
@@ -55,7 +52,7 @@ Program test_mpi
   Real( wp ), Dimension( 1:3 ) :: dg
   Real( wp ), Dimension( 1:3 ) :: t
 
-  Real( wp ) :: alpha
+  Real( wp ) :: alpha, rtol
   Real( wp ) :: gauss_tol
   Real( wp ) :: xshift
   Real( wp ) :: recip_E_ffp
@@ -97,8 +94,10 @@ Program test_mpi
      Read ( *, * ) alpha
      Write( *, * ) 'Number of ppoints for gaussians?'
      Read ( *, * ) range_gauss
-     Write( *, * ) 'Cut off tolerance for gaussians ?'
+     Write( *, * ) 'Cut off tolerance for gaussians?'
      Read ( *, * ) gauss_tol
+     Write( *, * ) 'REsidual tolerance for solver?'
+     Read ( *, * ) rtol
      Write( *, * ) 'FD_order?'
      Read ( *, * ) FD_order
      Write( *, * ) 'xshift?'
@@ -113,6 +112,7 @@ Program test_mpi
   Call mpi_bcast( alpha      ,         1, mpi_double_precision, 0, mpi_comm_world )
   Call mpi_bcast( range_gauss,         1, mpi_integer         , 0, mpi_comm_world )
   Call mpi_bcast( gauss_tol  ,         1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( rtol       ,         1, mpi_double_precision, 0, mpi_comm_world )
   Call mpi_bcast( FD_order   ,         1, mpi_integer         , 0, mpi_comm_world )
   Call mpi_bcast( n          ,         1, mpi_integer         , 0, mpi_comm_world )
   Call mpi_bcast( a          , Size( a ), mpi_double_precision, 0, mpi_comm_world )
@@ -264,7 +264,7 @@ Program test_mpi
   Call pot_swapper%init( n_grid_domain, range_gauss + 1, cart_comm, error )
 !!$  Call pot_swapper%init( n_grid_domain, range_gauss, cart_comm, error )
   ! Solve for the long range using finiste difference
-  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid_ssp ), &
+  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid_ssp ), rtol, &
        recip_E_ssp, q_grid_ssp, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid_ssp, t_pot_solve_ssp, t_forces_ssp, itn, istop, istop_message, rnorm, error )
   ! Check charge grid

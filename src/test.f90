@@ -55,7 +55,7 @@ Program test
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: dG
 
-  Real( wp ) :: alpha
+  Real( wp ) :: alpha, rtol
   Real( wp ) :: sic
   Real( wp ) :: recip_E, real_E, tot_E
   Real( wp ) :: recip_E_ffp, sic_ffp, real_E_ffp, tot_E_ffp
@@ -89,10 +89,12 @@ Program test
   
   Write( *, * ) 'Ewald param ?'
   Read ( *, * ) alpha
-!!$  Write( *, * ) 'Grid Dims ?'
-!!$  Read ( *, * ) n_grid
   Write( *, * ) 'Number of ppoints for gaussians?'
   Read ( *, * ) range_gauss
+  Write( *, * ) 'Cut off tolerance for gaussians?'
+  Read ( *, * ) gauss_tol
+  Write( *, * ) 'Residual tolerance for solver?'
+  Read ( *, * ) rtol
   Write( *, * ) 'FD_order?'
   Read ( *, * ) FD_order
   Write( *, * ) 'xshift?'
@@ -272,7 +274,7 @@ Program test
 !!$  Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
 !!$       recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
 !!$       ei_ssp, force_ssp, t_grid, t_pot_solve, error )
-  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid ), &
+  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid ), rtol, &
        recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
     Write( *, * ) 'Iterative solver summary:'
