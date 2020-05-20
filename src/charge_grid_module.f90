@@ -198,7 +198,7 @@ Contains
 
   End Subroutine charge_grid_calculate
 
-  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, lb, ub, pot_grid, ei, f )
+  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, lb, ub, pot_grid, ei, f )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -212,6 +212,7 @@ Contains
     Real( wp ), Dimension( 1:         ), Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
     Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
+    Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
     Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
     Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
@@ -237,7 +238,6 @@ Contains
     Real( wp ) :: dV
     Real( wp ) :: s
     
-    Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_atom_grid
     Integer, Dimension( 1:3 ) :: i_point
@@ -249,7 +249,6 @@ Contains
     Integer :: error
 
     n      = Size( q )
-    n_grid = Ubound( pot_grid ) + 1
     dV     = l%get_volume() / Product( n_grid )
 
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )

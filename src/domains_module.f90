@@ -34,7 +34,7 @@ Contains
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: domain_coords
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_domain
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_domain
-    Integer   , Dimension(      : ), Allocatable, Intent( In    ), Optional :: id
+    Integer   , Dimension(      : ),              Intent( In    ), Optional :: id
     Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_domain
 
     Integer, Dimension( : ), Allocatable :: i_domain
@@ -48,7 +48,7 @@ Contains
     n = Size( q )
 
     Call domain_get_params( n_grid, n_proc, domain_coords, n_grid_domain, domain_base_coords )
-    
+
     Allocate( i_domain( 1:0 ) )
 
     Do i = 1, n
@@ -86,7 +86,7 @@ Contains
     Integer   , Dimension( 1:3    ),              Intent( In    ) :: halo_width
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_halo
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_halo
-    Integer   , Dimension(      : ), Allocatable, Intent( In    ), Optional :: id
+    Integer   , Dimension(      : ),              Intent( In    ), Optional :: id
     Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_halo
 
     Real( wp ), Dimension( :, : ), Allocatable :: rtmp
