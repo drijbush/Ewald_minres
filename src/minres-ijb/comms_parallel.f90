@@ -145,7 +145,5 @@ Contains
     Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_sum, comm_f08 )
     
   End Subroutine reduce_real
-
-
   
 End Module comms_parallel_module
