@@ -30,7 +30,6 @@ Contains
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
-!!$    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
     Integer   ,                          Intent( In    ) :: range_gauss
     Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
     Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
@@ -48,7 +47,6 @@ Contains
     ! If we have to do this this really tells us that our representation of the charge density
     ! is not good enough, so print a warning
     Logical   , Parameter :: stabilise_q     = .True.
-!!$    Logical   , Parameter :: stabilise_q     = .False.
 
     Real( wp ), Parameter :: stabilise_q_tol = 1e-10_wp
 
@@ -67,7 +65,6 @@ Contains
 
     Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
     
-!!$    Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_point
     Integer, Dimension( 1:3 ) :: i_grid
@@ -79,12 +76,6 @@ Contains
 
     error = 0
 
-!!$    n = Size( q )
-!!$    n_grid = Ubound( q_grid ) + 1
-
-    !HACK - test in serial before parallel
-!!$    domain_lo = [ 0, 0, 0 ]
-!!$    n_domain = n_grid
     domain_lo = Lbound( q_grid )
     n_domain  = Ubound( q_grid ) - Lbound( q_grid ) + 1
     
@@ -212,7 +203,6 @@ Contains
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1:         ), Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
-!!$    Integer   , Dimension( 1:3        ), Intent( In    ) :: range_gauss
     Integer   ,                          Intent( In    ) :: range_gauss
     Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
     Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
@@ -266,8 +256,6 @@ Contains
     !           but this would be less accurate
     Call pot_swapper%allocate( lb, ub, range_gauss + 1, pot_with_halo )
     Call pot_swapper%fill( range_gauss + 1, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
-!!$    Call pot_swapper%allocate( lb, ub, range_gauss, pot_with_halo )
-!!$    Call pot_swapper%fill( range_gauss, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
     If( error /= 0 ) Then
        Error Stop "halo filler problem in forces"
     End If
@@ -289,9 +277,6 @@ Contains
        !
        ei(    i ) = 0.0_wp
        f ( :, i ) = 0.0_wp
-!!$       Do i3 = - range_gauss( 3 ), range_gauss( 3 )
-!!$          Do i2 = - range_gauss( 2 ), range_gauss( 2 )
-!!$             Do i1 = - range_gauss( 1 ), range_gauss( 1 )
        Do i3 = - range_gauss, range_gauss
           Do i2 = - range_gauss, range_gauss
              Do i1 = - range_gauss, range_gauss

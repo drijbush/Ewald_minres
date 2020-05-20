@@ -66,8 +66,6 @@ Contains
     Logical, Parameter :: standardise = .True.
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
-    
-!!$    Integer, Dimension( 1:3 ) :: range_gauss
 
     Real( wp ) :: Anorm, Arnorm, Acond, ynorm
     
@@ -111,11 +109,9 @@ Contains
     !                    b) I like to just add up the energies, having to subtract it is confusing
     recip_E = - 0.5_wp * grid_integrator%integrate( comms, l, n_grid, - q_grid * pot_grid )
     
-!!$    Return
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
     Call System_clock( start, rate )
-!!$    Call pot_swapper%init( error )
     Call charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
     Call System_clock( finish, rate )

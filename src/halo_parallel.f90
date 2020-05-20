@@ -80,8 +80,6 @@ Contains
     Integer :: n_loc_max, n_loc_min
     Integer :: i
 
-!!$    Integer :: iam ! debugging
-
     Logical, Dimension( 1:3 ) :: is_this_axis
     Logical, Dimension( 1:3 ) :: is_this_orthog_plane
 
@@ -147,44 +145,10 @@ Contains
             H%my_coords( i ), H%local_size( i ), H%halo_width, &
             H%total_size( i ), H%first_point( i ), one_d_recv( i ), one_d_send( i ) )
        Call mpi_comm_free( axis_comm, error )
-!!$       Call mpi_comm_rank( comm, iam )
-!!$       Write( 10 + iam, * ) 'dir = ', i
-!!$       Write( 10 + iam, * ) 'recv coord ', one_d_recv( i )%coords
-!!$       Write( 10 + iam, * ) 'recv size  ', one_d_recv( i )%sizes
-!!$       Write( 10 + iam, * ) 'recv start ', one_d_recv( i )%starts
-!!$       Write( 10 + iam, * ) 'send coord ', one_d_send( i )%coords
-!!$       Write( 10 + iam, * ) 'send size  ', one_d_send( i )%sizes
-!!$       Write( 10 + iam, * ) 'send start ', one_d_send( i )%starts
     End Do
 
     Call combine_comms( H, one_d_recv, one_d_send )
 
-!!$    Write( 10 + iam, * ) 
-!!$    Write( 10 + iam, * ) 'Recv'
-!!$    Do i = 1, Size( H%recv_comms )
-!!$       Write( 10 + iam, * ) i
-!!$       Write( 10 + iam, * ) H%recv_comms( i )%remote_coord
-!!$       Write( 10 + iam, * ) H%recv_comms( i )%remote_rank
-!!$       Write( 10 + iam, * ) H%recv_comms( i )%comm_size
-!!$       Write( 10 + iam, * ) H%recv_comms( i )%comm_start
-!!$       Write( 10 + iam, * ) H%recv_comms( i )%tag
-!!$       Write( 10 + iam, * ) H%recv_comms( i )%is_local
-!!$       Write( 10 + iam, * ) 
-!!$    End Do
-!!$    
-!!$    Write( 10 + iam, * ) 
-!!$    Write( 10 + iam, * ) 'Send'
-!!$    Do i = 1, Size( H%send_comms )
-!!$       Write( 10 + iam, * ) i
-!!$       Write( 10 + iam, * ) H%send_comms( i )%remote_coord
-!!$       Write( 10 + iam, * ) H%send_comms( i )%remote_rank
-!!$       Write( 10 + iam, * ) H%send_comms( i )%comm_size
-!!$       Write( 10 + iam, * ) H%send_comms( i )%comm_start
-!!$       Write( 10 + iam, * ) H%send_comms( i )%tag
-!!$       Write( 10 + iam, * ) H%send_comms( i )%is_local
-!!$       Write( 10 + iam, * ) 
-!!$    End Do
-    
   Contains
 
     Subroutine combine_comms( H, one_d_recv, one_d_send )
@@ -482,7 +446,6 @@ Contains
     Integer   ,                                                  Intent( In    ) :: halo_width
     Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
     Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
-!!$    Real( wp ), Dimension( hdlb( 1 ):, hdlb( 2 ):, hdlb( 3 ): ), Intent(   Out ) :: hout
     Real( wp ), Dimension( - halo_width:, - halo_width:, - halo_width: ), Intent(   Out ) :: hout
     Integer                                                    , Intent(   Out ) :: error
 
