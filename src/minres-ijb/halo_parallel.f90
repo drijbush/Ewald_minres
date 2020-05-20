@@ -406,28 +406,8 @@ Contains
       Allocate( size_to_send_to ( 0:-1 ) )
       Allocate( send_start      ( 0:-1 ) )
       
-      ! First consider to the left
-      points_remaining = halo_width
-      left_first_proc = my_coord
-      end_comm = halo_width - 1
-      Do While( points_remaining > 0 )
-         left_first_proc = left_first_proc - 1
-         proc_periodic = Merge( Modulo( left_first_proc, n_procs ), left_first_proc, is_periodic )
-         size_this_proc = Min( points_remaining, axis_local_sizes( proc_periodic ) )
-         start_comm = end_comm - size_this_proc + 1
-         coord_to_send_to = [ coord_to_send_to, left_first_proc ]
-         size_to_send_to  = [ size_to_send_to , size_this_proc  ] 
-         send_start       = [ send_start        , start_comm    ]
-         points_remaining = points_remaining - size_this_proc
-         end_comm = start_comm - 1
-      End Do
-
-      ! Now the middle - i.e. comms orthogonal to this axis, so just a local size length bit
-      coord_to_send_to = [ coord_to_send_to, my_coord   ]
-      size_to_send_to  = [ size_to_send_to , local_size ]
-      send_start       = [ send_start      , 0          ]
-
-      ! And now to the right
+      ! Note we need to order the sends in the opposite order to the recvs
+      ! So first to the right
       points_remaining = halo_width
       right_last_proc = my_coord
       start_comm = local_size - halo_width
@@ -441,6 +421,27 @@ Contains
          send_start       = [ send_start      , start_comm      ]
          points_remaining = points_remaining - size_this_proc
          start_comm = start_comm + size_this_proc
+      End Do
+
+      ! Now the middle - i.e. comms orthogonal to this axis, so just a local size length bit
+      coord_to_send_to = [ coord_to_send_to, my_coord   ]
+      size_to_send_to  = [ size_to_send_to , local_size ]
+      send_start       = [ send_start      , 0          ]
+
+      ! Last consider to the left
+      points_remaining = halo_width
+      left_first_proc = my_coord
+      end_comm = halo_width - 1
+      Do While( points_remaining > 0 )
+         left_first_proc = left_first_proc - 1
+         proc_periodic = Merge( Modulo( left_first_proc, n_procs ), left_first_proc, is_periodic )
+         size_this_proc = Min( points_remaining, axis_local_sizes( proc_periodic ) )
+         start_comm = end_comm - size_this_proc + 1
+         coord_to_send_to = [ coord_to_send_to, left_first_proc ]
+         size_to_send_to  = [ size_to_send_to , size_this_proc  ] 
+         send_start       = [ send_start        , start_comm    ]
+         points_remaining = points_remaining - size_this_proc
+         end_comm = start_comm - 1
       End Do
 
       one_d_send%coords = coord_to_send_to
@@ -481,7 +482,8 @@ Contains
     Integer   ,                                                  Intent( In    ) :: halo_width
     Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
     Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
-    Real( wp ), Dimension( hdlb( 1 ):, hdlb( 2 ):, hdlb( 3 ): ), Intent(   Out ) :: hout
+!!$    Real( wp ), Dimension( hdlb( 1 ):, hdlb( 2 ):, hdlb( 3 ): ), Intent(   Out ) :: hout
+    Real( wp ), Dimension( - halo_width:, - halo_width:, - halo_width: ), Intent(   Out ) :: hout
     Integer                                                    , Intent(   Out ) :: error
 
     Integer, Dimension( 1:3 ) :: s, e, ss, es

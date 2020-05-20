@@ -408,7 +408,7 @@ Contains
 !!$    halo_width = FD_order / 2
 
     ! Looks like a bug in get order! Returns twice what expected ...
-    halo_width = FD_order 
+    halo_width = FD_order
     Call halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
 
     ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
@@ -482,6 +482,8 @@ Contains
        t = contract( comms, y, r2 )       
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
+!!$       Call MPI_finalize( error )
+!!$       Stop
        If (z > epsa) Then
           istop = 6
           go to 900
@@ -757,7 +759,7 @@ Contains
 
     Real( wp ) :: d
 
-    Class( comms_base_class )       , Intent( In    ) :: comms
+    Class( comms_base_class )       , Intent( In ) :: comms
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: x
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: y
 

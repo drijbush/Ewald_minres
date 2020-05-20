@@ -69,17 +69,11 @@ Contains
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
     
-    Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
-
-    Real( wp ), Dimension( 1:3 ) :: dG
-
-!!$    Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: range_gauss
 
     Real( wp ) :: Anorm, Arnorm, Acond, ynorm, rtol
 
     Integer :: fd_order
-    Integer :: i
     
     Integer( li ) :: start, finish, rate
 
@@ -103,17 +97,8 @@ Contains
          n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
     Call System_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
-    Return
 
     ! Now calculate the long range potential by Finite difference
-
-    ! Initialise the FD template
-    dGrid_vecs = l%get_direct_vectors()
-    Do i = 1, 3
-       dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
-       dG( i )            = Sqrt( Dot_Product( dGrid_vecs( :, i ), dGrid_vecs( :, i ) ) )
-    End Do
-!!$    Call FD%init( FD_order, dGrid_vecs )
 
     ! And solve  Possion equation on the grid by FDs
     rtol = 1.0e-12_wp
@@ -122,6 +107,7 @@ Contains
     Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
          istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+    Return
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
