@@ -107,7 +107,6 @@ Contains
     Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
          pot_grid, 1000, 99, rtol,                      &
          istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
-    Return
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
@@ -121,11 +120,12 @@ Contains
     !                    b) I like to just add up the energies, having to subtract it is confusing
     recip_E = - 0.5_wp * grid_integrator%integrate( comms, l, n_grid, - q_grid * pot_grid )
     
+!!$    Return
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
     Call System_clock( start, rate )
-    Call pot_swapper%init( error )
-    Call charge_grid_forces( l, alpha, q, r, range_gauss, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
+!!$    Call pot_swapper%init( error )
+    Call charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, Lbound( pot_grid ), Ubound( pot_grid ), &
          pot_grid, ei, f )
     Call System_clock( finish, rate )
     t_forces = Real( finish - start, wp ) / rate
