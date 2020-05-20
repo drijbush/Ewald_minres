@@ -1,4 +1,4 @@
-Module quadrature_trapezium_parallel_module
+Module quadrature_trapezium_rule_module
 
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -6,29 +6,28 @@ Module quadrature_trapezium_parallel_module
 
   Implicit None
 
-  Type, Public, Extends( quadrature_base_class ) :: quadrature_trapezium_parallel
+  Type, Public, Extends( quadrature_base_class ) :: quadrature_trapezium_rule
      Private
    Contains
-     Procedure, Public :: integrate => trapezium_parallel
-  End type quadrature_trapezium_parallel
+     Procedure, Public :: integrate => trapezium_rule
+  End type quadrature_trapezium_rule
 
 Contains
 
-  Function trapezium_parallel( q, comms, l, n_grid, grid ) Result( r )
-    
+  Function trapezium_rule( q, comms, l, n_grid, grid ) Result( r )
+
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Use comms_base_class_module, Only : comms_base_class
-
-    Use lattice_module, Only : lattice
+    Use lattice_module         , Only : lattice
 
     Real( wp ) :: r
 
-    Class( quadrature_trapezium_parallel ), Intent( In ) :: q
-    Class( comms_base_class              ), Intent( In ) :: comms
-    Type( lattice )                       , Intent( In ) :: l
-    Integer   , Dimension( :       )      , Intent( In ) :: n_grid
-    Real( wp ), Dimension( :, :, : )      , Intent( In ) :: grid
+    Class( quadrature_trapezium_rule   ), Intent( In ) :: q
+    Class( comms_base_class            ), Intent( In ) :: comms
+    Type( lattice )                     , Intent( In ) :: l
+    Integer   , Dimension( :       )    , Intent( In ) :: n_grid
+    Real( wp ), Dimension( :, :, : )    , Intent( In ) :: grid
 
     Real( wp ) :: dV
     Real( wp ) :: c, y, t
@@ -54,10 +53,10 @@ Contains
     End Do
     !$omp end do
     !$omp end parallel
-    r = r * dV 
- 
+    r = r * dV
+
     Call comms%reduce( r )
     
-  End Function trapezium_parallel
-
-End Module quadrature_trapezium_parallel_module
+  End Function trapezium_rule
+  
+End Module quadrature_trapezium_rule_module

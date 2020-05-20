@@ -23,7 +23,7 @@ Contains
     Use comms_base_class_module, Only : comms_base_class
     Use comms_serial_module    , Only : comms_serial
     Use quadrature_base_module , Only : quadrature_base_class
-    Use quadrature_trapezium_serial_module, Only : quadrature_trapezium_serial
+    Use quadrature_trapezium_rule_module, Only : quadrature_trapezium_rule
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use halo_serial_module     , Only : halo_serial_setter
 
@@ -81,7 +81,7 @@ Contains
     Call charge_grid_find_range( l, alpha, n_grid, range_gauss )
     ! Now grid the charge
     Allocate( comms_serial :: comms )
-    Allocate( quadrature_trapezium_serial :: grid_integrator )
+    Allocate( quadrature_trapezium_rule :: grid_integrator )
     ! ( 1 ) on range gauss hold over from when we allowed different ranges in each direction
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss( 1 ), &
          n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )

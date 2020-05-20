@@ -13,17 +13,17 @@ Program test
   Use domains_module                      , Only : domain_build, domain_halo_build
   Use comms_serial_module                 , Only : comms_serial
   Use halo_serial_module                  , Only : halo_serial_setter
-  Use quadrature_trapezium_serial_module  , Only : quadrature_trapezium_serial
+  Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
   Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
   
   Implicit None
 
   Type( lattice ) :: l
 
-  Type( halo_serial_setter          ) :: fd_swapper, pot_swapper
-  Type( quadrature_trapezium_serial ) :: grid_integrator
-  Type( comms_serial                ) :: comms
-  Type( FD_Laplacian_3D             ) :: FD
+  Type( halo_serial_setter        ) :: fd_swapper, pot_swapper
+  Type( quadrature_trapezium_rule ) :: grid_integrator
+  Type( comms_serial              ) :: comms
+  Type( FD_Laplacian_3D           ) :: FD
   
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
