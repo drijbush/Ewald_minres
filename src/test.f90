@@ -15,7 +15,8 @@ Program test
   Use halo_serial_module                  , Only : halo_serial_setter
   Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
   Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
-  
+  Use equation_solver_minres_module       , Only : equation_solver_minres
+ 
   Implicit None
 
   Type( lattice ) :: l
@@ -24,6 +25,7 @@ Program test
   Type( quadrature_trapezium_rule ) :: grid_integrator
   Type( comms_serial              ) :: comms
   Type( FD_Laplacian_3D           ) :: FD
+  Type( equation_solver_minres    ) :: solver
   
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
@@ -275,7 +277,7 @@ Program test
 !!$       recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
 !!$       ei_ssp, force_ssp, t_grid, t_pot_solve, error )
   Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid ), rtol, &
-       recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
+       recip_E_ssp, q_grid, pot_grid_ssp, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
     Write( *, * ) 'Iterative solver summary:'
     Write( *, * ) 'alpha                = ', alpha
