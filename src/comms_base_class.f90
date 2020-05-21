@@ -8,12 +8,12 @@ Module comms_base_class_module
      Integer :: communicator
    Contains
      Procedure( reduce_real    ), Deferred, Public :: reduce
-     Procedure( set_comm       ), Deferred, Public  :: set_comm
-     Procedure( get_comm       ), Deferred, Public  :: get_comm
-     Procedure( inquiry_1d     ), Deferred, Public  :: get_rank
-     Procedure( inquiry_1d     ), Deferred, Public  :: get_size
-     Procedure( inquiry_3d     ), Deferred, Public  :: get_proc_coords
-     Procedure( inquiry_3d     ), Deferred, Public  :: get_proc_grid
+     Procedure( set_comm       ), Deferred, Public :: set_comm
+     Procedure( get_comm       ), Deferred, Public :: get_comm
+     Procedure( inquiry_1d     ), Deferred, Public :: get_rank
+     Procedure( inquiry_1d     ), Deferred, Public :: get_size
+     Procedure( inquiry_3d     ), Deferred, Public :: get_proc_coords
+     Procedure( inquiry_3d     ), Deferred, Public :: get_proc_grid
   End type comms_base_class
 
   Abstract Interface

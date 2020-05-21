@@ -30,49 +30,61 @@
 ! Apr-May 2020: Adapted by Ian Bush (Oxford University) for us in SSP Poisson solver
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Module minresModule
+Module equation_solver_minres_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use equation_solver_base_class_module, Only : equation_solver_base_class
+  
   Implicit None
-  Public   :: MINRES
 
+  Type, Public, Extends( equation_solver_base_class ) :: equation_solver_minres
+   Contains
+     Procedure, Public :: solve => minres
+  End type equation_solver_minres
+
+  Private
+  
 Contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  Subroutine MINRES( lb, ub, FD_operator, comms, halo_swapper, Msolve, b, shift, checkA, precon, &
-       x, itnlim, nout, rtol,                      &
-       istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+  Subroutine MINRES( method, &
+       lb, ub, FD_operator, comms, halo_swapper, Msolve, b, itnlim, rtol,  precon, &
+       x, istop, istop_message, itn, rnorm )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
-  
-    Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
-    Class( FD_template ), Intent( In ) :: FD_operator
-    Class( halo_setter_base_class ), Intent( InOut ) :: halo_swapper
-    Class( comms_base_class       ), Intent( In    ) :: comms
-    Integer,  Intent(in)    :: itnlim, nout
-    Logical,  Intent(in)    :: checkA, precon
-    Real(wp), Intent(in)    :: b( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real(wp), Intent(in)    :: shift, rtol
-    Real(wp), Intent(out)   :: x( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Integer,  Intent(out)   :: istop, itn
-    Character( Len = * )    :: istop_message
-    Real(wp), Intent(out)   :: Anorm, Acond, rnorm, Arnorm, ynorm
 
+    Class( equation_solver_minres )                       , Intent( In    ) :: method
+    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
+    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
+    Class( FD_template )                                  , Intent( In    ) :: FD_operator
+    Class( halo_setter_base_class )                       , Intent( InOut ) :: halo_swapper
+    Class( comms_base_class       )                       , Intent( In    ) :: comms
+    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
+    Integer                                               , Intent( In    ) :: itnlim
+    Real( wp )                                            , Intent( In    ) :: rtol
+    Logical                                               , Intent( In    ) :: precon
+    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
+    Integer                                               , Intent(   Out ) :: istop
+    Character( Len = * )                                  , Intent(   Out ) :: istop_message
+    Real( wp )                                            , Intent(   Out ) :: rnorm
+    Integer                                               , Intent(   Out ) :: itn
     Interface
        Subroutine Msolve(lb,ub,x,y)                   ! Solve M*y = x
-
          Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
-         Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
-         Real(wp), Intent(in)    :: x( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-         Real(wp), Intent(out)   :: y( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+         Integer                                               , Intent( In    ) :: lb( 1:3 )
+         Integer                                               , Intent( In    ) :: ub( 1:3 )
+         Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
+         Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
        End Subroutine Msolve
     End Interface
 
+    Logical :: checkA = .False.
+    Real( wp ) :: shift = 0.0_wp
+    Real(wp) :: Anorm, Acond, Arnorm, ynorm
     !-------------------------------------------------------------------
     !
     ! MINRES  is designed to solve the system of linear equations
@@ -335,10 +347,10 @@ Contains
          s     , sn    , t     , tnorm2, ynorm2, z
 
     Integer :: FD_order, halo_width
-    
+
     Logical   :: debug, prnt
     Integer :: error
-    
+
     ! Local constants
     Real(wp),         Parameter :: zero =  0.0_wp,  one = 1.0_wp
     Real(wp),         Parameter :: ten  = 10.0_wp
@@ -357,317 +369,266 @@ Contains
 
     Intrinsic       :: abs, dot_product, epsilon, min, max, sqrt
 
-    Allocate( r1, r2, v, w, w1, w2, y, mold = b )
-    
-    ! Print heading and initialize.
+    solver_block: Block
 
-    debug = .False.
-    eps   = Epsilon(eps)
-    istop  = 0
-    itn    = 0
-    Anorm  = zero
-    Acond  = zero
-    rnorm  = zero
-    ynorm  = zero
-    x      = zero
+      Allocate( r1, r2, v, w, w1, w2, y, mold = b )
 
-    !IJB
-    ! Note order is always even, so no worries about splitting it in 2
-    FD_order  = FD_operator%get_order()
-    
+      ! Print heading and initialize.
+
+      debug = .False.
+      eps   = Epsilon(eps)
+      istop  = 0
+      itn    = 0
+      Anorm  = zero
+      Acond  = zero
+      rnorm  = zero
+      ynorm  = zero
+      x      = zero
+
+      !IJB
+      ! Note order is always even, so no worries about splitting it in 2
+      FD_order  = FD_operator%get_order()
+
 !!$    halo_width = FD_order / 2
-    ! Looks like a bug in get order! Returns twice what expected ...
-    halo_width = FD_order
-    Call halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
+      ! Looks like a bug in get order! Returns twice what expected ...
+      halo_width = FD_order
+      Call halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
 
-    ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
-    ! due to errors before the iteration starts
-    Arnorml = Huge( Arnorml )
-    
-    !-------------------------------------------------------------------
-    ! Set up y and v for the first Lanczos vector v1.
-    ! y = beta1 P' v1, where P = C**(-1).
-    ! v is really P' v1.
-    !-------------------------------------------------------------------
-    r1     = b
-    y      = b
-    If ( precon ) Call Msolve( lb, ub, b, y )
-    beta1 = contract( comms, b, y )
-    
-    If (beta1 < zero) Then     ! M must be indefinite.
-       istop = 8
-       go to 900
-    End If
+      ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
+      ! due to errors before the iteration starts
+      Arnorml = Huge( Arnorml )
 
-    If (Abs(beta1) < Tiny(beta1)) Then    ! b = 0 exactly.  Stop with x = 0.
-       istop = 0
-       go to 900
-    End If
+      !-------------------------------------------------------------------
+      ! Set up y and v for the first Lanczos vector v1.
+      ! y = beta1 P' v1, where P = C**(-1).
+      ! v is really P' v1.
+      !-------------------------------------------------------------------
+      r1     = b
+      y      = b
+      If ( precon ) Call Msolve( lb, ub, b, y )
+      beta1 = method%contract( comms, b, y )
 
-    beta1  = Sqrt( beta1 )     ! Normalize y to get v1 later.
+      If (beta1 < zero) Then     ! M must be indefinite.
+         istop = 8
+         Exit solver_block
+      End If
 
-    !-------------------------------------------------------------------
-    ! See if Msolve is symmetric.
-    !-------------------------------------------------------------------
-    If (checkA  .And.  precon) Then
-       Call Msolve( lb, ub, y, r2 )
-       s = contract( comms, y , y  )
-       t = contract( comms, r1, r2 )
-       z      = Abs(s - t)
-       epsa   = (s + eps) * eps**0.33333
-       If (z > epsa) Then
-          istop = 7
-          go to 900
-       End If
-    End If
+      If (Abs(beta1) < Tiny(beta1)) Then    ! b = 0 exactly.  Stop with x = 0.
+         istop = 0
+         Exit solver_block
+      End If
 
-    !-------------------------------------------------------------------
-    ! See if Aprod  is symmetric.  Initialize Arnorm.
-    !-------------------------------------------------------------------
-    If (checkA) Then
-       ! NEED TO FIX ARGUMENTS - especially lb of grid
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
-       Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
-            grid_with_halo, w  )
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
-       Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
-            grid_with_halo, r2  )
-       s = contract( comms, w, w  )
-       t = contract( comms, y, r2 )       
-       z      = Abs(s - t)
-       epsa   = (s + eps) * eps**0.33333
-       If (z > epsa) Then
-          istop = 6
-          go to 900
-       End If
-       Arnorml = Sqrt(s);
-    Else
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
-       Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
-            grid_with_halo, w  )
-       Arnorml = Sqrt( contract( comms, w, w  ) )
-    End If
+      beta1  = Sqrt( beta1 )     ! Normalize y to get v1 later.
 
-    !-------------------------------------------------------------------
-    ! Initialize other quantities.
-    !-------------------------------------------------------------------
-    oldb   = zero
-    beta   = beta1
-    dbar   = zero
-    epsln  = zero
-    qrnorm = beta1
-    phibar = beta1
-    rhs1   = beta1
-    rhs2   = zero
-    tnorm2 = zero
-    ynorm2 = zero
-    cs     = - one
-    sn     = zero
-    w  = zero
-    w2 = zero
-    r2 = r1
+      !-------------------------------------------------------------------
+      ! See if Msolve is symmetric.
+      !-------------------------------------------------------------------
+      If (checkA  .And.  precon) Then
+         Call Msolve( lb, ub, y, r2 )
+         s = method%contract( comms, y , y  )
+         t = method%contract( comms, r1, r2 )
+         z      = Abs(s - t)
+         epsa   = (s + eps) * eps**0.33333
+         If (z > epsa) Then
+            istop = 7
+            Exit solver_block
+         End If
+      End If
 
-    ! Stop gfortran complaining about might be using uninitialised
-    gmin =   Huge( gmin )
-    gmax = - Huge( gmax )
+      !-------------------------------------------------------------------
+      ! See if Aprod  is symmetric.  Initialize Arnorm.
+      !-------------------------------------------------------------------
+      If (checkA) Then
+         ! NEED TO FIX ARGUMENTS - especially lb of grid
+         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
+         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
+              grid_with_halo, w  )
+         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
+         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
+              grid_with_halo, r2  )
+         s = method%contract( comms, w, w  )
+         t = method%contract( comms, y, r2 )       
+         z      = Abs(s - t)
+         epsa   = (s + eps) * eps**0.33333
+         If (z > epsa) Then
+            istop = 6
+            Exit solver_block
+         End If
+         Arnorml = Sqrt(s);
+      Else
+         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
+         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
+              grid_with_halo, w  )
+         Arnorml = Sqrt( method%contract( comms, w, w  ) )
+      End If
 
-    !===================================================================
-    ! Main iteration loop.
-    !===================================================================
-    iteration_loop: Do
-       itn = itn + 1               ! k = itn = 1 first time through
+      !-------------------------------------------------------------------
+      ! Initialize other quantities.
+      !-------------------------------------------------------------------
+      oldb   = zero
+      beta   = beta1
+      dbar   = zero
+      epsln  = zero
+      qrnorm = beta1
+      phibar = beta1
+      rhs1   = beta1
+      rhs2   = zero
+      tnorm2 = zero
+      ynorm2 = zero
+      cs     = - one
+      sn     = zero
+      w  = zero
+      w2 = zero
+      r2 = r1
 
-       !----------------------------------------------------------------
-       ! Obtain quantities for the next Lanczos vector vk+1, k = 1, 2,...
-       ! The general iteration is similar to the case k = 1 with v0 = 0:
-       !
-       !   p1      = Operator * v1  -  beta1 * v0,
-       !   alpha1  = v1'p1,
-       !   q2      = p2  -  alpha1 * v1,
-       !   beta2^2 = q2'q2,
-       !   v2      = (1/beta2) q2.
-       !
-       ! Again, y = betak P vk,  where  P = C**(-1).
-       ! .... more description needed.
-       !----------------------------------------------------------------
-       s      = one / beta            ! Normalize previous vector (in y).
-       v      = s*y                   ! v = vk if P = I
+      ! Stop gfortran complaining about might be using uninitialised
+      gmin =   Huge( gmin )
+      gmax = - Huge( gmax )
 
-       ! NEED TO FIX ARGUMENTS - especially lb of grid
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo, error )
-       Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
-            grid_with_halo, y  )
-       y      = y - shift*v           ! call daxpy ( n, (- shift), v, 1, y, 1 )
-       If (itn >= 2) Then
-          y   = y - (beta/oldb)*r1    ! call daxpy ( n, (- beta/oldb), r1, 1, y, 1 )
-       End If
+      !===================================================================
+      ! Main iteration loop.
+      !===================================================================
+      iteration_loop: Do
+         itn = itn + 1               ! k = itn = 1 first time through
 
-       alfa = contract( comms, v, y  )
-       y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
-       r1     = r2
-       r2     = y
-       If ( precon ) Call Msolve( lb, ub, r2, y )
+         !----------------------------------------------------------------
+         ! Obtain quantities for the next Lanczos vector vk+1, k = 1, 2,...
+         ! The general iteration is similar to the case k = 1 with v0 = 0:
+         !
+         !   p1      = Operator * v1  -  beta1 * v0,
+         !   alpha1  = v1'p1,
+         !   q2      = p2  -  alpha1 * v1,
+         !   beta2^2 = q2'q2,
+         !   v2      = (1/beta2) q2.
+         !
+         ! Again, y = betak P vk,  where  P = C**(-1).
+         ! .... more description needed.
+         !----------------------------------------------------------------
+         s      = one / beta            ! Normalize previous vector (in y).
+         v      = s*y                   ! v = vk if P = I
 
-       oldb   = beta                  ! oldb = betak
-       beta = contract( comms, r2, y  )
-       If (beta < zero) Then
-          istop = 6
-          go to 900
-       End If
+         ! NEED TO FIX ARGUMENTS - especially lb of grid
+         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo, error )
+         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
+              grid_with_halo, y  )
+         y      = y - shift*v           ! call daxpy ( n, (- shift), v, 1, y, 1 )
+         If (itn >= 2) Then
+            y   = y - (beta/oldb)*r1    ! call daxpy ( n, (- beta/oldb), r1, 1, y, 1 )
+         End If
 
-       beta   = Sqrt( beta )          ! beta = betak+1
-       tnorm2 = tnorm2 + alfa**2 + oldb**2 + beta**2
+         alfa = method%contract( comms, v, y  )
+         y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
+         r1     = r2
+         r2     = y
+         If ( precon ) Call Msolve( lb, ub, r2, y )
 
-       If (itn == 1) Then                   ! Initialize a few things.
-          If (beta/beta1 <= ten*eps) Then   ! beta2 = 0 or ~ 0.
-             istop = -1                     ! Terminate later.
-          End If
-          !tnorm2 = alfa**2
-          gmax   = Abs( alfa )              ! alpha1
-          gmin   = gmax                     ! alpha1
-       End If
+         oldb   = beta                  ! oldb = betak
+         beta = method%contract( comms, r2, y  )
+         If (beta < zero) Then
+            istop = 6
+            Exit solver_block
+         End If
 
-       ! Apply previous rotation Qk-1 to get
-       !   [deltak epslnk+1] = [cs  sn][dbark    0   ]
-       !   [gbar k dbar k+1]   [sn -cs][alfak betak+1].
+         beta   = Sqrt( beta )          ! beta = betak+1
+         tnorm2 = tnorm2 + alfa**2 + oldb**2 + beta**2
 
-       oldeps = epsln
-       delta  = cs * dbar  +  sn * alfa ! delta1 = 0         deltak
-       gbar   = sn * dbar  -  cs * alfa ! gbar 1 = alfa1     gbar k
-       epsln  =               sn * beta ! epsln2 = 0         epslnk+1
-       dbar   =            -  cs * beta ! dbar 2 = beta2     dbar k+1
+         If (itn == 1) Then                   ! Initialize a few things.
+            If (beta/beta1 <= ten*eps) Then   ! beta2 = 0 or ~ 0.
+               istop = -1                     ! Terminate later.
+            End If
+            !tnorm2 = alfa**2
+            gmax   = Abs( alfa )              ! alpha1
+            gmin   = gmax                     ! alpha1
+         End If
 
-       ! Compute the next plane rotation Qk
+         ! Apply previous rotation Qk-1 to get
+         !   [deltak epslnk+1] = [cs  sn][dbark    0   ]
+         !   [gbar k dbar k+1]   [sn -cs][alfak betak+1].
 
-       gamma  = Sqrt( gbar**2 + beta**2 )   ! gammak
-       cs     = gbar / gamma                ! ck
-       sn     = beta / gamma                ! sk
-       phi    = cs * phibar                 ! phik
-       phibar = sn * phibar                 ! phibark+1
+         oldeps = epsln
+         delta  = cs * dbar  +  sn * alfa ! delta1 = 0         deltak
+         gbar   = sn * dbar  -  cs * alfa ! gbar 1 = alfa1     gbar k
+         epsln  =               sn * beta ! epsln2 = 0         epslnk+1
+         dbar   =            -  cs * beta ! dbar 2 = beta2     dbar k+1
 
-       ! Update  x.
+         ! Compute the next plane rotation Qk
 
-       denom = one/gamma
+         gamma  = Sqrt( gbar**2 + beta**2 )   ! gammak
+         cs     = gbar / gamma                ! ck
+         sn     = beta / gamma                ! sk
+         phi    = cs * phibar                 ! phik
+         phibar = sn * phibar                 ! phibark+1
 
-       w1 = w2
-       w2 = w
-       w = ( v - oldeps * w1 - delta * w2 ) * denom
-       x = x + phi * w
+         ! Update  x.
 
-       ! Go round again.
+         denom = one/gamma
 
-       gmax   = Max( gmax, gamma )
-       gmin   = Min( gmin, gamma )
-       z      = rhs1 / gamma
-       ynorm2 = z**2  +  ynorm2
-       rhs1   = rhs2  -  delta * z
-       rhs2   =       -  epsln * z
+         w1 = w2
+         w2 = w
+         w = ( v - oldeps * w1 - delta * w2 ) * denom
+         x = x + phi * w
 
-       ! Estimate various norms and test for convergence.
+         ! Go round again.
 
-       Anorm  = Sqrt( tnorm2 )
-       ynorm  = Sqrt( ynorm2 )
-       epsa   = Anorm * eps
-       epsx   = Anorm * ynorm * eps
-       epsr   = Anorm * ynorm * rtol
-       diag   = gbar
-       If (Abs(diag) < Tiny(diag)) diag = epsa
+         gmax   = Max( gmax, gamma )
+         gmin   = Min( gmin, gamma )
+         z      = rhs1 / gamma
+         ynorm2 = z**2  +  ynorm2
+         rhs1   = rhs2  -  delta * z
+         rhs2   =       -  epsln * z
 
-       qrnorm = phibar
-       rnorml = rnorm
-       rnorm  = qrnorm
-       rootl       = Sqrt( gbar**2 +dbar**2  )  ! norm([gbar; dbar]);
-       Arnorml     = rnorml*rootl               ! ||A r_{k-1} ||
-       relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)     
-       !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A|| 
+         ! Estimate various norms and test for convergence.
 
-       ! Estimate  cond(A).
-       ! In this version we look at the diagonals of  R  in the
-       ! factorization of the lower Hessenberg matrix,  Q * H = R,
-       ! where H is the tridiagonal matrix from Lanczos with one
-       ! extra row, beta(k+1) e_k^T.
+         Anorm  = Sqrt( tnorm2 )
+         ynorm  = Sqrt( ynorm2 )
+         epsa   = Anorm * eps
+         epsx   = Anorm * ynorm * eps
+         epsr   = Anorm * ynorm * rtol
+         diag   = gbar
+         If (Abs(diag) < Tiny(diag)) diag = epsa
 
-       Acond  = gmax / gmin
+         qrnorm = phibar
+         rnorml = rnorm
+         rnorm  = qrnorm
+         rootl       = Sqrt( gbar**2 +dbar**2  )  ! norm([gbar; dbar]);
+         Arnorml     = rnorml*rootl               ! ||A r_{k-1} ||
+         relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)     
+         !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A|| 
 
-       ! See if any of the stopping criteria are satisfied.
-       ! In rare cases, istop is already -1 from above (Abar = const*I).
+         ! Estimate  cond(A).
+         ! In this version we look at the diagonals of  R  in the
+         ! factorization of the lower Hessenberg matrix,  Q * H = R,
+         ! where H is the tridiagonal matrix from Lanczos with one
+         ! extra row, beta(k+1) e_k^T.
 
-       If (istop == 0) Then
-          If (itn    >= itnlim    ) istop = 5
-          If (Acond  >= 0.1d+0/eps) istop = 4
-          If (epsx   >= beta1     ) istop = 3
-          If (qrnorm <= epsx  .Or.  relArnorml <= epsx) istop = 2
-          If (qrnorm <= epsr  .Or.  relArnorml <= epsr) istop = 1
-       End If
+         Acond  = gmax / gmin
 
+         ! See if any of the stopping criteria are satisfied.
+         ! In rare cases, istop is already -1 from above (Abar = const*I).
 
-       ! See if it is time to print something.
+         If (istop == 0) Then
+            If (itn    >= itnlim    ) istop = 5
+            If (Acond  >= 0.1d+0/eps) istop = 4
+            If (epsx   >= beta1     ) istop = 3
+            If (qrnorm <= epsx  .Or.  relArnorml <= epsx) istop = 2
+            If (qrnorm <= epsr  .Or.  relArnorml <= epsr) istop = 1
+         End If
 
-       If (nout > 0) Then
-          prnt   = .False.
-          If (Product( ub - lb + 1 )      <= 40         ) prnt = .True.
-          If (itn    <= 10         ) prnt = .True.
-          If (itn    >= itnlim - 10) prnt = .True.
-          If (Mod(itn,10)  ==     0) prnt = .True.
-          If (qrnorm <=  ten * epsx) prnt = .True.
-          If (qrnorm <=  ten * epsr) prnt = .True.
-          If (relArnorml<= ten*epsx) prnt = .True.
-          If (relArnorml<= ten*epsr) prnt = .True.
-          If (Acond  >= 1.0_wp/eps ) prnt = .True.
-          If (istop  /=  0         ) prnt = .True.
+         If (istop /= 0) Exit
 
-       End If
-       If (istop /= 0) Exit
+      End Do iteration_loop
+      !===================================================================
+      ! End of iteration loop.
+      !===================================================================
 
-    End Do iteration_loop
-    !===================================================================
-    ! End of iteration loop.
-    !===================================================================
+    End Block solver_block
 
     ! Display final status.
 
-900 Arnorm = Arnorml
+    Arnorm = Arnorml
 
     istop_message = msg(istop)
 
   End Subroutine MINRES
 
-  Function contract( comms, x, y ) Result( d )
-
-    Use comms_base_class_module, Only : comms_base_class
-
-    Implicit None
-
-    Real( wp ) :: d
-
-    Class( comms_base_class )       , Intent( In ) :: comms
-    Real( wp ), Dimension( :, :, : ), Intent( In ) :: x
-    Real( wp ), Dimension( :, :, : ), Intent( In ) :: y
-
-    Real( wp ) :: c, yk, t
-
-    Integer :: i1, i2, i3
-
-    ! Sum using Kahan summation for accuracy
-    d = 0.0_wp
-    !$omp parallel default( none ) shared( grid, d ) private( c, yk, t, i1, i2, i3 )
-    c = 0.0_wp
-    !$omp do collapse( 3 ) reduction( +:d )
-    Do i3 = Lbound( x, Dim = 3 ), Ubound( x, Dim = 3 )
-       Do i2 = Lbound( x, Dim = 2 ), Ubound( x, Dim = 2 )
-          Do i1 = Lbound( x, Dim = 1 ), Ubound( x, Dim = 1 )
-             yk = x( i1, i2, i3 ) * y( i1, i2, i3 ) - c
-             t  = d + yk
-             c  = ( t - d ) - yk
-             d  = t
-          End Do
-       End Do
-    End Do
-    !$omp end do
-    !$omp end parallel    ! Use Kahan for accuracy
-
-    Call comms%reduce( d )
-    
-  End Function contract
-  
-End Module minresModule
+End Module equation_solver_minres_module
