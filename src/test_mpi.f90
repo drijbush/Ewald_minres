@@ -16,8 +16,13 @@ Program test_mpi
   Use halo_parallel_module                , Only : halo_parallel_setter
   Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
   Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
+  Use equation_solver_base_class_module   , Only : equation_solver_base_class
+  Use equation_solver_minres_module       , Only : equation_solver_minres
+  Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
   
   Implicit None
+
+  Class( equation_solver_base_class ), Allocatable :: solver
 
   Type( lattice  ) :: l
   Type( mpi_comm ) :: cart_comm
@@ -78,10 +83,12 @@ Program test_mpi
   Integer :: n
   Integer :: n_at_loc, n_at
   Integer :: itn, istop
+  Integer :: which_solver
   Integer :: error
   Integer :: i
 
   Character( Len = 132 ) :: istop_message
+  Character( Len = 132 ) :: what
 
   Call mpi_init( error )
   Call mpi_comm_size( mpi_comm_world, nproc )
@@ -102,6 +109,17 @@ Program test_mpi
      Read ( *, * ) FD_order
      Write( *, * ) 'xshift?'
      Read ( *, * ) xshift
+     Write( *, * ) 'which solver?'
+     Read ( *, * ) what
+
+     Select Case( Trim( Adjustl( what ) ) )
+     Case( 'CG' )
+        which_solver = 1
+     Case( 'MINRES' )
+        which_solver = 2
+     Case Default
+        Error Stop 'Unrecongnized solver'
+     End Select
      
      Open( 10, File = 'CONFIG' )
      Call read_header( 10, n, level, a )
@@ -109,13 +127,21 @@ Program test_mpi
 
   End If Read_params_on_proc_0
      
-  Call mpi_bcast( alpha      ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( range_gauss,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( gauss_tol  ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( rtol       ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( FD_order   ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( n          ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( a          , Size( a ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( alpha        ,         1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( range_gauss  ,         1, mpi_integer         , 0, mpi_comm_world )
+  Call mpi_bcast( gauss_tol    ,         1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( rtol         ,         1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( FD_order     ,         1, mpi_integer         , 0, mpi_comm_world )
+  Call mpi_bcast( n            ,         1, mpi_integer         , 0, mpi_comm_world )
+  Call mpi_bcast( a            , Size( a ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( which_solver ,         1, mpi_integer         , 0, mpi_comm_world )
+
+  Select Case( which_solver )
+  Case( 1 )
+     Allocate( equation_solver_conjugate_gradient :: solver )
+  Case( 2 )
+     Allocate( equation_solver_minres :: solver )
+  End Select
 
   Call l%initialise( 3, a, alpha )
   
@@ -157,9 +183,9 @@ Program test_mpi
   np_grid = 0
   Call mpi_dims_create( nproc, 3, np_grid )
   ! Now increase the size of the grid where it is not a multiple of the number of procs
-  Where( Mod( n_grid, np_grid ) /= 0 )
-     n_grid = ( n_grid / np_grid + 1 ) * np_grid
-  End Where
+!!$  Where( Mod( n_grid, np_grid ) /= 0 )
+!!$     n_grid = ( n_grid / np_grid + 1 ) * np_grid
+!!$  End Where
   If( me == 0 ) Then
      Write( *, * ) 'N_grid = ', n_grid
   End If
@@ -275,7 +301,7 @@ Program test_mpi
 !!$  Call pot_swapper%init( n_grid_domain, range_gauss, cart_comm, error )
   ! Solve for the long range using finiste difference
   Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid_ssp ), rtol, &
-       recip_E_ssp, q_grid_ssp, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
+       recip_E_ssp, q_grid_ssp, pot_grid_ssp, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid_ssp, t_pot_solve_ssp, t_forces_ssp, itn, istop, istop_message, rnorm, error )
   ! Check charge grid
   If( me_cart == 0 ) Then

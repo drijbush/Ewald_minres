@@ -1,6 +1,6 @@
 add_subdirectory("FD_Template")
 
-add_library(ewald-minres STATIC fft.f90 charge_grid_module.f90 vec_utilities.f90 sort.f90 lattice.f90 ffp_module.f90 real_space_module.f90 grid_io_module.f90 ssp_module.f90 domains_module.f90 quadrature_base_class.f90 quadrature_trapezium.f90 halo_base_class.f90 halo_serial.f90 halo_parallel.f90 comms_base_class.f90 comms_serial.f90 comms_parallel.f90 equation_solver_base_class.f90 equation_solver_minres.f90 )
+add_library(ewald-minres STATIC fft.f90 charge_grid_module.f90 vec_utilities.f90 sort.f90 lattice.f90 ffp_module.f90 real_space_module.f90 grid_io_module.f90 ssp_module.f90 domains_module.f90 quadrature_base_class.f90 quadrature_trapezium.f90 halo_base_class.f90 halo_serial.f90 halo_parallel.f90 comms_base_class.f90 comms_serial.f90 comms_parallel.f90 equation_solver_base_class.f90 equation_solver_minres.f90 equation_solver_cg.f90 )
 add_dependencies(ewald-minres fd)
 
 target_include_directories(ewald-minres PUBLIC ${FiniteD_BINARY_DIR}/src)

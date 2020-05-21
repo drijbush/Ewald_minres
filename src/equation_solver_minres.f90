@@ -371,7 +371,7 @@ Contains
 
     solver_block: Block
 
-      Allocate( r1, r2, v, w, w1, w2, y, mold = b )
+      Allocate( r1, r2, v, w, w1, w2, y, Mold = b )
 
       ! Print heading and initialize.
 
