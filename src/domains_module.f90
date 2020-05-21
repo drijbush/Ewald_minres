@@ -19,7 +19,8 @@ Contains
   Pure Subroutine domain_build( l, q, r, n_grid, n_proc, domain_coords, q_domain, r_domain, id, id_domain )
 
     ! GRIDS START AT ZERO
-
+    ! Determine aoms in this domain assuming the grid is comensurate with the space that holds the domain
+    
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Use lattice_module, Only : lattice
@@ -70,7 +71,8 @@ Contains
   Subroutine domain_halo_build( l, q, r, n_grid, n_proc, domain_coords, halo_width, q_halo, r_halo, id, id_halo )
 
     ! GRIDS START AT ZERO
-
+    ! Determine atoms in the halo assuming the grid is comensurate with the space that holds the domain
+    
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Use lattice_module, Only : lattice
@@ -143,6 +145,7 @@ Contains
   Pure Function domain_is_in_grid_volume( l, ri, n_grid, lo, hi ) Result( in_volume )
 
     ! GRIDS START AT ZERO
+    ! Return true if RI is in the volume described by the grid points lo -> hi
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -170,6 +173,7 @@ Contains
   Elemental Subroutine domain_get_params( n_grid, n_proc, domain_coords, n_grid_domain, domain_base_coords )
 
     ! GRIDS START AT ZERO
+    ! Decide on the domains by dividing up the grid
 
     Integer, Intent( In    ) :: n_grid
     Integer, Intent( In    ) :: n_proc
