@@ -148,8 +148,18 @@ Program test_mpi
      Write( *, '( a, 3( t25, 3( f10.5, 1x ) / ) )' ) &
           'Lattice vectors: ', l%get_direct_vectors()
   End If
-  
+
+  ! Find the size of the grid
+  ! Find the minimum size of grid commensurate with the range of gauss required
   Call charge_grid_get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
+  ! Now make the charge/pot grid commensurate with the process grid
+  ! First factor the procs into a grid
+  np_grid = 0
+  Call mpi_dims_create( nproc, 3, np_grid )
+  ! Now increase the size of the grid where it is not a multiple of the number of procs
+  Where( Mod( n_grid, np_grid ) /= 0 )
+     n_grid = ( n_grid / np_grid + 1 ) * np_grid
+  End Where
   If( me == 0 ) Then
      Write( *, * ) 'N_grid = ', n_grid
   End If
