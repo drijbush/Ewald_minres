@@ -21,11 +21,11 @@ Contains
 
     Use lattice_module         , Only : lattice
     Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
-    Use minresmodule           , Only : minres
     Use FD_template_module     , Only : FD_template
     Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use quadrature_base_module , Only : quadrature_base_class
+    Use equation_solver_minres_module, Only : equation_solver_minres
     
     Implicit None
 
@@ -60,6 +60,8 @@ Contains
     Real( wp )                         , Intent(   Out ) :: rnorm
     Integer                            , Intent(   Out ) :: error
 
+    Type( equation_solver_minres ) :: solver
+
     ! Standardize the potential so it sums to zero over the cell
     ! Not required, but useful for comparison of accuracy with Fourier methods.
     ! This should be set to .False. for production
@@ -67,8 +69,6 @@ Contains
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
 
-    Real( wp ) :: Anorm, Arnorm, Acond, ynorm
-    
     Integer :: fd_order
     
     Integer( li ) :: start, finish, rate
@@ -93,9 +93,11 @@ Contains
     ! And solve  Possion equation on the grid by FDs
     Call System_clock( start, rate )
     rhs = - 4.0_wp * pi * q_grid
-    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
-         pot_grid, 1000, 99, rtol,                      &
-         istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+!!$    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
+!!$         pot_grid, 1000, 99, rtol,                      &
+!!$         istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 1000, rtol, .False., &
+         pot_grid, istop, istop_message, itn, rnorm )
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
@@ -133,15 +135,17 @@ Contains
   End Function ssp_sic
 
   Subroutine dummy_msolve( lb, ub, x, y )                   ! Solve M*y = x
+
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-    Integer,    Intent( In    )   :: lb( 1:3 ), ub( 1:3 )
-    Real( wp ), Intent( In    )   :: x( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
-    Real( wp ), Intent(   out )   :: y( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) )
+    
+    Integer                                               , Intent( In    ) :: lb( 1:3 )
+    Integer                                               , Intent( In    ) :: ub( 1:3 )
+    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
+    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
     
     ! Shut up compiler
     y = x
 
   End Subroutine dummy_msolve
-
 
 End Module symetrically_screened_poisson_module
