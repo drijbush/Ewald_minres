@@ -20,7 +20,7 @@ Contains
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
     Use lattice_module                   , Only : lattice
-    Use charge_grid_module               , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
+    Use charge_grid_module               , Only : charge_grid_calculate, charge_grid_forces
     Use FD_template_module               , Only : FD_template
     Use comms_base_class_module          , Only : comms_base_class
     Use halo_setter_base_module          , Only : halo_setter_base_class
