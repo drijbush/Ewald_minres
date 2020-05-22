@@ -296,7 +296,8 @@ Program test_mpi
      Error stop "Error in setting comms communicator"
   End If
   ! Set up potential halo swapper
-  ! Need to track down +2
+  ! Need to track down +1 properly - it is to do with atoms near the edge of the grid where
+  ! the nearest grid point to the centre of the gaussian actually lies in the next domain
   Call pot_swapper%init( n_grid_domain, range_gauss + 1, cart_comm, error )
 !!$  Call pot_swapper%init( n_grid_domain, range_gauss, cart_comm, error )
   ! Solve for the long range using finiste difference
