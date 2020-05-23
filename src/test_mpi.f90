@@ -19,6 +19,7 @@ Program test_mpi
   Use equation_solver_base_class_module   , Only : equation_solver_base_class
   Use equation_solver_minres_module       , Only : equation_solver_minres
   Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
+  Use Ewald_3d_module, Only : Ewald_3d, Ewald_3d_status
   
   Implicit None
 
@@ -31,6 +32,7 @@ Program test_mpi
   Type( quadrature_trapezium_rule     ) :: grid_integrator
   Type( comms_parallel                ) :: comms
   Type( FD_Laplacian_3D               ) :: FD
+  Type( Ewald_3d_status               ) :: status
   
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_ffp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ffp
@@ -47,6 +49,7 @@ Program test_mpi
 
   Real( wp ), Dimension( 1:3, 1:3 ) :: a
   Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
+  Real( wp ), Dimension( 1:3, 1:3 ) :: stress
   
   Real( wp ), Dimension( : ), Allocatable :: q
   Real( wp ), Dimension( : ), Allocatable :: q_domain
@@ -340,6 +343,56 @@ Program test_mpi
   Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
      Open( 11, file = 'forces_ssp_parallel.dat' )
+     Write( 11, * ) n, '     #number of particles'
+     Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
+     Do i = 1, n
+        Write( 11, * ) i, force_full( :, i )
+     End Do
+     Close( 11 )
+     Write( *, * ) 'Energy from summing per particle contributions ', ei_full
+  End If
+  Deallocate(  q_grid_full, force_full )
+
+  recip_E_ssp   = 0.0_wp
+  Call Ewald_3d(  l, alpha, q_domain, r_domain, q_halo, r_halo,  &
+       recip_E_ssp, force_ssp, stress, error, cart_comm%mpi_val, &
+       q_grid = q_grid_ssp, pot_grid = pot_grid_ssp, ei = ei_ssp, status = status )
+  If( me_cart == 0 ) Then
+     Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
+     Write( *, * ) status%solver_iterations, status%solver_stop_code, &
+          status%solver_stop_message, status%solver_residual_norm
+     Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
+     Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
+     Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
+  End If
+  Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+  q_grid_full = 0.0_wp
+  q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
+       domain_base_coords( 2 ):domain_end_coords( 2 ), &
+       domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
+  Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+  If( me_cart == 0 ) Then
+     Call grid_io_save( 11, 'q_grid_ssp_parallel_new.dat', l, q_grid_full )
+  End If
+  q_grid_full = 0.0_wp
+  q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
+       domain_base_coords( 2 ):domain_end_coords( 2 ), &
+       domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
+  Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+  If( me_cart == 0 ) Then
+     Call grid_io_save( 11, 'pot_grid_ssp_parallel_new.dat', l, q_grid_full )
+  End If
+
+  Allocate( force_full( 1:3, 1:n ) )
+  force_full = 0.0_wp
+  Do i = 1, Size( force_ssp, Dim = 2 )
+     force_full( :, id_domain( i ) ) = force_ssp( :, i )
+  End Do
+  Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
+  ei_full = Sum( ei_ssp )
+  Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
+  If( me_cart == 0 ) Then
+     Open( 11, file = 'forces_ssp_parallel_new.dat' )
      Write( 11, * ) n, '     #number of particles'
      Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
      Do i = 1, n
