@@ -119,7 +119,7 @@ Contains
     comm_f08%mpi_val = c%communicator
     Call mpi_cart_get( comm_f08, Size( dims ), dims, periods, coords )
 
-    data = coords
+    data = dims
 
   End Subroutine get_proc_grid
 

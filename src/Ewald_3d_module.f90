@@ -7,7 +7,7 @@ Module Ewald_3d_module
   Public :: Ewald_3d
 
   Type, Public :: Ewald_3d_status
-     Private
+!!$     Private
      Real( wp )              :: t_grid                  = - Huge( 1.0_wp )
      Real( wp )              :: t_pot_solve             = - Huge( 1.0_wp )
      Real( wp )              :: t_forces                = - Huge( 1.0_wp )
@@ -237,7 +237,7 @@ Contains
     Else
        scope_method = default_solver
     End If
-    Select Case( method )
+    Select Case( Trim( Adjustl( scope_method ) ) )
     Case( "cg", "CG" )
        Allocate( equation_solver_conjugate_gradient :: solver )
     Case( "minres", "MINRES" )
@@ -277,7 +277,6 @@ Contains
     End If
 
     ! Return optional arguments as required
-    
     If( Present( q_grid ) ) Then
        Call Move_alloc( q_grid_ssp, q_grid )
     End If
@@ -288,6 +287,10 @@ Contains
 
     If( Present( ei ) ) Then
        ei = ei_ssp
+    End If
+
+    If( Present( status ) ) Then
+       status = scope_status
     End If
 
   End Subroutine Ewald_3d
