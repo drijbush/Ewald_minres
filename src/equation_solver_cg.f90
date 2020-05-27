@@ -55,12 +55,16 @@ Contains
 
     Real( wp ) :: alpha, beta
     Real( wp ) :: r_dot_r_old, r_dot_r, p_dot_w
-
+    Real( wp ) :: mu
+    
     Integer :: halo_width
     Integer :: FD_order
     Integer :: iteration
+    Integer :: np
     Integer :: error
-    
+
+    Call comms%get_size( np )
+
     Allocate( r, p, w, Mold = b )
 
     rnorm = Huge( rnorm )
@@ -80,26 +84,40 @@ Contains
     Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
          grid_with_halo, w  )
     r = b - w
+    mu = Sum( r )
+    ! Need n_grid in here really!!!! So can for av value of r
+    Call comms%reduce( mu )
+    mu = mu / ( np * Size( r ) )
+    r = r - mu
     p = r
     r_dot_r_old = method%contract( comms, r, r )
-    Do iteration = 1, itnlim
-!!$    Do iteration = 1, 30
-       Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), p, grid_with_halo, error )
-       Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w  ), Ubound( w  ), &
-            grid_with_halo, w  )
-       p_dot_w = method%contract( comms, p, w )
-       alpha = r_dot_r_old / p_dot_w
-       x = x + alpha * p
-       r = r - alpha * w
-       r_dot_r = method%contract( comms, r, r )
-       ! NEED BETTER CONVERGENCE CRITERION!!!
-       rnorm = Sqrt( r_dot_r )
-       If( rnorm < rtol ) Exit
-       beta = r_dot_r / r_dot_r_old
-       p = r + beta * p
-       r_dot_r_old = r_dot_r
-    End Do
-
+    rnorm = Sqrt( r_dot_r_old )
+    If( rnorm > rtol ) Then
+       Do iteration = 1, itnlim
+          Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), p, grid_with_halo, error )
+          Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w  ), Ubound( w  ), &
+               grid_with_halo, w  )
+          p_dot_w = method%contract( comms, p, w )
+          alpha = r_dot_r_old / p_dot_w
+          x = x + alpha * p
+          r = r - alpha * w
+    mu = Sum( r )
+    mu = mu / Size( r )
+    Call comms%reduce( mu )
+    mu = mu / ( np * Size( r ) )
+    r = r - mu
+          r_dot_r = method%contract( comms, r, r )
+          ! NEED BETTER CONVERGENCE CRITERION!!!
+          rnorm = Sqrt( r_dot_r )
+          If( rnorm < rtol ) Exit
+          beta = r_dot_r / r_dot_r_old
+          p = r + beta * p
+          r_dot_r_old = r_dot_r
+       End Do
+    Else
+       iteration = 0
+    End If
+       
     itn = iteration
 
     If( iteration <= itnlim ) Then

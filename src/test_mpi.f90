@@ -46,6 +46,7 @@ Program test_mpi
   Real( wp ), Dimension( :, : ), Allocatable :: force_ffp
   Real( wp ), Dimension( :, : ), Allocatable :: force_ssp
   Real( wp ), Dimension( :, : ), Allocatable :: force_full
+  Real( wp ), Dimension( :, : ), Allocatable :: dr
 
   Real( wp ), Dimension( 1:3, 1:3 ) :: a
   Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
@@ -402,6 +403,54 @@ Program test_mpi
      Write( *, * ) 'Energy from summing per particle contributions ', ei_full
   End If
   
+  recip_E_ssp   = 0.0_wp
+  Call Ewald_3d(  l, alpha, q_domain, r_domain, q_halo, r_halo,  &
+       recip_E_ssp, force_ssp, stress, error, cart_comm%mpi_val, &
+       q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
+  If( me_cart == 0 ) Then
+     Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
+     Write( *, * ) status%solver_iterations, status%solver_stop_code, &
+          status%solver_stop_message, status%solver_residual_norm
+     Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
+     Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
+     Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
+  End If
+
+  Allocate( dr, mold = r )
+  Call Random_number( dr )
+  dr = dr - 0.5_wp
+  dr = dr / 100.0_wp
+  r = r + dr
+!!$  dr = r
+  Do i = 1, n
+     t = r( :, i )
+     Call l%to_reference( t, r( :, i ) ) 
+  End Do
+!!$  Write( *, * ) Maxval( dr - r )
+!!$  r( :, 1 ) = r( :, 1 ) + 0.00001_wp
+  ! Build the domain and halo
+  Call domain_build( l, q, r, n_grid, np_grid, p_coords, q_domain, r_domain, id, id_domain )
+  Call domain_halo_build( l, q, r, n_grid, np_grid, p_coords, [ range_gauss, range_gauss, range_gauss ], &
+       q_halo, r_halo )
+  Deallocate( ei_ssp )
+  Deallocate( force_ssp )
+  n_at_loc = Size( q_domain )
+  Allocate( ei_ssp( 1:n_at_loc ) )
+  Allocate( force_ssp( 1:3, 1:n_at_loc ) )
+  recip_E_ssp   = 0.0_wp
+  Call Ewald_3d(  l, alpha, q_domain, r_domain, q_halo, r_halo,  &
+       recip_E_ssp, force_ssp, stress, error, cart_comm%mpi_val, &
+       q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
+  Write( *, * ) 'error = ', error
+  If( me_cart == 0 ) Then
+     Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
+     Write( *, * ) status%solver_iterations, status%solver_stop_code, &
+          status%solver_stop_message, status%solver_residual_norm
+     Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
+     Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
+     Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
+  End If
+
   Call mpi_finalize( error )
   
 Contains

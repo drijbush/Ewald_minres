@@ -15,7 +15,7 @@ Contains
 
   Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo, range_gauss, n_grid, lb, rtol, &
        recip_E, q_grid, pot_grid, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
-       ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
+       ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error, q_grid_old, pot_grid_old )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
@@ -62,9 +62,8 @@ Contains
     Character( Len = * )               , Intent(   Out ) :: istop_message
     Real( wp )                         , Intent(   Out ) :: rnorm
     Integer                            , Intent(   Out ) :: error
-
-!!$    Type( equation_solver_minres ) :: solver
-!!$    Type( equation_solver_conjugate_gradient ) :: solver
+    Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ), Optional :: q_grid_old
+    Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ), Optional :: pot_grid_old
 
     ! Standardize the potential so it sums to zero over the cell
     ! Not required, but useful for comparison of accuracy with Fourier methods.
@@ -96,12 +95,18 @@ Contains
 
     ! And solve  Possion equation on the grid by FDs
     Call System_clock( start, rate )
-    rhs = - 4.0_wp * pi * q_grid
-!!$    Call minres( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 0.0_wp, .True., .False., &
-!!$         pot_grid, 1000, 99, rtol,                      &
-!!$         istop, istop_message, itn, Anorm, Acond, rnorm, Arnorm, ynorm )
+    ! Solve on delta if the old grid is present
+    If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
+       rhs = - 4.0_wp * pi * ( q_grid - q_grid_old )
+    Else
+       rhs = - 4.0_wp * pi * q_grid
+    End If
     Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 1000, rtol, .False., &
          pot_grid, istop, istop_message, itn, rnorm )
+    ! If delta solve add back in old potential
+    If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
+       pot_grid = pot_grid + pot_grid_old
+    End If
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
