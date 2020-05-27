@@ -2,24 +2,24 @@ Program test_mpi
 
   !$ Use omp_lib
   Use mpi_f08, Only : mpi_comm, mpi_init, mpi_finalize, mpi_comm_world, mpi_bcast, mpi_double_precision, mpi_integer, &
-       mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place
+       mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place, mpi_character
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
-  Use lattice_module                      , Only : lattice
-  Use charge_grid_module                  , Only : charge_grid_get_n_grid
-  Use fast_fourier_poisson_module         , Only : ffp_long_range, ffp_sic
-  Use symetrically_screened_poisson_module, Only : ssp_long_range, ssp_sic
-  Use grid_io_module                      , Only : grid_io_save
-  Use domains_module                      , Only : domain_build, domain_halo_build, domain_get_params
-  Use comms_parallel_module               , Only : comms_parallel
-  Use halo_parallel_module                , Only : halo_parallel_setter
-  Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
-  Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
-  Use equation_solver_base_class_module   , Only : equation_solver_base_class
-  Use equation_solver_minres_module       , Only : equation_solver_minres
+  Use lattice_module                           , Only : lattice
+  Use charge_grid_module                       , Only : charge_grid_get_n_grid
+  Use fast_fourier_poisson_module              , Only : ffp_long_range, ffp_sic
+  Use symetrically_screened_poisson_module     , Only : ssp_long_range, ssp_sic
+  Use grid_io_module                           , Only : grid_io_save
+  Use domains_module                           , Only : domain_build, domain_halo_build, domain_get_params
+  Use comms_parallel_module                    , Only : comms_parallel
+  Use halo_parallel_module                     , Only : halo_parallel_setter
+  Use quadrature_trapezium_rule_module         , Only : quadrature_trapezium_rule
+  Use FD_Laplacian_3d_module                   , Only : FD_Laplacian_3D
+  Use equation_solver_base_class_module        , Only : equation_solver_base_class
+  Use equation_solver_minres_module            , Only : equation_solver_minres
   Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
-  Use Ewald_3d_module, Only : Ewald_3d, Ewald_3d_status
+  Use Ewald_3d_module                          , Only : Ewald_3d_recipe, Ewald_3d_status
   
   Implicit None
 
@@ -32,6 +32,7 @@ Program test_mpi
   Type( quadrature_trapezium_rule     ) :: grid_integrator
   Type( comms_parallel                ) :: comms
   Type( FD_Laplacian_3D               ) :: FD
+  Type( Ewald_3d_recipe               ) :: ewald_recipe
   Type( Ewald_3d_status               ) :: status
   
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_ffp
@@ -74,7 +75,7 @@ Program test_mpi
   Integer, Dimension( : ), Allocatable :: id, id_domain
   
   Integer, Dimension( 1:3 ) :: n_grid
-  Integer, Dimension( 1:3 ) :: np_grid
+  Integer, Dimension( 1:3 ) :: np_grid, np_grid_serial
   Integer, Dimension( 1:3 ) :: p_coords
   Integer, Dimension( 1:3 ) :: n_grid_domain
   Integer, Dimension( 1:3 ) :: domain_base_coords
@@ -139,6 +140,8 @@ Program test_mpi
   Call mpi_bcast( n            ,         1, mpi_integer         , 0, mpi_comm_world )
   Call mpi_bcast( a            , Size( a ), mpi_double_precision, 0, mpi_comm_world )
   Call mpi_bcast( which_solver ,         1, mpi_integer         , 0, mpi_comm_world )
+  
+  Call mpi_bcast( what, Len( what ), mpi_character, 0, mpi_comm_world )
 
   Select Case( which_solver )
   Case( 1 )
@@ -201,9 +204,9 @@ Program test_mpi
   ! First do the calculation in serial on proc 0
   Reference_serial: If( me == 0 ) Then
      ! Build the arrays of particles in the domain and halo
-     np_grid = [ 1, 1, 1 ]
-     Call domain_build( l, q, r, n_grid, np_grid, [ 0, 0, 0 ], q_domain, r_domain )
-     Call domain_halo_build( l, q, r, n_grid, np_grid, [ 0, 0, 0 ], [ range_gauss, range_gauss, range_gauss ], &
+     np_grid_serial = [ 1, 1, 1 ]
+     Call domain_build( l, q, r, n_grid, np_grid_serial, [ 0, 0, 0 ], q_domain, r_domain )
+     Call domain_halo_build( l, q, r, n_grid, np_grid_serial, [ 0, 0, 0 ], [ range_gauss, range_gauss, range_gauss ], &
           q_halo, r_halo )
 
      ! Calculate the long range term by fourier space methods
@@ -310,8 +313,11 @@ Program test_mpi
        ei_ssp, force_ssp, t_grid_ssp, t_pot_solve_ssp, t_forces_ssp, itn, istop, istop_message, rnorm, error )
   ! Check charge grid
   If( me_cart == 0 ) Then
+     Write( *, * )
      Write( *, * ) 'SSP Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
-     Write( *, * ) itn, istop, istop_message, rnorm
+     Write( *, * ) 'iterations = ', itn
+     Write( *, * ) 'terminated because ', Trim( Adjustl( istop_message ) )
+     Write( *, * ) 'norm of error vector ', rnorm
      Write( *, '( "SSP grid   time: ", f7.3 )' ) t_grid_ssp
      Write( *, '( "SSP solve  time: ", f7.3 )' ) t_pot_solve_ssp
      Write( *, '( "SSP forces time: ", f7.3 )' ) t_forces_ssp
@@ -354,14 +360,23 @@ Program test_mpi
   End If
   Deallocate(  q_grid_full, force_full )
 
+  ! Need to set these up earlier so use consistent sizes throughout calculation
+  Call ewald_recipe%mix( l, alpha, error, communicator = cart_comm%mpi_val, equation_solver = what )
+  ! May have changed some dimnsions due to constrains of parallel implementation
+  Call ewald_recipe%get_ingredients( n_grid = n_grid, range_gauss = range_gauss, &
+       domain_base_coords = domain_base_coords, &
+       domain_end_coords = domain_end_coords )
+  
   recip_E_ssp   = 0.0_wp
-  Call Ewald_3d(  l, alpha, q_domain, r_domain, q_halo, r_halo,  &
-       recip_E_ssp, force_ssp, stress, error, cart_comm%mpi_val, &
+  Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
+       recip_E_ssp, force_ssp, stress, error,          &
        q_grid = q_grid_ssp, pot_grid = pot_grid_ssp, ei = ei_ssp, status = status )
   If( me_cart == 0 ) Then
+     Write( *, * )
      Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
-     Write( *, * ) status%solver_iterations, status%solver_stop_code, &
-          status%solver_stop_message, status%solver_residual_norm
+     Write( *, * ) 'iterations = ', status%solver_iterations
+     Write( *, * ) 'terminated because ', Trim( Adjustl( status%solver_stop_message ) )
+     Write( *, * ) 'norm of error vector ', status%solver_residual_norm
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
@@ -402,32 +417,37 @@ Program test_mpi
      Close( 11 )
      Write( *, * ) 'Energy from summing per particle contributions ', ei_full
   End If
-  
+
+  ! See if we get the same answer with a restart
   recip_E_ssp   = 0.0_wp
-  Call Ewald_3d(  l, alpha, q_domain, r_domain, q_halo, r_halo,  &
-       recip_E_ssp, force_ssp, stress, error, cart_comm%mpi_val, &
+  Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
+       recip_E_ssp, force_ssp, stress, error, &
        q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
   If( me_cart == 0 ) Then
-     Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
-     Write( *, * ) status%solver_iterations, status%solver_stop_code, &
-          status%solver_stop_message, status%solver_residual_norm
+     Write( *, * )
+     Write( *, * ) 'OLD Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
+     Write( *, * ) 'iterations = ', status%solver_iterations
+     Write( *, * ) 'terminated because ', Trim( Adjustl( status%solver_stop_message ) )
+     Write( *, * ) 'norm of error vector ', status%solver_residual_norm
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
   End If
+
+  ! Now move the atoms slightly ...
 
   Allocate( dr, mold = r )
   Call Random_number( dr )
   dr = dr - 0.5_wp
   dr = dr / 100.0_wp
   r = r + dr
-!!$  dr = r
+!!$!!!!$  dr = r
   Do i = 1, n
      t = r( :, i )
      Call l%to_reference( t, r( :, i ) ) 
   End Do
-!!$  Write( *, * ) Maxval( dr - r )
-!!$  r( :, 1 ) = r( :, 1 ) + 0.00001_wp
+!!$!!!!$  Write( *, * ) Maxval( dr - r )
+!!$!!!!$  r( :, 1 ) = r( :, 1 ) + 0.00001_wp
   ! Build the domain and halo
   Call domain_build( l, q, r, n_grid, np_grid, p_coords, q_domain, r_domain, id, id_domain )
   Call domain_halo_build( l, q, r, n_grid, np_grid, p_coords, [ range_gauss, range_gauss, range_gauss ], &
@@ -438,14 +458,15 @@ Program test_mpi
   Allocate( ei_ssp( 1:n_at_loc ) )
   Allocate( force_ssp( 1:3, 1:n_at_loc ) )
   recip_E_ssp   = 0.0_wp
-  Call Ewald_3d(  l, alpha, q_domain, r_domain, q_halo, r_halo,  &
-       recip_E_ssp, force_ssp, stress, error, cart_comm%mpi_val, &
+  Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
+       recip_E_ssp, force_ssp, stress, error, &
        q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
-  Write( *, * ) 'error = ', error
   If( me_cart == 0 ) Then
-     Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
-     Write( *, * ) status%solver_iterations, status%solver_stop_code, &
-          status%solver_stop_message, status%solver_residual_norm
+     Write( *, * )
+     Write( *, * ) 'SHIFTED Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
+     Write( *, * ) 'iterations = ', status%solver_iterations
+     Write( *, * ) 'terminated because ', Trim( Adjustl( status%solver_stop_message ) )
+     Write( *, * ) 'norm of error vector ', status%solver_residual_norm
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
