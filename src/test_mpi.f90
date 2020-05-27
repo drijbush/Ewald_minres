@@ -61,6 +61,7 @@ Program test_mpi
 
   Real( wp ), Dimension( 1:3 ) :: dg
   Real( wp ), Dimension( 1:3 ) :: t
+  Real( wp ), Dimension( 1:3 ) :: f_ssp
 
   Real( wp ) :: alpha, rtol
   Real( wp ) :: gauss_tol
@@ -311,7 +312,10 @@ Program test_mpi
   Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid_ssp ), rtol, &
        recip_E_ssp, q_grid_ssp, pot_grid_ssp, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid_ssp, t_pot_solve_ssp, t_forces_ssp, itn, istop, istop_message, rnorm, error )
-  ! Check charge grid
+  Do i = 1, 3
+     f_ssp( i ) = Sum( force_ssp( i, : ) )
+  End Do
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
      Write( *, * )
      Write( *, * ) 'SSP Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
@@ -321,7 +325,9 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) t_grid_ssp
      Write( *, '( "SSP solve  time: ", f7.3 )' ) t_pot_solve_ssp
      Write( *, '( "SSP forces time: ", f7.3 )' ) t_forces_ssp
+     Write( *, * ) 'Nett force: ', f_ssp
   End If
+  ! Check charge grid
   Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   q_grid_full = 0.0_wp
   q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
@@ -371,6 +377,10 @@ Program test_mpi
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error,          &
        q_grid = q_grid_ssp, pot_grid = pot_grid_ssp, ei = ei_ssp, status = status )
+  Do i = 1, 3
+     f_ssp( i ) = Sum( force_ssp( i, : ) )
+  End Do
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
      Write( *, * )
      Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
@@ -380,6 +390,7 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
+     Write( *, * ) 'Nett force: ', f_ssp
   End If
   Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   q_grid_full = 0.0_wp
@@ -423,6 +434,10 @@ Program test_mpi
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error, &
        q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
+  Do i = 1, 3
+     f_ssp( i ) = Sum( force_ssp( i, : ) )
+  End Do
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
      Write( *, * )
      Write( *, * ) 'OLD Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
@@ -432,6 +447,7 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
+     Write( *, * ) 'Nett force: ', f_ssp
   End If
 
   ! Now move the atoms slightly ...
@@ -461,6 +477,13 @@ Program test_mpi
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error, &
        q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
+!!$  Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
+!!$       recip_E_ssp, force_ssp, stress, error, &
+!!$       ei = ei_ssp, status = status )
+  Do i = 1, 3
+     f_ssp( i ) = Sum( force_ssp( i, : ) )
+  End Do
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
      Write( *, * )
      Write( *, * ) 'SHIFTED Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
@@ -470,6 +493,7 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
+     Write( *, * ) 'Nett force: ', f_ssp
   End If
 
   Call mpi_finalize( error )
