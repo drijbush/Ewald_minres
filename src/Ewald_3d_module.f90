@@ -394,17 +394,35 @@ Contains
   End Subroutine Ewald_3d_init
 
   Subroutine Ewald_3d_get_ingredients( recipe, l, alpha, n_grid, &
-       domain_base_coords, domain_end_coords, range_gauss )
+       domain_base_coords, domain_end_coords, range_gauss, gauss_tol, residual_tol, &
+       comms, FD, FD_swapper, pot_swapper, solver, grid_integrator )
 
-    !!!!! NEEDS COMPLETEING !!!!!!
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Use lattice_module                   , Only : lattice
+    Use comms_base_class_module          , Only : comms_base_class
+    Use FD_template_module               , Only : FD_template
+    Use halo_setter_base_module          , Only : halo_setter_base_class
+    Use quadrature_base_module           , Only : quadrature_base_class
+    Use equation_solver_base_class_module, Only : equation_solver_base_class
+
+    Implicit None
     
-    Class( Ewald_3d_recipe ) , Intent( In    )           :: recipe
-    Type( lattice )          , Intent(   Out ), Optional :: l
-    Real( wp )               , Intent(   Out ), Optional :: alpha
-    Integer, Dimension( 1:3 ), Intent(   Out ), Optional :: n_grid
-    Integer, Dimension( 1:3 ), Intent(   Out ), Optional :: domain_base_coords
-    Integer, Dimension( 1:3 ), Intent(   Out ), Optional :: domain_end_coords
-    Integer,                   Intent(   Out ), Optional :: range_gauss
+    Class( Ewald_3d_recipe )                        , Intent( In    )           :: recipe
+    Type( lattice )                                 , Intent(   Out ), Optional :: l
+    Real( wp )                                      , Intent(   Out ), Optional :: alpha
+    Integer, Dimension( 1:3 )                       , Intent(   Out ), Optional :: n_grid
+    Integer, Dimension( 1:3 )                       , Intent(   Out ), Optional :: domain_base_coords
+    Integer, Dimension( 1:3 )                       , Intent(   Out ), Optional :: domain_end_coords
+    Integer                                         , Intent(   Out ), Optional :: range_gauss
+    Real( wp )                                      , Intent(   Out ), Optional :: gauss_tol
+    Real( wp )                                      , Intent(   Out ), Optional :: residual_tol
+    Class( comms_base_class           ), Allocatable, Intent(   Out ), Optional :: comms
+    Class( FD_template                ), Allocatable, Intent(   Out ), Optional :: FD
+    Class( halo_setter_base_class     ), Allocatable, Intent(   Out ), Optional :: FD_swapper
+    Class( halo_setter_base_class     ), Allocatable, Intent(   Out ), Optional :: pot_swapper
+    Class( equation_solver_base_class ), Allocatable, Intent(   Out ), Optional :: solver
+    Class( quadrature_base_class      ), Allocatable, Intent(   Out ), Optional :: grid_integrator
 
     If( Present( l ) ) Then
        l = recipe%l
@@ -430,6 +448,38 @@ Contains
        range_gauss = recipe%range_gauss
     End If
        
+    If( Present( gauss_tol ) ) Then
+       alpha = recipe%alpha
+    End If
+
+    If( Present( residual_tol ) ) Then
+       alpha = recipe%alpha
+    End If
+
+    If( Present( comms ) ) Then
+       comms = recipe%comms
+    End If
+
+    If( Present( FD ) ) Then
+       FD = recipe%FD
+    End If
+
+    If( Present( FD_swapper ) ) Then
+       FD_swapper = recipe%FD_swapper
+    End If
+
+    If( Present( pot_swapper ) ) Then
+       pot_swapper = recipe%pot_swapper
+    End If
+
+    If( Present( solver ) ) Then
+       solver = recipe%solver
+    End If
+
+    If( Present( grid_integrator ) ) Then
+       grid_integrator = recipe%grid_integrator
+    End If
+
   End Subroutine Ewald_3d_get_ingredients
   
 End Module Ewald_3d_module
