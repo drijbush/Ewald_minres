@@ -23,7 +23,8 @@ Module Ewald_3d_module
   Real( wp )          , Parameter :: gauss_tol_default    = 1e-15_wp ! Value for cutting of the gaussian
   Integer             , Parameter :: range_gauss_default  = 14       ! Number of points to grid one side of a gaussian
   Integer             , Parameter :: FD_order_default     = 14       ! Default order of the finite difference approximation
-  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
+!!$  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
+  Character( Len = * ), Parameter :: default_solver       = "CG" ! Default equation solver 
   Real( wp )          , Parameter :: residual_tol_default = 1e-10_wp ! Tolerance on residual in equation solver
   
 Contains
@@ -271,10 +272,10 @@ Contains
        recip_E, q_grid_ssp, pot_grid_ssp, solver, comms, FD_swapper, pot_swapper, grid_integrator      , &
        ei_ssp, forces, scope_status%t_grid, scope_status%t_pot_solve, scope_status%t_forces,             &
        scope_status%solver_iterations, scope_status%solver_stop_code, scope_status%solver_stop_message , &
-       scope_status%solver_residual_norm, error )
-    If( error /= 0 ) Then
-       Return
-    End If
+       scope_status%solver_residual_norm, error, q_grid_old, pot_grid_old )
+!!$    If( error /= 0 ) Then
+!!$       Return
+!!$    End If
 
     ! Return optional arguments as required
     If( Present( q_grid ) ) Then

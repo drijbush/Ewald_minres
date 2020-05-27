@@ -74,12 +74,14 @@ Contains
     Use mpi_f08, Only : mpi_comm, mpi_comm_size
 
     Class( comms_parallel ), Intent( In    ) :: c
-    Integer              , Intent(   Out ) :: data
+    Integer                , Intent(   Out ) :: data
 
     Type( mpi_comm ) :: comm_f08
 
+    Integer :: error
+
     comm_f08%mpi_val = c%communicator
-    Call mpi_comm_rank( comm_f08, data )
+    Call mpi_comm_size( comm_f08, data, error )
 
   End Subroutine get_size
 
