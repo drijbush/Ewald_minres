@@ -191,9 +191,9 @@ Program test_mpi
   np_grid = 0
   Call mpi_dims_create( nproc, 3, np_grid )
   ! Now increase the size of the grid where it is not a multiple of the number of procs
-!!$  Where( Mod( n_grid, np_grid ) /= 0 )
-!!$     n_grid = ( n_grid / np_grid + 1 ) * np_grid
-!!$  End Where
+  Where( Mod( n_grid, np_grid ) /= 0 )
+     n_grid = ( n_grid / np_grid + 1 ) * np_grid
+  End Where
   If( me == 0 ) Then
      Write( *, * ) 'N_grid = ', n_grid
   End If
@@ -366,12 +366,21 @@ Program test_mpi
   End If
   Deallocate(  q_grid_full, force_full )
 
+  ! START USE OF FULL INTERFACE !!!!!!!!!!!!!!
+  ! ------------------------------------------
+  
   ! Need to set these up earlier so use consistent sizes throughout calculation
+  ! Set the recipe for the calculation
   Call ewald_recipe%mix( l, alpha, error, communicator = cart_comm%mpi_val, equation_solver = what )
   ! May have changed some dimnsions due to constrains of parallel implementation
+  ! Need these for checking potential grids etc.
   Call ewald_recipe%get_ingredients( n_grid = n_grid, range_gauss = range_gauss, &
        domain_base_coords = domain_base_coords, &
        domain_end_coords = domain_end_coords )
+  If( me_cart == 0 ) Then
+     Write( *, * )
+     Write( *, * ) 'N_grid in full interface ', n_grid
+  End If
   
   recip_E_ssp   = 0.0_wp
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
