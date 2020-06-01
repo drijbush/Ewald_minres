@@ -47,7 +47,8 @@ Contains
     Real( wp )                         , Intent( In    ) :: rtol
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: pot_grid
-    Class( equation_solver_base_class ), Intent( In    ) :: solver
+!!$    Class( equation_solver_base_class ), Intent( In    ) :: solver
+    Class( equation_solver_base_class ), Intent( InOut ) :: solver
     Class( comms_base_class        )   , Intent( InOut ) :: comms ! Need to check and fix these InOuts
     Class( halo_setter_base_class  )   , Intent( InOut ) :: fd_swapper
     Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper
@@ -101,7 +102,10 @@ Contains
     Else
        rhs = - 4.0_wp * pi * q_grid
     End If
-    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 1000, rtol, .False., &
+!!$    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 1000, rtol, .False., &
+!!$         pot_grid, istop, istop_message, itn, rnorm )
+    call solver%init( comms = comms )
+    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, fd_swapper, dummy_Msolve, rhs, rtol, .False., &
          pot_grid, istop, istop_message, itn, rnorm )
     ! If delta solve add back in old potential
     If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
