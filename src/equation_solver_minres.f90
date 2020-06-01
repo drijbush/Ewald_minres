@@ -48,7 +48,7 @@ Contains
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   Subroutine MINRES( method, &
-       lb, ub, FD_operator, halo_swapper, Msolve, b, rtol,  precon, &
+       lb, ub, Msolve, b, rtol,  precon, &
        x, istop, istop_message, itn, rnorm )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
@@ -56,11 +56,9 @@ Contains
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
 
-    Class( equation_solver_minres )                       , Intent( In    ) :: method
+    Class( equation_solver_minres )                       , Intent( InOut ) :: method
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
-    Class( FD_template )                                  , Intent( In    ) :: FD_operator
-    Class( halo_setter_base_class )                       , Intent( InOut ) :: halo_swapper
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
     Real( wp )                                            , Intent( In    ) :: rtol
     Logical                                               , Intent( In    ) :: precon
@@ -384,12 +382,12 @@ Contains
 
       !IJB
       ! Note order is always even, so no worries about splitting it in 2
-      FD_order  = FD_operator%get_order()
+      FD_order  = method%FD_operator%get_order()
 
 !!$    halo_width = FD_order / 2
       ! Looks like a bug in get order! Returns twice what expected ...
       halo_width = FD_order
-      Call halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
+      Call method%halo_swapper%allocate( lb, ub, halo_width, grid_with_halo )
 
       ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
       ! due to errors before the iteration starts
@@ -437,11 +435,11 @@ Contains
       !-------------------------------------------------------------------
       If (checkA) Then
          ! NEED TO FIX ARGUMENTS - especially lb of grid
-         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
-         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
+         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
+         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
               grid_with_halo, w  )
-         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
-         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
+         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
+         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
               grid_with_halo, r2  )
          s = method%contract( method%comms, w, w  )
          t = method%contract( method%comms, y, r2 )       
@@ -453,8 +451,8 @@ Contains
          End If
          Arnorml = Sqrt(s);
       Else
-         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
-         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
+         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
+         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
               grid_with_halo, w  )
          Arnorml = Sqrt( method%contract( method%comms, w, w  ) )
       End If
@@ -505,8 +503,8 @@ Contains
          v      = s*y                   ! v = vk if P = I
 
          ! NEED TO FIX ARGUMENTS - especially lb of grid
-         Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo, error )
-         Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
+         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo, error )
+         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
               grid_with_halo, y  )
          y      = y - shift*v           ! call daxpy ( n, (- shift), v, 1, y, 1 )
          If (itn >= 2) Then

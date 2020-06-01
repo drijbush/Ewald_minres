@@ -24,17 +24,15 @@ Module equation_solver_base_class_module
   Abstract Interface
 
      Subroutine solver( method, &
-          lb, ub, FD_operator, halo_swapper, Msolve, b, rtol,  precon, &
+          lb, ub, Msolve, b, rtol,  precon, &
           x, istop, istop_message, itn, rnorm )
        Use halo_setter_base_module, Only : halo_setter_base_class
        Use FD_template_module     , Only : FD_template
        Import :: wp
        Import :: equation_solver_base_class
-       Class( equation_solver_base_class )                   , Intent( In    ) :: method
+       Class( equation_solver_base_class )                   , Intent( InOut ) :: method
        Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
        Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
-       Class( FD_template )                                  , Intent( In    ) :: FD_operator
-       Class( halo_setter_base_class )                       , Intent( InOut ) :: halo_swapper
        Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
        Real( wp )                                            , Intent( In    ) :: rtol
        Logical                                               , Intent( In    ) :: precon

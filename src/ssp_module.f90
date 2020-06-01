@@ -104,8 +104,8 @@ Contains
     End If
 !!$    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 1000, rtol, .False., &
 !!$         pot_grid, istop, istop_message, itn, rnorm )
-    call solver%init( comms = comms )
-    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, fd_swapper, dummy_Msolve, rhs, rtol, .False., &
+    call solver%init( comms = comms, FD_operator = FD, halo_swapper = fd_swapper  )
+    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), dummy_Msolve, rhs, rtol, .False., &
          pot_grid, istop, istop_message, itn, rnorm )
     ! If delta solve add back in old potential
     If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
