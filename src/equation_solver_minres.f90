@@ -48,12 +48,11 @@ Contains
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   Subroutine MINRES( method, &
-       lb, ub, FD_operator, comms, halo_swapper, Msolve, b, itnlim, rtol,  precon, &
+       lb, ub, FD_operator, halo_swapper, Msolve, b, rtol,  precon, &
        x, istop, istop_message, itn, rnorm )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
 
@@ -62,9 +61,7 @@ Contains
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
     Class( FD_template )                                  , Intent( In    ) :: FD_operator
     Class( halo_setter_base_class )                       , Intent( InOut ) :: halo_swapper
-    Class( comms_base_class       )                       , Intent( In    ) :: comms
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
-    Integer                                               , Intent( In    ) :: itnlim
     Real( wp )                                            , Intent( In    ) :: rtol
     Logical                                               , Intent( In    ) :: precon
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
@@ -406,7 +403,7 @@ Contains
       r1     = b
       y      = b
       If ( precon ) Call Msolve( lb, ub, b, y )
-      beta1 = method%contract( comms, b, y )
+      beta1 = method%contract( method%comms, b, y )
 
       If (beta1 < zero) Then     ! M must be indefinite.
          istop = 8
@@ -425,8 +422,8 @@ Contains
       !-------------------------------------------------------------------
       If (checkA  .And.  precon) Then
          Call Msolve( lb, ub, y, r2 )
-         s = method%contract( comms, y , y  )
-         t = method%contract( comms, r1, r2 )
+         s = method%contract( method%comms, y , y  )
+         t = method%contract( method%comms, r1, r2 )
          z      = Abs(s - t)
          epsa   = (s + eps) * eps**0.33333
          If (z > epsa) Then
@@ -446,8 +443,8 @@ Contains
          Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
          Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
               grid_with_halo, r2  )
-         s = method%contract( comms, w, w  )
-         t = method%contract( comms, y, r2 )       
+         s = method%contract( method%comms, w, w  )
+         t = method%contract( method%comms, y, r2 )       
          z      = Abs(s - t)
          epsa   = (s + eps) * eps**0.33333
          If (z > epsa) Then
@@ -459,7 +456,7 @@ Contains
          Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
          Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
               grid_with_halo, w  )
-         Arnorml = Sqrt( method%contract( comms, w, w  ) )
+         Arnorml = Sqrt( method%contract( method%comms, w, w  ) )
       End If
 
       !-------------------------------------------------------------------
@@ -516,14 +513,14 @@ Contains
             y   = y - (beta/oldb)*r1    ! call daxpy ( n, (- beta/oldb), r1, 1, y, 1 )
          End If
 
-         alfa = method%contract( comms, v, y  )
+         alfa = method%contract( method%comms, v, y  )
          y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
          r1     = r2
          r2     = y
          If ( precon ) Call Msolve( lb, ub, r2, y )
 
          oldb   = beta                  ! oldb = betak
-         beta = method%contract( comms, r2, y  )
+         beta = method%contract( method%comms, r2, y  )
          If (beta < zero) Then
             istop = 6
             Exit solver_block
@@ -607,7 +604,7 @@ Contains
          ! In rare cases, istop is already -1 from above (Abar = const*I).
 
          If (istop == 0) Then
-            If (itn    >= itnlim    ) istop = 5
+            If (itn    >= method%max_iter    ) istop = 5
             If (Acond  >= 0.1d+0/eps) istop = 4
             If (epsx   >= beta1     ) istop = 3
             If (qrnorm <= epsx  .Or.  relArnorml <= epsx) istop = 2

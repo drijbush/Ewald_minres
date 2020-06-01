@@ -14,12 +14,11 @@ Module equation_solver_conjugate_gradient_module
 Contains
 
   Subroutine cg( method, &
-       lb, ub, FD_operator, comms, halo_swapper, Msolve, b, itnlim, rtol,  precon, &
+       lb, ub, FD_operator, halo_swapper, Msolve, b, rtol,  precon, &
        x, istop, istop_message, itn, rnorm )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
 
@@ -30,9 +29,7 @@ Contains
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
     Class( FD_template )                                  , Intent( In    ) :: FD_operator
     Class( halo_setter_base_class )                       , Intent( InOut ) :: halo_swapper
-    Class( comms_base_class       )                       , Intent( In    ) :: comms
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
-    Integer                                               , Intent( In    ) :: itnlim
     Real( wp )                                            , Intent( In    ) :: rtol
     Logical                                               , Intent( In    ) :: precon
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
@@ -63,8 +60,8 @@ Contains
     Integer :: np
     Integer :: error
 
-    Call comms%get_size( np )
-
+    Call method%comms%get_size( np )
+    
     Allocate( r, p, w, Mold = b )
 
     rnorm = Huge( rnorm )
@@ -86,27 +83,27 @@ Contains
     r = b - w
     mu = Sum( r )
     ! Need n_grid in here really!!!! So can for av value of r
-    Call comms%reduce( mu )
+    Call method%comms%reduce( mu )
     mu = mu / ( np * Size( r ) )
     r = r - mu
     p = r
-    r_dot_r_old = method%contract( comms, r, r )
+    r_dot_r_old = method%contract( method%comms, r, r )
     rnorm = Sqrt( r_dot_r_old )
     If( rnorm > rtol ) Then
-       Do iteration = 1, itnlim
+       Do iteration = 1, method%max_iter
           Call halo_swapper%fill( halo_width, Lbound( grid_with_halo ), p, grid_with_halo, error )
           Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w  ), Ubound( w  ), &
                grid_with_halo, w  )
-          p_dot_w = method%contract( comms, p, w )
+          p_dot_w = method%contract( method%comms, p, w )
           alpha = r_dot_r_old / p_dot_w
           x = x + alpha * p
           r = r - alpha * w
     mu = Sum( r )
     mu = mu / Size( r )
-    Call comms%reduce( mu )
+    Call method%comms%reduce( mu )
     mu = mu / ( np * Size( r ) )
     r = r - mu
-          r_dot_r = method%contract( comms, r, r )
+          r_dot_r = method%contract( method%comms, r, r )
           ! NEED BETTER CONVERGENCE CRITERION!!!
           rnorm = Sqrt( r_dot_r )
           If( rnorm < rtol ) Exit
@@ -120,7 +117,7 @@ Contains
        
     itn = iteration
 
-    If( iteration <= itnlim ) Then
+    If( iteration <= method%max_iter ) Then
        istop = 1
        istop_message = "CG worked"
     Else
