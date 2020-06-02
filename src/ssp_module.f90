@@ -13,16 +13,19 @@ Module symetrically_screened_poisson_module
 
 Contains
 
-  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo, range_gauss, n_grid, lb, rtol, &
-       recip_E, q_grid, pot_grid, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
+!!$  Subroutine ssp_long_range( l, q, r, alpha, FD, q_halo, r_halo, range_gauss, n_grid, lb, rtol, &
+!!$       recip_E, q_grid, pot_grid, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
+!!$       ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error, q_grid_old, pot_grid_old )
+  Subroutine ssp_long_range( l, q, r, alpha, q_halo, r_halo, range_gauss, n_grid, lb, rtol, &
+       recip_E, q_grid, pot_grid, solver, pot_swapper, grid_integrator, &
        ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error, q_grid_old, pot_grid_old )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
     Use lattice_module                   , Only : lattice
     Use charge_grid_module               , Only : charge_grid_calculate, charge_grid_forces
-    Use FD_template_module               , Only : FD_template
-    Use comms_base_class_module          , Only : comms_base_class
+!!$    Use FD_template_module               , Only : FD_template
+!!$    Use comms_base_class_module          , Only : comms_base_class
     Use halo_setter_base_module          , Only : halo_setter_base_class
     Use quadrature_base_module           , Only : quadrature_base_class
     Use equation_solver_base_class_module, Only : equation_solver_base_class
@@ -37,7 +40,6 @@ Contains
     Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r
     Real( wp )                         , Intent( In    ) :: alpha
-    Class( FD_template )               , Intent( In    ) :: FD
     Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
     Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r_halo
     Integer   ,                          Intent( In    ) :: range_gauss
@@ -47,11 +49,8 @@ Contains
     Real( wp )                         , Intent( In    ) :: rtol
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: pot_grid
-!!$    Class( equation_solver_base_class ), Intent( In    ) :: solver
-    Class( equation_solver_base_class ), Intent( InOut ) :: solver
-    Class( comms_base_class        )   , Intent( InOut ) :: comms ! Need to check and fix these InOuts
-    Class( halo_setter_base_class  )   , Intent( InOut ) :: fd_swapper
-    Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper
+    Class( equation_solver_base_class ), Intent( InOut ) :: solver ! Need to check and fix these InOuts
+    Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper 
     Class( quadrature_base_class   )   , Intent( InOut ) :: grid_integrator
     Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
     Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
@@ -73,8 +72,6 @@ Contains
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
 
-    Integer :: fd_order
-    
     Integer( li ) :: start, finish, rate
 
     Allocate( r_full( 1:3, 1:Size( q ) + Size( q_halo ) ) )
@@ -83,12 +80,10 @@ Contains
 
     error = 0
 
-    fd_order = FD%get_order()
-
     ! Grid the charge
     Call System_clock( start, rate )
     Call charge_grid_calculate( l, alpha, [ q, q_halo ], r_full, range_gauss, &
-         n_grid, Lbound( q_grid ), Ubound( q_grid ), comms, grid_integrator, q_grid, error )
+         n_grid, Lbound( q_grid ), Ubound( q_grid ), solver%comms, grid_integrator, q_grid, error )
     Call System_clock( finish, rate )
     t_grid = Real( finish - start, wp ) / rate
 
@@ -102,9 +97,7 @@ Contains
     Else
        rhs = - 4.0_wp * pi * q_grid
     End If
-!!$    Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), FD, comms, fd_swapper, dummy_Msolve, rhs, 1000, rtol, .False., &
-!!$         pot_grid, istop, istop_message, itn, rnorm )
-    call solver%init( comms = comms, FD_operator = FD, halo_swapper = fd_swapper  )
+!!$    call solver%init( comms = comms, FD_operator = FD, halo_swapper = fd_swapper  )
     Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), dummy_Msolve, rhs, rtol, .False., &
          pot_grid, istop, istop_message, itn, rnorm )
     ! If delta solve add back in old potential
@@ -114,7 +107,7 @@ Contains
     If( standardise ) Then
        ! Standardise to potential averages to zero over grid
        ! In real calculation don't need to do this!
-       pot_grid = pot_grid - grid_integrator%integrate( comms, l, n_grid, pot_grid ) / l%get_volume()
+       pot_grid = pot_grid - grid_integrator%integrate( solver%comms, l, n_grid, pot_grid ) / l%get_volume()
     End If
     Call System_clock( finish, rate )
     t_pot_solve = Real( finish - start, wp ) / rate
@@ -122,7 +115,7 @@ Contains
     ! Calculate from the potential the long range energy
     ! Two minus signs as a) this is the SCREENED charge
     !                    b) I like to just add up the energies, having to subtract it is confusing
-    recip_E = - 0.5_wp * grid_integrator%integrate( comms, l, n_grid, - q_grid * pot_grid )
+    recip_E = - 0.5_wp * grid_integrator%integrate( solver%comms, l, n_grid, - q_grid * pot_grid )
     
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper

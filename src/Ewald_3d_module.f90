@@ -135,12 +135,11 @@ Contains
     Allocate( ei_loc( 1:Size( q ) ) )
 
     ! Solve the problem
-    Call ssp_long_range( recipe%l, q, r, recipe%alpha, recipe%FD, q_halo, r_halo,                    &
-         recipe%range_gauss, recipe%n_grid, Lbound( q_grid_loc ), recipe%residual_tol,               &
-         recip_E, q_grid_loc, pot_grid_loc, recipe%solver, recipe%comms,                             &
-         recipe%FD_swapper, recipe%pot_swapper, recipe%grid_integrator,                              &
-         ei_loc, forces, loc_status%t_grid, loc_status%t_pot_solve, loc_status%t_forces,             &
-         loc_status%solver_iterations, loc_status%solver_stop_code, loc_status%solver_stop_message , &
+    Call ssp_long_range( recipe%l, q, r, recipe%alpha, q_halo, r_halo,                                 &
+         recipe%range_gauss, recipe%n_grid, Lbound( q_grid_loc ), recipe%residual_tol,                 &
+         recip_E, q_grid_loc, pot_grid_loc, recipe%solver, recipe%pot_swapper, recipe%grid_integrator, &
+         ei_loc, forces, loc_status%t_grid, loc_status%t_pot_solve, loc_status%t_forces,               &
+         loc_status%solver_iterations, loc_status%solver_stop_code, loc_status%solver_stop_message ,   &
          loc_status%solver_residual_norm, error, q_grid_old, pot_grid_old )
 
     ! Return optional arguments as required
@@ -368,6 +367,8 @@ Contains
        error = EWALD_3D_INIT_UNKNOWN_EQUATION_SOLVER
        Return
     End Select
+    call solver%init( comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
+
 
     ! Set up the quadrature method
     Allocate( quadrature_trapezium_rule :: grid_integrator )

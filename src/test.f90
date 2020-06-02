@@ -263,8 +263,6 @@ Program test
   Allocate( pot_grid_ssp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
   Allocate( ei_ssp( 1:n ) )
   Allocate( force_ssp( 1:3, 1:n ) )
-!!$  Call ssp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
-!!$       recip_E_ssp, q_grid, pot_grid_ssp, ei_ssp, force_ssp, t_grid, t_pot_solve, error )
   Call fd_swapper%init ( error )
   Call pot_swapper%init( error )
     ! Initialise the FD template
@@ -273,11 +271,9 @@ Program test
        dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
     End Do
     Call FD%init( FD_order, dGrid_vecs )
-!!$  Call ssp_long_range( l, q_domain, r_domain, alpha, FD_order, q_halo, r_halo, &
-!!$       recip_E_ssp, q_grid, pot_grid_ssp, comms, fd_swapper, pot_swapper, grid_integrator, &
-!!$       ei_ssp, force_ssp, t_grid, t_pot_solve, error )
-  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid ), rtol, &
-       recip_E_ssp, q_grid, pot_grid_ssp, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
+    call solver%init( comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
+    Call ssp_long_range( l, q_domain, r_domain, alpha, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid ), rtol, &
+       recip_E_ssp, q_grid, pot_grid_ssp, solver, pot_swapper, grid_integrator, &
        ei_ssp, force_ssp, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error )
     Write( *, * ) 'Iterative solver summary:'
     Write( *, * ) 'alpha                = ', alpha
