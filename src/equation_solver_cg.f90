@@ -1,12 +1,12 @@
 Module equation_solver_conjugate_gradient_module
 
-  Use equation_solver_base_class_module, Only : equation_solver_base_class
+  Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
   
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
   Implicit None
 
-  Type, Public, Extends( equation_solver_base_class ) :: equation_solver_conjugate_gradient
+  Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_conjugate_gradient
    Contains
      Procedure :: solve => cg
   End type equation_solver_conjugate_gradient
@@ -14,7 +14,7 @@ Module equation_solver_conjugate_gradient_module
 Contains
 
   Subroutine cg( method, &
-       lb, ub, Msolve, b, rtol,  precon, &
+       lb, ub, b, rtol, &
        x, istop, istop_message, itn, rnorm )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
@@ -29,38 +29,24 @@ Contains
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
     Real( wp )                                            , Intent( In    ) :: rtol
-    Logical                                               , Intent( In    ) :: precon
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
     Integer                                               , Intent(   Out ) :: istop
     Character( Len = * )                                  , Intent(   Out ) :: istop_message
     Real( wp )                                            , Intent(   Out ) :: rnorm
     Integer                                               , Intent(   Out ) :: itn
-    Interface
-       Subroutine Msolve(lb,ub,x,y)                   ! Solve M*y = x
-         Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-         Integer                                               , Intent( In    ) :: lb( 1:3 )
-         Integer                                               , Intent( In    ) :: ub( 1:3 )
-         Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
-         Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
-       End Subroutine Msolve
-    End Interface
 
-    Real( wp ), Dimension( :, :, : ), Allocatable :: r, p, w
+    Real( wp ), Dimension( :, :, : ), Allocatable :: r, p, w, z
     Real( wp ), Dimension( :, :, : ), Allocatable :: grid_with_halo
 
     Real( wp ) :: alpha, beta
-    Real( wp ) :: r_dot_r_old, r_dot_r, p_dot_w
-    Real( wp ) :: mu
+    Real( wp ) :: z_dot_r_old, z_dot_r, r_dot_r, p_dot_w
     
     Integer :: halo_width
     Integer :: FD_order
     Integer :: iteration
-    Integer :: np
     Integer :: error
 
-    Call method%comms%get_size( np )
-    
-    Allocate( r, p, w, Mold = b )
+    Allocate( r, p, w, z, Mold = b )
 
     rnorm = Huge( rnorm )
     
@@ -79,35 +65,37 @@ Contains
     Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
          grid_with_halo, w  )
     r = b - w
-    mu = Sum( r )
-    ! Need n_grid in here really!!!! So can for av value of r
-    Call method%comms%reduce( mu )
-    mu = mu / ( np * Size( r ) )
-    r = r - mu
-    p = r
-    r_dot_r_old = method%contract( method%comms, r, r )
-    rnorm = Sqrt( r_dot_r_old )
+    If( Allocated( method%precon ) ) Then
+       Call method%precon%solve( lb, ub, r, rtol, z, istop, istop_message, itn, rnorm )
+    Else
+       z = r
+    End If
+    p = z
+    z_dot_r_old = method%contract( method%comms, z, r )
+    r_dot_r = method%contract( method%comms, r, r )
+    rnorm = Sqrt( r_dot_r )
     If( rnorm > rtol ) Then
        Do iteration = 1, method%max_iter
           Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), p, grid_with_halo, error )
           Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w  ), Ubound( w  ), &
                grid_with_halo, w  )
           p_dot_w = method%contract( method%comms, p, w )
-          alpha = r_dot_r_old / p_dot_w
+          alpha = z_dot_r_old / p_dot_w
           x = x + alpha * p
           r = r - alpha * w
-    mu = Sum( r )
-    mu = mu / Size( r )
-    Call method%comms%reduce( mu )
-    mu = mu / ( np * Size( r ) )
-    r = r - mu
           r_dot_r = method%contract( method%comms, r, r )
           ! NEED BETTER CONVERGENCE CRITERION!!!
           rnorm = Sqrt( r_dot_r )
           If( rnorm < rtol ) Exit
-          beta = r_dot_r / r_dot_r_old
-          p = r + beta * p
-          r_dot_r_old = r_dot_r
+          If( Allocated( method%precon ) ) Then
+             Call method%precon%solve( lb, ub, r, rtol, z, istop, istop_message, itn, rnorm )
+          Else
+             z = r
+          End If
+          z_dot_r = method%contract( method%comms, z, r )
+          beta = z_dot_r / z_dot_r_old
+          p = z + beta * p
+          z_dot_r_old = z_dot_r
        End Do
     Else
        iteration = 0

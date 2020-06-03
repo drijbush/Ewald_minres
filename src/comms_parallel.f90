@@ -7,6 +7,7 @@ Module comms_parallel_module
   Type, Public, Extends( comms_base_class ) :: comms_parallel
    Contains
      Procedure, Public  :: reduce          => reduce_real
+     Procedure, Public  :: max             => max_real
      Procedure, Public  :: set_comm        => set_comm
      Procedure, Public  :: get_comm        => get_comm
      Procedure, Public  :: get_rank        => get_rank
@@ -147,5 +148,28 @@ Contains
     Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_sum, comm_f08 )
     
   End Subroutine reduce_real
+  
+  Subroutine max_real( c, data )
+
+    Use mpi_f08, Only : mpi_comm, mpi_sizeof, mpi_type_match_size, mpi_typeclass_real, mpi_datatype, &
+         mpi_allreduce, mpi_in_place, mpi_max
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+    
+    Class( comms_parallel ), Intent( In    ) :: c
+    Real( wp )             , Intent( InOut ) :: data
+
+    Type( mpi_comm     ) :: comm_f08
+    Type( mpi_datatype ) :: datatype
+
+    Integer :: data_size
+
+    Call mpi_sizeof( data, data_size )
+    Call mpi_type_match_size( mpi_typeclass_real, data_size, datatype )
+
+    comm_f08%mpi_val = c%communicator
+    Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_max, comm_f08 )
+    
+  End Subroutine max_real
   
 End Module comms_parallel_module

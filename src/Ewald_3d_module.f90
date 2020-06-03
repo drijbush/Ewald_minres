@@ -2,12 +2,12 @@ Module Ewald_3d_module
 
   Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-  Use lattice_module                   , Only : lattice
-  Use comms_base_class_module          , Only : comms_base_class
-  Use FD_template_module               , Only : FD_template
-  Use halo_setter_base_module          , Only : halo_setter_base_class
-  Use quadrature_base_module           , Only : quadrature_base_class
-  Use equation_solver_base_class_module, Only : equation_solver_base_class
+  Use lattice_module                          , Only : lattice
+  Use comms_base_class_module                 , Only : comms_base_class
+  Use FD_template_module                      , Only : FD_template
+  Use halo_setter_base_module                 , Only : halo_setter_base_class
+  Use quadrature_base_module                  , Only : quadrature_base_class
+  Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
 
   Implicit None
 
@@ -21,20 +21,20 @@ Module Ewald_3d_module
   
   Type, Public :: Ewald_3d_recipe
      Private
-     Type( lattice )                                  :: l
-     Real( wp )                                       :: alpha
-     Integer, Dimension( : )            , Allocatable :: n_grid
-     Integer, Dimension( : )            , Allocatable :: domain_base_coords
-     Integer, Dimension( : )            , Allocatable :: domain_end_coords
-     Integer                                          :: range_gauss
-     Real( wp )                                       :: gauss_tol
-     Real( wp )                                       :: residual_tol
-     Class( comms_base_class           ), Allocatable :: comms
-     Class( FD_template                ), Allocatable :: FD
-     Class( halo_setter_base_class     ), Allocatable :: FD_swapper
-     Class( halo_setter_base_class     ), Allocatable :: pot_swapper
-     Class( equation_solver_base_class ), Allocatable :: solver
-     Class( quadrature_base_class      ), Allocatable :: grid_integrator
+     Type( lattice )                                         :: l
+     Real( wp )                                              :: alpha
+     Integer, Dimension( : )                   , Allocatable :: n_grid
+     Integer, Dimension( : )                   , Allocatable :: domain_base_coords
+     Integer, Dimension( : )                   , Allocatable :: domain_end_coords
+     Integer                                                 :: range_gauss
+     Real( wp )                                              :: gauss_tol
+     Real( wp )                                              :: residual_tol
+     Class( comms_base_class                  ), Allocatable :: comms
+     Class( FD_template                       ), Allocatable :: FD
+     Class( halo_setter_base_class            ), Allocatable :: FD_swapper
+     Class( halo_setter_base_class            ), Allocatable :: pot_swapper
+     Class( equation_solver_precon_base_class ), Allocatable :: solver
+     Class( quadrature_base_class             ), Allocatable :: grid_integrator
    Contains
      Procedure, Public :: mix             => Ewald_3d_init
      Procedure, Public :: consume         => Ewald_3d 
@@ -58,8 +58,9 @@ Module Ewald_3d_module
   Real( wp )          , Parameter :: gauss_tol_default    = 1e-15_wp ! Value for cutting of the gaussian
   Integer             , Parameter :: range_gauss_default  = 12       ! Number of points to grid one side of a gaussian
   Integer             , Parameter :: FD_order_default     = 12       ! Default order of the finite difference approximation
-  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
+!!$  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
 !!$  Character( Len = * ), Parameter :: default_solver       = "CG" ! Default equation solver 
+  Character( Len = * ), Parameter :: default_solver       = "wjac" ! Default equation solver 
   Real( wp )          , Parameter :: residual_tol_default = 1e-10_wp ! Tolerance on residual in equation solver
   
 Contains
@@ -67,33 +68,9 @@ Contains
   Subroutine Ewald_3d( recipe, q, r, q_halo, r_halo, &
        recip_E, forces, stress, error, q_grid_old, pot_grid_old, ei, q_grid, pot_grid, status ) 
 
-    Use lattice_module                   , Only : lattice
-
-    Use comms_base_class_module          , Only : comms_base_class
-    Use comms_serial_module              , Only : comms_serial
-    Use comms_parallel_module            , Only : comms_parallel
-
-    Use charge_grid_module               , Only : charge_grid_calculate, charge_grid_get_n_grid, charge_grid_forces
-
-    Use FD_template_module               , Only : FD_template
-    Use FD_Laplacian_3d_module           , Only : FD_Laplacian_3D
-
-    Use halo_setter_base_module          , Only : halo_setter_base_class
-    Use halo_serial_module               , Only : halo_serial_setter
-    Use halo_parallel_module             , Only : halo_parallel_setter
-
-    Use quadrature_base_module           , Only : quadrature_base_class
-    Use quadrature_trapezium_rule_module , Only : quadrature_trapezium_rule
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
     
-    Use equation_solver_base_class_module        , Only : equation_solver_base_class
-    Use equation_solver_minres_module            , Only : equation_solver_minres
-    Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
-
     Use symetrically_screened_poisson_module, Only : ssp_long_range
-    
-    ! Should eventually get rid of this one once HALO_HACK is sorted
-    ! But will need a more general solution to find base coords of domain
-    Use domains_module, Only : domain_get_params
 
     Implicit None
 
@@ -189,9 +166,10 @@ Contains
     Use quadrature_base_module           , Only : quadrature_base_class
     Use quadrature_trapezium_rule_module , Only : quadrature_trapezium_rule
     
-    Use equation_solver_base_class_module        , Only : equation_solver_base_class
+    Use equation_solver_precon_base_class_module , Only : equation_solver_precon_base_class
     Use equation_solver_minres_module            , Only : equation_solver_minres
     Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
+    Use equation_solver_weighted_jacobi_module   , Only : equation_solver_weighted_jacobi
 
     Use symetrically_screened_poisson_module, Only : ssp_long_range
     
@@ -209,12 +187,12 @@ Contains
     Integer                 , Intent( In    ), Optional :: communicator
     Character( Len = * )    , Intent( In    ), Optional :: equation_solver
 
-    Class( comms_base_class           ), Allocatable :: comms
-    Class( FD_template                ), Allocatable :: FD
-    Class( halo_setter_base_class     ), Allocatable :: FD_swapper
-    Class( halo_setter_base_class     ), Allocatable :: pot_swapper
-    Class( equation_solver_base_class ), Allocatable :: solver
-    Class( quadrature_base_class      ), Allocatable :: grid_integrator
+    Class( comms_base_class                  ), Allocatable :: comms
+    Class( FD_template                       ), Allocatable :: FD
+    Class( halo_setter_base_class            ), Allocatable :: FD_swapper
+    Class( halo_setter_base_class            ), Allocatable :: pot_swapper
+    Class( equation_solver_precon_base_class ), Allocatable :: solver
+    Class( quadrature_base_class             ), Allocatable :: grid_integrator
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: Grid_vecs, dGrid_vecs
     
@@ -363,6 +341,8 @@ Contains
        Allocate( equation_solver_conjugate_gradient :: solver )
     Case( "minres", "MINRES" )
        Allocate( equation_solver_minres :: solver )
+    Case( "WJAC", "wjac" )
+       Allocate( equation_solver_weighted_jacobi :: solver )
     Case Default
        error = EWALD_3D_INIT_UNKNOWN_EQUATION_SOLVER
        Return
@@ -400,30 +380,30 @@ Contains
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Use lattice_module                   , Only : lattice
-    Use comms_base_class_module          , Only : comms_base_class
-    Use FD_template_module               , Only : FD_template
-    Use halo_setter_base_module          , Only : halo_setter_base_class
-    Use quadrature_base_module           , Only : quadrature_base_class
-    Use equation_solver_base_class_module, Only : equation_solver_base_class
+    Use lattice_module                          , Only : lattice
+    Use comms_base_class_module                 , Only : comms_base_class
+    Use FD_template_module                      , Only : FD_template
+    Use halo_setter_base_module                 , Only : halo_setter_base_class
+    Use quadrature_base_module                  , Only : quadrature_base_class
+    Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
 
     Implicit None
     
-    Class( Ewald_3d_recipe )                        , Intent( In    )           :: recipe
-    Type( lattice )                                 , Intent(   Out ), Optional :: l
-    Real( wp )                                      , Intent(   Out ), Optional :: alpha
-    Integer, Dimension( 1:3 )                       , Intent(   Out ), Optional :: n_grid
-    Integer, Dimension( 1:3 )                       , Intent(   Out ), Optional :: domain_base_coords
-    Integer, Dimension( 1:3 )                       , Intent(   Out ), Optional :: domain_end_coords
-    Integer                                         , Intent(   Out ), Optional :: range_gauss
-    Real( wp )                                      , Intent(   Out ), Optional :: gauss_tol
-    Real( wp )                                      , Intent(   Out ), Optional :: residual_tol
-    Class( comms_base_class           ), Allocatable, Intent(   Out ), Optional :: comms
-    Class( FD_template                ), Allocatable, Intent(   Out ), Optional :: FD
-    Class( halo_setter_base_class     ), Allocatable, Intent(   Out ), Optional :: FD_swapper
-    Class( halo_setter_base_class     ), Allocatable, Intent(   Out ), Optional :: pot_swapper
-    Class( equation_solver_base_class ), Allocatable, Intent(   Out ), Optional :: solver
-    Class( quadrature_base_class      ), Allocatable, Intent(   Out ), Optional :: grid_integrator
+    Class( Ewald_3d_recipe )                               , Intent( In    )           :: recipe
+    Type( lattice )                                        , Intent(   Out ), Optional :: l
+    Real( wp )                                             , Intent(   Out ), Optional :: alpha
+    Integer, Dimension( 1:3 )                              , Intent(   Out ), Optional :: n_grid
+    Integer, Dimension( 1:3 )                              , Intent(   Out ), Optional :: domain_base_coords
+    Integer, Dimension( 1:3 )                              , Intent(   Out ), Optional :: domain_end_coords
+    Integer                                                , Intent(   Out ), Optional :: range_gauss
+    Real( wp )                                             , Intent(   Out ), Optional :: gauss_tol
+    Real( wp )                                             , Intent(   Out ), Optional :: residual_tol
+    Class( comms_base_class                  ), Allocatable, Intent(   Out ), Optional :: comms
+    Class( FD_template                       ), Allocatable, Intent(   Out ), Optional :: FD
+    Class( halo_setter_base_class            ), Allocatable, Intent(   Out ), Optional :: FD_swapper
+    Class( halo_setter_base_class            ), Allocatable, Intent(   Out ), Optional :: pot_swapper
+    Class( equation_solver_precon_base_class ), Allocatable, Intent(   Out ), Optional :: solver
+    Class( quadrature_base_class             ), Allocatable, Intent(   Out ), Optional :: grid_integrator
 
     If( Present( l ) ) Then
        l = recipe%l
