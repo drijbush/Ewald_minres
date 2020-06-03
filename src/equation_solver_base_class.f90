@@ -9,7 +9,7 @@ Module equation_solver_base_class_module
   Implicit None
        
   Type, Public, Abstract :: equation_solver_base_class
-     Integer                                         , Public :: max_iter = 1000         
+     Integer                                         , Public :: max_iter = 1000
      Class( comms_base_class           ), Allocatable, Public :: comms
      Class( FD_template                ), Allocatable, Public :: FD_operator
      Class( halo_setter_base_class     ), Allocatable, Public :: halo_swapper

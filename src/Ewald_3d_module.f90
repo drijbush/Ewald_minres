@@ -430,11 +430,11 @@ Contains
     End If
        
     If( Present( gauss_tol ) ) Then
-       alpha = recipe%alpha
+       gauss_tol = recipe%gauss_tol
     End If
 
     If( Present( residual_tol ) ) Then
-       alpha = recipe%alpha
+       residual_tol = recipe%residual_tol
     End If
 
     If( Present( comms ) ) Then
