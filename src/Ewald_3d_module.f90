@@ -58,10 +58,10 @@ Module Ewald_3d_module
   Real( wp )          , Parameter :: gauss_tol_default    = 1e-15_wp ! Value for cutting of the gaussian
   Integer             , Parameter :: range_gauss_default  = 12       ! Number of points to grid one side of a gaussian
   Integer             , Parameter :: FD_order_default     = 12       ! Default order of the finite difference approximation
-!!$  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
-!!$  Character( Len = * ), Parameter :: default_solver       = "CG" ! Default equation solver 
-  Character( Len = * ), Parameter :: default_solver       = "wjac" ! Default equation solver 
-  Real( wp )          , Parameter :: residual_tol_default = 1e-10_wp ! Tolerance on residual in equation solver
+  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
+!!$  Character( Len = * ), Parameter :: default_solver       = "CG" 
+!!$  Character( Len = * ), Parameter :: default_solver       = "wjac" 
+  Real( wp )          , Parameter :: residual_tol_default = 1e-7_wp ! Tolerance on residual in equation solver
   
 Contains
 
@@ -192,6 +192,7 @@ Contains
     Class( halo_setter_base_class            ), Allocatable :: FD_swapper
     Class( halo_setter_base_class            ), Allocatable :: pot_swapper
     Class( equation_solver_precon_base_class ), Allocatable :: solver
+    Class( equation_solver_precon_base_class ), Allocatable :: precon
     Class( quadrature_base_class             ), Allocatable :: grid_integrator
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: Grid_vecs, dGrid_vecs
@@ -210,6 +211,7 @@ Contains
     Integer :: FD_order
     Integer :: max_swap
     Integer :: loc_communicator
+    Integer :: max_iter
     Integer :: i
 
     Character( Len = : ), Allocatable :: loc_equation_solver
@@ -331,6 +333,9 @@ Contains
     ! Set up the equation solver
     ! First decide on the accuracy
     residual_tol = residual_tol_default
+    ! TESTING PRECONDITIONER
+    Allocate( equation_solver_weighted_jacobi :: precon )
+    Call precon%init( max_iter = 3, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
     If( Present( equation_solver ) ) Then
        loc_equation_solver = equation_solver 
     Else
@@ -338,16 +343,20 @@ Contains
     End If
     Select Case( Trim( Adjustl( loc_equation_solver ) ) )
     Case( "cg", "CG" )
+       max_iter = 1000
        Allocate( equation_solver_conjugate_gradient :: solver )
     Case( "minres", "MINRES" )
+       max_iter = 1000
        Allocate( equation_solver_minres :: solver )
     Case( "WJAC", "wjac" )
+       max_iter = 80
        Allocate( equation_solver_weighted_jacobi :: solver )
     Case Default
        error = EWALD_3D_INIT_UNKNOWN_EQUATION_SOLVER
        Return
     End Select
-    call solver%init( comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
+    call solver%init( max_iter = max_iter, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
+!!$    call solver%init( max_iter = max_iter, comms = comms, FD_operator = FD, halo_swapper = FD_swapper, precon = precon  )
 
 
     ! Set up the quadrature method
