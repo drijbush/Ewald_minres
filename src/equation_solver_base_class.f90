@@ -14,17 +14,19 @@ Module equation_solver_base_class_module
      Class( FD_template                ), Allocatable, Public :: FD_operator
      Class( halo_setter_base_class     ), Allocatable, Public :: halo_swapper
      ! Bug in gcc 7.4 gives ICE with allocatable
+     ! Therefore split off in own module
 !!$     Class( equation_solver_base_class ), Pointer    , Private :: preconditioner
    Contains
-     Procedure                    , Public :: init
-     Procedure( solver ), Deferred, Public :: solve
-     Procedure          , NoPass  , Public :: contract
+     Generic                      , Public  :: init => base_init
+     Procedure( solver ), Deferred, Public  :: solve
+     Procedure          , NoPass  , Public  :: contract
+     Procedure                    , Private :: base_init
   End type equation_solver_base_class
 
   Abstract Interface
 
      Subroutine solver( method, &
-          lb, ub, Msolve, b, rtol,  precon, &
+          lb, ub, b, rtol, &
           x, istop, istop_message, itn, rnorm )
        Use halo_setter_base_module, Only : halo_setter_base_class
        Use FD_template_module     , Only : FD_template
@@ -35,21 +37,11 @@ Module equation_solver_base_class_module
        Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
        Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
        Real( wp )                                            , Intent( In    ) :: rtol
-       Logical                                               , Intent( In    ) :: precon
        Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
        Integer                                               , Intent(   Out ) :: istop
        Character( Len = * )                                  , Intent(   Out ) :: istop_message
        Real( wp )                                            , Intent(   Out ) :: rnorm
        Integer                                               , Intent(   Out ) :: itn
-       Interface
-          Subroutine Msolve(lb,ub,x,y)                   ! Solve M*y = x
-            Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-            Integer                                               , Intent( In    ) :: lb( 1:3 )
-            Integer                                               , Intent( In    ) :: ub( 1:3 )
-            Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
-            Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
-          End Subroutine Msolve
-       End Interface
     End Subroutine solver
      
   End Interface
@@ -58,7 +50,7 @@ Module equation_solver_base_class_module
   
 Contains
 
-  Subroutine init( method, max_iter, comms, FD_operator, halo_swapper )
+  Subroutine base_init( method, max_iter, comms, FD_operator, halo_swapper )
 
     Use comms_base_class_module          , Only : comms_base_class
     Use halo_setter_base_module          , Only : halo_setter_base_class
@@ -88,7 +80,7 @@ Contains
        method%halo_swapper = halo_swapper
     End If
     
-  End Subroutine init
+  End Subroutine base_init
   
   Function contract( comms, x, y ) Result( d )
 

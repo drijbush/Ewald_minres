@@ -52,7 +52,7 @@ Module FD_template_module
 
      Subroutine jacobi_interface( FD, grid_lb, lap_lb, start, final, jac_weight, grid, soln_in, soln_out )
        Import :: wp, FD_template
-       Class( FD_template )                                        , Intent( In    ) :: FD
+       Class( FD_template )                                          , Intent( In    ) :: FD
        Integer, Dimension( 1:3 )                                     , Intent( In    ) :: grid_lb    !! lower bounds grid
        Integer, Dimension( 1:3 )                                     , Intent( In    ) :: lap_lb     !! lower bounds laplacian
        Integer, Dimension( 1:3 )                                     , Intent( In    ) :: start      !! start point for calculation

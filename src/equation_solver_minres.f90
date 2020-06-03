@@ -32,11 +32,11 @@
 
 Module equation_solver_minres_module
 
-  Use equation_solver_base_class_module, Only : equation_solver_base_class
+  Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
   
   Implicit None
 
-  Type, Public, Extends( equation_solver_base_class ) :: equation_solver_minres
+  Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_minres
    Contains
      Procedure, Public :: solve => minres
   End type equation_solver_minres
@@ -48,7 +48,7 @@ Contains
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   Subroutine MINRES( method, &
-       lb, ub, Msolve, b, rtol,  precon, &
+       lb, ub, b, rtol,  &
        x, istop, istop_message, itn, rnorm )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
@@ -61,24 +61,12 @@ Contains
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
     Real( wp )                                            , Intent( In    ) :: rtol
-    Logical                                               , Intent( In    ) :: precon
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
     Integer                                               , Intent(   Out ) :: istop
     Character( Len = * )                                  , Intent(   Out ) :: istop_message
     Real( wp )                                            , Intent(   Out ) :: rnorm
     Integer                                               , Intent(   Out ) :: itn
-    Interface
-       Subroutine Msolve(lb,ub,x,y)                   ! Solve M*y = x
-         Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-         Integer                                               , Intent( In    ) :: lb( 1:3 )
-         Integer                                               , Intent( In    ) :: ub( 1:3 )
-         Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
-         Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
-       End Subroutine Msolve
-    End Interface
 
-    Logical :: checkA = .False.
-    Real( wp ) :: shift = 0.0_wp
     Real(wp) :: Anorm, Acond, Arnorm, ynorm
     !-------------------------------------------------------------------
     !
@@ -400,7 +388,9 @@ Contains
       !-------------------------------------------------------------------
       r1     = b
       y      = b
-      If ( precon ) Call Msolve( lb, ub, b, y )
+      If ( Allocated( method%precon ) ) Then
+         Call method%precon%solve( lb, ub, b, rtol, y, istop, istop_message, itn, rnorm )
+      End If
       beta1 = method%contract( method%comms, b, y )
 
       If (beta1 < zero) Then     ! M must be indefinite.
@@ -415,47 +405,10 @@ Contains
 
       beta1  = Sqrt( beta1 )     ! Normalize y to get v1 later.
 
-      !-------------------------------------------------------------------
-      ! See if Msolve is symmetric.
-      !-------------------------------------------------------------------
-      If (checkA  .And.  precon) Then
-         Call Msolve( lb, ub, y, r2 )
-         s = method%contract( method%comms, y , y  )
-         t = method%contract( method%comms, r1, r2 )
-         z      = Abs(s - t)
-         epsa   = (s + eps) * eps**0.33333
-         If (z > epsa) Then
-            istop = 7
-            Exit solver_block
-         End If
-      End If
-
-      !-------------------------------------------------------------------
-      ! See if Aprod  is symmetric.  Initialize Arnorm.
-      !-------------------------------------------------------------------
-      If (checkA) Then
-         ! NEED TO FIX ARGUMENTS - especially lb of grid
-         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
-         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w  ), Lbound( w  ), Ubound( w  ), &
-              grid_with_halo, w  )
-         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), w, grid_with_halo, error )
-         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
-              grid_with_halo, r2  )
-         s = method%contract( method%comms, w, w  )
-         t = method%contract( method%comms, y, r2 )       
-         z      = Abs(s - t)
-         epsa   = (s + eps) * eps**0.33333
-         If (z > epsa) Then
-            istop = 6
-            Exit solver_block
-         End If
-         Arnorml = Sqrt(s);
-      Else
-         Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
-         Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
-              grid_with_halo, w  )
-         Arnorml = Sqrt( method%contract( method%comms, w, w  ) )
-      End If
+      Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), y, grid_with_halo, error )
+      Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
+           grid_with_halo, w  )
+      Arnorml = Sqrt( method%contract( method%comms, w, w  ) )
 
       !-------------------------------------------------------------------
       ! Initialize other quantities.
@@ -502,11 +455,9 @@ Contains
          s      = one / beta            ! Normalize previous vector (in y).
          v      = s*y                   ! v = vk if P = I
 
-         ! NEED TO FIX ARGUMENTS - especially lb of grid
          Call method%halo_swapper%fill( halo_width, Lbound( grid_with_halo ), v, grid_with_halo, error )
          Call method%FD_operator%apply( Lbound( grid_with_halo ), Lbound( y ), Lbound( y ), Ubound( y ), &
               grid_with_halo, y  )
-         y      = y - shift*v           ! call daxpy ( n, (- shift), v, 1, y, 1 )
          If (itn >= 2) Then
             y   = y - (beta/oldb)*r1    ! call daxpy ( n, (- beta/oldb), r1, 1, y, 1 )
          End If
@@ -515,7 +466,9 @@ Contains
          y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
          r1     = r2
          r2     = y
-         If ( precon ) Call Msolve( lb, ub, r2, y )
+         If ( Allocated( method%precon ) ) Then
+            Call method%precon%solve( lb, ub, r2, rtol, y, istop, istop_message, itn, rnorm )
+         End If
 
          oldb   = beta                  ! oldb = betak
          beta = method%contract( method%comms, r2, y  )

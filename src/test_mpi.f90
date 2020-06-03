@@ -123,6 +123,8 @@ Program test_mpi
         which_solver = 1
      Case( 'MINRES' )
         which_solver = 2
+     Case( 'WJAC' )
+        which_solver = 3
      Case Default
         Error Stop 'Unrecongnized solver'
      End Select
@@ -144,12 +146,12 @@ Program test_mpi
   
   Call mpi_bcast( what, Len( what ), mpi_character, 0, mpi_comm_world )
 
-  Select Case( which_solver )
-  Case( 1 )
-     Allocate( equation_solver_conjugate_gradient :: solver )
-  Case( 2 )
-     Allocate( equation_solver_minres :: solver )
-  End Select
+!!$  Select Case( which_solver )
+!!$  Case( 1 )
+!!$     Allocate( equation_solver_conjugate_gradient :: solver )
+!!$  Case( 2 )
+!!$     Allocate( equation_solver_minres :: solver )
+!!$  End Select
 
   Call l%initialise( 3, a, alpha )
   

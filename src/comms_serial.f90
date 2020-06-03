@@ -7,6 +7,7 @@ Module comms_serial_module
   Type, Public, Extends( comms_base_class ) :: comms_serial
    Contains
      Procedure, Public  :: reduce          => reduce_real
+     Procedure, Public  :: max             => reduce_real
      Procedure, Public  :: set_comm        => set_comm
      Procedure, Public  :: get_comm        => get_comm
      Procedure, Public  :: get_rank        => get_rank
