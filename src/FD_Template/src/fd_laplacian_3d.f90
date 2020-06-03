@@ -140,9 +140,13 @@ Contains
        End Do
     End Do
 
+    ! Set the inverse of the diagonal elemnt of the matrix
+    ! Note that as we are using a central differencing scheme all first derivative terms (due to a non-orthognal grid)
+    ! have zero weight on the dgiagonal of the matrix.
+    Allocate( w2( -FD%get_order():FD%get_order() ) )
     w2 = FD%get_weight( 2 )
-    ! Note allocation on assignment means indexing starts at 1
-    FD%diag_inv = 1.0_wp / ( w2( 1 ) * ( FD%deriv_weights( XX ) + FD%deriv_weights( YY ) + FD%deriv_weights( ZZ ) ) )
+    FD%diag_inv = 1.0_wp / ( w2( 0 ) * ( FD%deriv_weights( XX ) + FD%deriv_weights( YY ) + FD%deriv_weights( ZZ ) ) )
+
     ! Work out if we need the off diagonal derivatives
     FD%need_XY = Abs( FD%deriv_weights( XY ) ) > FD%orthog_tol
     FD%need_XZ = Abs( FD%deriv_weights( XZ ) ) > FD%orthog_tol
@@ -347,7 +351,7 @@ Contains
     Real( wp )                                                    , Intent( In    ) :: jac_weight !! The weight for the weighted jacobi
     Real( wp ), Dimension( grid_lb(1):, grid_lb(2):, grid_lb(3): ), Intent( In    ) :: grid       !! The RHS
     Real( wp ), Dimension(  lap_lb(1):,  lap_lb(2):,  lap_lb(3): ), Intent( In    ) :: soln_in    !! Solution at start of sweep 
-    Real( wp ), Dimension(  lap_lb(1):,  lap_lb(2):,  lap_lb(3): ), Intent(   Out ) :: soln_out   !! Solution at end of sweep
+    Real( wp ), Dimension( grid_lb(1):, grid_lb(2):, grid_lb(3): ), Intent(   Out ) :: soln_out   !! Solution at end of sweep
 
     Real( wp ), Dimension( : ), Allocatable :: w1, w2
 
@@ -403,7 +407,7 @@ Contains
     Real( wp )                                           , Intent( In    ) :: jac_weight    !! The weight of the NEW solution 
     Real( wp ), Dimension( lg( 1 ):, lg( 2 ):, lg( 3 ): ), Intent( In    ) :: grid          !! The source
     Real( wp ), Dimension( ll( 1 ):, ll( 2 ):, ll( 3 ): ), Intent( In    ) :: soln_in       !! The solution on input
-    Real( wp ), Dimension( ll( 1 ):, ll( 2 ):, ll( 3 ): ), Intent( InOut ) :: soln_out      !! The updated solution
+    Real( wp ), Dimension( lg( 1 ):, lg( 2 ):, lg( 3 ): ), Intent( InOut ) :: soln_out      !! The updated solution
 
     ! Deriv_weights: As we do NOT assume the grid is orthogonal our FD laplacian is of the form
     ! d_xx * del_xx + d_xy * del_xy + d_xz * del_xz + d_yy * del_yy + d_yz * del_yz + d_zz * del_zz

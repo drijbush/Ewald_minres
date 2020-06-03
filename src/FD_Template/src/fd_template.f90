@@ -60,7 +60,7 @@ Module FD_template_module
        Real( wp )                                                    , Intent( In    ) :: jac_weight !! The weight for the weighted jacobi
        Real( wp ), Dimension( grid_lb(1):, grid_lb(2):, grid_lb(3): ), Intent( In    ) :: grid       !! Thing to be differentiated
        Real( wp ), Dimension(  lap_lb(1):,  lap_lb(2):,  lap_lb(3): ), Intent( In    ) :: soln_in    !! Solution at start of sweep 
-       Real( wp ), Dimension(  lap_lb(1):,  lap_lb(2):,  lap_lb(3): ), Intent(   Out ) :: soln_out   !! Solution at end of sweep
+       Real( wp ), Dimension( grid_lb(1):, grid_lb(2):, grid_lb(3): ), Intent(   Out ) :: soln_out   !! Solution at end of sweep
 
      End Subroutine jacobi_interface
 
