@@ -26,12 +26,14 @@ Module FD_template_module
      Integer                                   , Private :: max_deriv
      Integer                                   , Private :: order
      Real( wp ), Dimension( :, : ), Allocatable, Private :: weights
+     Real( wp )                                , Public  :: diag_inv ! HACK AS PUBLIC - NEED TO FIX EVENTUALLY
    Contains
      Procedure                    , Public           :: FD_init
      Procedure                    , Public           :: set_order
      Procedure                    , Public           :: get_order
      Procedure                    , Public           :: get_max_deriv
      Procedure                    , Public           :: get_weight
+     Procedure                    , Public           :: get_diag_inv
      Procedure(  apply_interface ), Public, Deferred :: apply
      Procedure( jacobi_interface ), Public, Deferred :: jacobi_sweep
   End type FD_template
@@ -151,6 +153,21 @@ Contains
     weight = FD%weights( :, deriv )
 
   End Function get_weight
+
+  Pure Function get_diag_inv( FD ) Result( diag_inv )
+    !!-----------------------------------------------------------
+    !! Return maximum possible derivative order
+    !!
+    !! Written by I.J. Bush
+    !!-----------------------------------------------------------
+
+    Real( wp ) :: diag_inv
+
+    Class( FD_template ), Intent( In ) :: FD
+
+    diag_inv = FD%diag_inv
+
+  End Function get_diag_inv
 
   Subroutine weights (centre,sample_points,deriv,coeffs)
     !!-----------------------------------------------------------
