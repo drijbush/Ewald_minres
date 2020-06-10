@@ -24,7 +24,7 @@ Module FD_Laplacian_3d_module
      Integer   , Dimension( 1:3 ), Private :: nc_block_apply
      Integer   , Dimension( 1:3 ), Private :: nc_block_jacobi
      Real( wp ), Dimension( 1:6 ), Private :: deriv_weights
-     Real( wp )                  , Private :: diag_inv
+!!$     Real( wp )                  , Private :: diag_inv
      Logical                     , Private :: need_XY     ! Indicate if do  not need
      Logical                     , Private :: need_XZ     ! these compinents due to
      Logical                     , Private :: need_YZ     ! grid orthogonality

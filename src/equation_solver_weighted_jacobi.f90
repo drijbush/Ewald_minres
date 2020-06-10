@@ -49,10 +49,13 @@ Contains
     Integer :: me
 
     Call method%comms%get_rank( me )
-    
+
+    ! No solution so norm of residual huge ...
     rnorm = Huge( rnorm )
-    
-    x = b
+    max_diff = rnorm
+
+    ! Initial guess at result - assume diagonal matrix
+    x = b * method%FD_operator%get_diag_inv()
     
     !IJB
     ! Note order is always even, so no worries about splitting it in 2
