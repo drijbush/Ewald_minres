@@ -13,12 +13,12 @@ Contains
     Use constants, Only : wp
     Use lattice_module, Only : lattice
 
-    Integer                            , Intent( In ) :: unit
-    Character( Len = * )               , Intent( In ) :: filename
-    Type( lattice )                    , Intent( In ) :: l
+    Integer,                             Intent( In ) :: unit
+    Character( Len = * ),                Intent( In ) :: filename
+    Type( lattice ),                     Intent( In ) :: l
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent( In ) :: grid
 
-    Real( wp ), Dimension( : , : ), Allocatable  :: lattice_vectors
+    Real( wp ), Dimension( :,  : ), Allocatable  :: lattice_vectors
 
     Real( wp ), Dimension( 1:3 ) :: f_point
     Real( wp ), Dimension( 1:3 ) :: r_point
@@ -37,7 +37,7 @@ Contains
     Write( unit, * ) 'Sum over grid           ', Sum( grid )
     Write( unit, * ) 'Average per unit volume ', Sum( grid ) / l%get_volume()
     Write( unit, '( 3( i0, 1x ), t60, a )' ) n_grid, '# grid size'
-    Do i = 1, Ubound( lattice_vectors , Dim = 2 )
+    Do i = 1, Ubound( lattice_vectors,  Dim = 2 )
        Write( unit, '( 3( f11.6, 1x ), t60, a, i0  )' ) lattice_vectors( :, i ), '# lattice vector ', i
     End Do
     Do i3 = 0, n_grid( 3 ) - 1

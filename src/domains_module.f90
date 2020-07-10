@@ -26,16 +26,16 @@ Contains
 
     Implicit none
 
-    Type( lattice )                ,              Intent( In    ) :: l
+    Type( lattice ),                              Intent( In    ) :: l
     Real( wp ), Dimension( 1:     ),              Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),              Intent( In    ) :: r
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: n_grid
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: n_proc
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: domain_coords
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: n_grid
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: n_proc
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: domain_coords
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_domain
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_domain
-    Integer   , Dimension(      : ),              Intent( In    ), Optional :: id
-    Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_domain
+    Integer,    Dimension(      : ),              Intent( In    ), Optional :: id
+    Integer,    Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_domain
 
     Integer, Dimension( : ), Allocatable :: i_domain
 
@@ -78,17 +78,17 @@ Contains
 
     Implicit none
 
-    Type( lattice )                ,              Intent( In    ) :: l
+    Type( lattice ),                              Intent( In    ) :: l
     Real( wp ), Dimension( 1:     ),              Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),              Intent( In    ) :: r
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: n_grid
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: n_proc
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: domain_coords
-    Integer   , Dimension( 1:3    ),              Intent( In    ) :: halo_width
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: n_grid
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: n_proc
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: domain_coords
+    Integer,    Dimension( 1:3    ),              Intent( In    ) :: halo_width
     Real( wp ), Dimension(      : ), Allocatable, Intent(   Out ) :: q_halo
     Real( wp ), Dimension(  :,  : ), Allocatable, Intent(   Out ) :: r_halo
-    Integer   , Dimension(      : ),              Intent( In    ), Optional :: id
-    Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_halo
+    Integer,    Dimension(      : ),              Intent( In    ), Optional :: id
+    Integer,    Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_halo
 
     Real( wp ), Dimension( :, : ), Allocatable :: rtmp
 
@@ -153,10 +153,10 @@ Contains
     Logical :: in_volume
 
     Type( lattice ),                   Intent( In ) :: l
-    Real( wp )     , Dimension( 1:3 ), Intent( In ) :: ri
-    Integer        , Dimension( 1:3 ), Intent( In ) :: n_grid
-    Integer        , Dimension( 1:3 ), Intent( In ) :: lo
-    Integer        , Dimension( 1:3 ), Intent( In ) :: hi
+    Real( wp ),      Dimension( 1:3 ), Intent( In ) :: ri
+    Integer,         Dimension( 1:3 ), Intent( In ) :: n_grid
+    Integer,         Dimension( 1:3 ), Intent( In ) :: lo
+    Integer,         Dimension( 1:3 ), Intent( In ) :: hi
 
     Real( wp ), Dimension( 1:3 ) :: fi
 

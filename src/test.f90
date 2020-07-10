@@ -3,18 +3,18 @@ Program test
   !$ Use omp_lib, Only : omp_get_max_threads
 
   Use constants,                            Only : wp, li, pi, r4pie0
-  Use lattice_module                      , Only : lattice
-  Use charge_grid_module                  , Only : charge_grid_find_range
-  Use fast_fourier_poisson_module         , Only : ffp_long_range, ffp_sic
+  Use lattice_module,                       Only : lattice
+  Use charge_grid_module,                   Only : charge_grid_find_range
+  Use fast_fourier_poisson_module,          Only : ffp_long_range, ffp_sic
   Use symetrically_screened_poisson_module, Only : ssp_long_range, ssp_sic
-  Use real_space_module                   , Only : real_space_energy
-  Use grid_io_module                      , Only : grid_io_save
-  Use domains_module                      , Only : domain_build, domain_halo_build
-  Use comms_serial_module                 , Only : comms_serial
-  Use halo_serial_module                  , Only : halo_serial_setter
-  Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
-  Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
-  Use equation_solver_minres_module       , Only : equation_solver_minres
+  Use real_space_module,                    Only : real_space_energy
+  Use grid_io_module,                       Only : grid_io_save
+  Use domains_module,                       Only : domain_build, domain_halo_build
+  Use comms_serial_module,                  Only : comms_serial
+  Use halo_serial_module,                   Only : halo_serial_setter
+  Use quadrature_trapezium_rule_module,     Only : quadrature_trapezium_rule
+  Use FD_Laplacian_3d_module,               Only : FD_Laplacian_3D
+  Use equation_solver_minres_module,        Only : equation_solver_minres
 
   Implicit None
 
@@ -355,7 +355,7 @@ Program test
      Write( 11, '( a7, 2x, a5, 2x, a2, 1x, a6, 1x, a2, 1x, a9, &
           & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14, t230, a, t260, a )' ) &
           'alpha', 'dg', 'Od', 'xshift', 'Rg', 'Q error', &
-          'tot E'  , 'tot E SSP'  , 'Delta tot E', &
+          'tot E',   'tot E SSP',   'Delta tot E', &
           'recip E FFP', 'recip E SSP', 'Delta recip E', &
           'RMS delta pot', 'RMS Delta force', 'Bad Charge'
   End If
@@ -375,9 +375,9 @@ Contains
 
   Subroutine read_header( unit, n, level, vecs )
 
-    Integer                      , Intent( In    ) :: unit
-    Integer                      , Intent(   Out ) :: n
-    Integer                      , Intent(   Out ) :: level
+    Integer,                       Intent( In    ) :: unit
+    Integer,                       Intent(   Out ) :: n
+    Integer,                       Intent(   Out ) :: level
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: vecs
 
     Integer :: junk
@@ -390,8 +390,8 @@ Contains
 
   Subroutine read_config( level, unit, q, r )
 
-    Integer                      , Intent( In    ) :: level
-    Integer                      , Intent( In    ) :: unit
+    Integer,                       Intent( In    ) :: level
+    Integer,                       Intent( In    ) :: unit
     Real( wp ), Dimension( :    ), Intent(   Out ) :: q
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: r
 
@@ -427,7 +427,7 @@ Contains
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Type( lattice )               , Intent( In    ) :: l
+    Type( lattice ),                Intent( In    ) :: l
     Real( wp ), Dimension( :     ), Intent( In    ) :: q
     Real( wp ), Dimension( :, :  ), Intent( In    ) :: r
     Real( wp ),                     Intent( In    ) :: alpha
@@ -473,17 +473,17 @@ Contains
 
     Use lattice_module, Only : lattice
 
-    Type( lattice )               , Intent( In    ) :: l
+    Type( lattice ),                Intent( In    ) :: l
     Real( wp ), Dimension( :     ), Intent( In    ) :: q
     Real( wp ), Dimension( :, :  ), Intent( In    ) :: r
     Real( wp ),                     Intent( In    ) :: alpha
     Complex( wp ), Dimension( 0: ), Intent( In    ) :: ew_func
-    Real( wp )                    , Intent( Out   ) :: recip_E
-    Real( wp )                    , Intent( Out   ) :: SIC
-    Real( wp )                    , Intent( Out   ) :: real_E
-    Real( wp )                    , Intent( Out   ) :: tot_E
-    Real( wp )                    , Intent( Out   ) :: t_pot_solve
-    Real( wp )                    , Intent( Out   ) :: t_real
+    Real( wp ),                     Intent( Out   ) :: recip_E
+    Real( wp ),                     Intent( Out   ) :: SIC
+    Real( wp ),                     Intent( Out   ) :: real_E
+    Real( wp ),                     Intent( Out   ) :: tot_E
+    Real( wp ),                     Intent( Out   ) :: t_pot_solve
+    Real( wp ),                     Intent( Out   ) :: t_real
 
     Complex( wp ) :: potg
     Complex( wp ) :: cc, cy, ct
@@ -547,9 +547,9 @@ Contains
 
     Type( lattice ),              Intent( In    ) :: l
     Real( wp ),                   Intent( In    ) :: alpha
-    Integer   ,                   Intent( In    ) :: range_gauss
+    Integer,                      Intent( In    ) :: range_gauss
     Real( wp ),                   Intent( In    ) :: gauss_tol
-    Integer   , Dimension( 1:3 ), Intent(   Out ) :: n_grid
+    Integer,    Dimension( 1:3 ), Intent(   Out ) :: n_grid
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dir_vecs
 

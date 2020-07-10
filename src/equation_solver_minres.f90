@@ -53,18 +53,18 @@ Contains
 
     Use constants, only : zero, one
     Use halo_setter_base_module, Only : halo_setter_base_class
-    Use FD_template_module     , Only : FD_template
+    Use FD_template_module,      Only : FD_template
 
-    Class( equation_solver_minres )                       , Intent( InOut ) :: method
-    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
-    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
-    Real( wp )                                            , Intent( In    ) :: rtol
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
-    Integer                                               , Intent(   Out ) :: istop
-    Character( Len = * )                                  , Intent(   Out ) :: istop_message
-    Real( wp )                                            , Intent(   Out ) :: rnorm
-    Integer                                               , Intent(   Out ) :: itn
+    Class( equation_solver_minres ),                        Intent( InOut ) :: method
+    Integer,  Dimension( 1:3 ),                             Intent( In    ) :: lb( 1:3 )
+    Integer,  Dimension( 1:3 ),                             Intent( In    ) :: ub( 1:3 )
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
+    Real( wp ),                                             Intent( In    ) :: rtol
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
+    Integer,                                                Intent(   Out ) :: istop
+    Character( Len = * ),                                   Intent(   Out ) :: istop_message
+    Real( wp ),                                             Intent(   Out ) :: rnorm
+    Integer,                                                Intent(   Out ) :: itn
 
     Real(wp) :: Anorm, Acond, Arnorm, ynorm
     !-------------------------------------------------------------------
@@ -319,14 +319,14 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: w1
     Real( wp ), Dimension( :, :, : ), Allocatable :: w2
     Real( wp ), Dimension( :, :, : ), Allocatable :: y
-    Real(wp)  :: alpha  , beta  , beta1 , cs    ,          &
-         dbar  , delta , denom , diag  ,          &
-         eps   , epsa  , epsln , epsr  , epsx  ,  &
-         gamma , gbar  , gmax  , gmin  ,          &
-         oldb  , oldeps, qrnorm, phi   , phibar,  &
-         rhs1  , rhs2  , rnorml, rootl ,          &
+    Real(wp)  :: alpha,   beta,   beta1,  cs,              &
+         dbar,   delta,  denom,  diag,            &
+         eps,    epsa,   epsln,  epsr,   epsx,    &
+         gamma,  gbar,   gmax,   gmin,            &
+         oldb,   oldeps, qrnorm, phi,    phibar,  &
+         rhs1,   rhs2,   rnorml, rootl,           &
          Arnorml,        relArnorml,              &
-         s     , sn     , tnorm2, ynorm2, z
+         s,      sn,      tnorm2, ynorm2, z
 
     Integer :: FD_order, halo_width
 

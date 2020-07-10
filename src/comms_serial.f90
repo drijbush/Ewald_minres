@@ -24,8 +24,8 @@ Contains
     Implicit None
 
     Class( comms_serial ), Intent(   Out ) :: c
-    Integer              , Intent( In    ) :: comm
-    Integer              , Intent(   Out ) :: error
+    Integer,               Intent( In    ) :: comm
+    Integer,               Intent(   Out ) :: error
 
     c%communicator = comm
 
@@ -38,7 +38,7 @@ Contains
     Implicit None
 
     Class( comms_serial ), Intent( In    ) :: c
-    Integer              , Intent(   Out ) :: comm
+    Integer,               Intent(   Out ) :: comm
 
     comm = c%communicator
 
@@ -47,7 +47,7 @@ Contains
   Subroutine get_rank( c, data )
 
     Class( comms_serial ), Intent( In    ) :: c
-    Integer              , Intent(   Out ) :: data
+    Integer,               Intent(   Out ) :: data
 
     data = 0
 
@@ -56,7 +56,7 @@ Contains
   Subroutine get_size( c, data )
 
     Class( comms_serial ), Intent( In    ) :: c
-    Integer              , Intent(   Out ) :: data
+    Integer,               Intent(   Out ) :: data
 
     data = 1
 
@@ -64,7 +64,7 @@ Contains
 
   Subroutine get_proc_coords( c, data )
 
-    Class( comms_serial )  , Intent( In    ) :: c
+    Class( comms_serial ),   Intent( In    ) :: c
     Integer, Dimension( : ), Intent(   Out ) :: data
 
     data = 0
@@ -73,7 +73,7 @@ Contains
 
   Subroutine get_proc_grid( c, data )
 
-    Class( comms_serial )  , Intent( In    ) :: c
+    Class( comms_serial ),   Intent( In    ) :: c
     Integer, Dimension( : ), Intent(   Out ) :: data
 
     data = 1
@@ -83,7 +83,7 @@ Contains
   Subroutine reduce_real( c, data )
 
     Class( comms_serial ), Intent( In    ) :: c
-    Real( wp )           , Intent( InOut ) :: data
+    Real( wp ),            Intent( InOut ) :: data
 
     data = data
 

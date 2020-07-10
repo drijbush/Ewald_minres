@@ -11,14 +11,14 @@ Module fft_module
      Subroutine dfftw_plan_dft_3d( plan, k1, k2, k3, a, b, dir, method )
        Use constants, Only : wp, li
        Implicit None
-       Integer( li )                             , Intent(   Out ) :: plan
-       Integer                                     , Intent( In    ) :: k1
-       Integer                                     , Intent( In    ) :: k2
-       Integer                                     , Intent( In    ) :: k3
+       Integer( li ),                              Intent(   Out ) :: plan
+       Integer,                                      Intent( In    ) :: k1
+       Integer,                                      Intent( In    ) :: k2
+       Integer,                                      Intent( In    ) :: k3
        Complex( wp ), Dimension( 1:k1, 1:k2, 1:k3 ), Intent( In    ) :: a
        Complex( wp ), Dimension( 1:k1, 1:k2, 1:k3 ), Intent( In    ) :: b
-       Integer                                     , Intent( In    ) :: dir
-       Integer                                     , Intent( In    ) :: method
+       Integer,                                      Intent( In    ) :: dir
+       Integer,                                      Intent( In    ) :: method
      End Subroutine dfftw_plan_dft_3d
      Subroutine dfftw_destroy_plan( plan )
        Use constants, Only : wp, li
@@ -36,7 +36,7 @@ Contains
 
   Subroutine fft_fft3d( direction, data )
 
-    Integer                             , Intent( In    ) :: direction
+    Integer,                              Intent( In    ) :: direction
     Complex( wp ), Dimension( :, :, :  ), Intent( InOut ) :: data
 
     Integer( li ) :: plan

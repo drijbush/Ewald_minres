@@ -46,7 +46,7 @@ Contains
 
     Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
-    Use FD_template_module     , Only : FD_template
+    Use FD_template_module,      Only : FD_template
 
     Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
     Class( FD_template ), Intent( In ) :: FD_operator
@@ -324,14 +324,14 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: w1
     Real( wp ), Dimension( :, :, : ), Allocatable :: w2
     Real( wp ), Dimension( :, :, : ), Allocatable :: y
-    Real(wp)  :: alfa  , beta  , beta1 , cs    ,          &
-         dbar  , delta , denom , diag  ,          &
-         eps   , epsa  , epsln , epsr  , epsx  ,  &
-         gamma , gbar  , gmax  , gmin  ,          &
-         oldb  , oldeps, qrnorm, phi   , phibar,  &
-         rhs1  , rhs2  , rnorml, rootl ,          &
+    Real(wp)  :: alfa,   beta,   beta1,  cs,              &
+         dbar,   delta,  denom,  diag,            &
+         eps,    epsa,   epsln,  epsr,   epsx,    &
+         gamma,  gbar,   gmax,   gmin,            &
+         oldb,   oldeps, qrnorm, phi,    phibar,  &
+         rhs1,   rhs2,   rnorml, rootl,           &
          Arnorml,        relArnorml,              &
-         s     , sn    , t     , tnorm2, ynorm2, z
+         s,      sn,     t,      tnorm2, ynorm2, z
 
     Integer :: FD_order, halo_width
 
@@ -409,7 +409,7 @@ Contains
     !-------------------------------------------------------------------
     If (checkA  .And.  precon) Then
        Call Msolve( lb, ub, y, r2 )
-       s = contract( comms, y , y  )
+       s = contract( comms, y,  y  )
        t = contract( comms, r1, r2 )
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
@@ -638,7 +638,7 @@ Contains
 
     Real( wp ) :: d
 
-    Class( comms_base_class )       , Intent( In ) :: comms
+    Class( comms_base_class ),        Intent( In ) :: comms
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: x
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: y
 

@@ -3,23 +3,23 @@ Module equation_solver_base_class_module
   Use constants, Only : wp
   Use comms_base_class_module, Only : comms_base_class
   Use halo_setter_base_module, Only : halo_setter_base_class
-  Use FD_template_module     , Only : FD_template
+  Use FD_template_module,      Only : FD_template
 
   Implicit None
 
   Type, Public, Abstract :: equation_solver_base_class
-     Integer                                         , Public :: max_iter = 1000
+     Integer,                                          Public :: max_iter = 1000
      Class( comms_base_class           ), Allocatable, Public :: comms
      Class( FD_template                ), Allocatable, Public :: FD_operator
      Class( halo_setter_base_class     ), Allocatable, Public :: halo_swapper
      ! Bug in gcc 7.4 gives ICE with allocatable
      ! Therefore split off in own module
-!!$     Class( equation_solver_base_class ), Pointer    , Private :: preconditioner
+!!$     Class( equation_solver_base_class ), Pointer,     Private :: preconditioner
    Contains
-     Generic                      , Public  :: init => base_init
+     Generic,                       Public  :: init => base_init
      Procedure( solver ), Deferred, Public  :: solve
-     Procedure          , NoPass  , Public  :: contract
-     Procedure                    , Private :: base_init
+     Procedure,           NoPass,   Public  :: contract
+     Procedure,                     Private :: base_init
   End type equation_solver_base_class
 
   Abstract Interface
@@ -29,18 +29,18 @@ Module equation_solver_base_class_module
           x, istop, istop_message, itn, rnorm )
        Use constants, Only : wp
        Use halo_setter_base_module, Only : halo_setter_base_class
-       Use FD_template_module     , Only : FD_template
+       Use FD_template_module,      Only : FD_template
        Import :: equation_solver_base_class
-       Class( equation_solver_base_class )                   , Intent( InOut ) :: method
-       Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
-       Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
-       Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
-       Real( wp )                                            , Intent( In    ) :: rtol
-       Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
-       Integer                                               , Intent(   Out ) :: istop
-       Character( Len = * )                                  , Intent(   Out ) :: istop_message
-       Real( wp )                                            , Intent(   Out ) :: rnorm
-       Integer                                               , Intent(   Out ) :: itn
+       Class( equation_solver_base_class ),                    Intent( InOut ) :: method
+       Integer,  Dimension( 1:3 ),                             Intent( In    ) :: lb( 1:3 )
+       Integer,  Dimension( 1:3 ),                             Intent( In    ) :: ub( 1:3 )
+       Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
+       Real( wp ),                                             Intent( In    ) :: rtol
+       Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
+       Integer,                                                Intent(   Out ) :: istop
+       Character( Len = * ),                                   Intent(   Out ) :: istop_message
+       Real( wp ),                                             Intent(   Out ) :: rnorm
+       Integer,                                                Intent(   Out ) :: itn
     End Subroutine solver
 
   End Interface
@@ -51,17 +51,17 @@ Contains
 
   Subroutine base_init( method, max_iter, comms, FD_operator, halo_swapper )
 
-    Use comms_base_class_module          , Only : comms_base_class
-    Use halo_setter_base_module          , Only : halo_setter_base_class
-    Use FD_template_module               , Only : FD_template
+    Use comms_base_class_module,           Only : comms_base_class
+    Use halo_setter_base_module,           Only : halo_setter_base_class
+    Use FD_template_module,                Only : FD_template
 
     Implicit None
 
     Class( equation_solver_base_class ), Intent( InOut )           :: method
-    Integer                            , Intent( In    ), Optional :: max_iter
-    Class( comms_base_class       )    , Intent( In    ), Optional :: comms
-    Class( FD_template )               , Intent( In    ), Optional :: FD_operator
-    Class( halo_setter_base_class )    , Intent( In    ), Optional :: halo_swapper
+    Integer,                             Intent( In    ), Optional :: max_iter
+    Class( comms_base_class       ),     Intent( In    ), Optional :: comms
+    Class( FD_template ),                Intent( In    ), Optional :: FD_operator
+    Class( halo_setter_base_class ),     Intent( In    ), Optional :: halo_swapper
 
     If( Present( max_iter ) ) Then
        method%max_iter = max_iter
@@ -89,7 +89,7 @@ Contains
 
     Real( wp ) :: d
 
-    Class( comms_base_class )       , Intent( In ) :: comms
+    Class( comms_base_class ),        Intent( In ) :: comms
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: x
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: y
 

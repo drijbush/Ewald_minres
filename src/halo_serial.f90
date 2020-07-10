@@ -19,11 +19,11 @@ Contains
   Subroutine halo_fill( H, halo_width, hdlb, gin, hout, error )
 
     Class( halo_serial_setter ),                                 Intent( InOut ) :: H
-    Integer   ,                                                  Intent( In    ) :: halo_width
-    Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
-    Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
+    Integer,                                                     Intent( In    ) :: halo_width
+    Integer,    Dimension( 1:3 ),                                Intent( In    ) :: hdlb
+    Real( wp ), Dimension( 0:, 0:, 0: ),                         Intent( In    ) :: gin
     Real( wp ), Dimension( hdlb( 1 ):, hdlb( 2 ):, hdlb( 3 ): ), Intent(   Out ) :: hout
-    Integer                                                    , Intent(   Out ) :: error
+    Integer,                                                     Intent(   Out ) :: error
 
     Integer, Dimension( 1:3 ) :: gub, gn
     Integer, Dimension( 1:3 ) :: hub, hlb
