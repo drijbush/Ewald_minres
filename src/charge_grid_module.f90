@@ -13,7 +13,7 @@ Contains
 
   Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, n_grid, lb, ub, comms, grid_integrator, q_grid,error )
 
-    !$ Use omp_lib
+    !$ Use omp_lib, only : omp_get_max_threads, omp_get_thread_num
     Use lattice_module         , Only : lattice
     Use comms_base_class_module, Only : comms_base_class
     Use quadrature_base_module , Only : quadrature_base_class
@@ -225,7 +225,7 @@ Contains
 
     Integer :: n
     Integer :: i1, i2, i3
-    Integer :: i, i_alpha, i_beta
+    Integer :: i
     Integer :: error
 
     n      = Size( q )

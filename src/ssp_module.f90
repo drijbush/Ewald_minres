@@ -14,8 +14,6 @@ Contains
        recip_E, q_grid, pot_grid, solver, pot_swapper, grid_integrator, &
        ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error, q_grid_old, pot_grid_old )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
-
     Use lattice_module                          , Only : lattice
     Use charge_grid_module                      , Only : charge_grid_calculate, charge_grid_forces
     Use halo_setter_base_module                 , Only : halo_setter_base_class
@@ -138,6 +136,9 @@ Contains
     Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
 
     ! Shut up compiler
+    if (lb(1) /= 0) continue
+    if (ub(1) /= 0) continue
+
     y = x
 
   End Subroutine dummy_msolve

@@ -1,6 +1,6 @@
 Program test
 
-  !$ Use omp_lib
+  !$ Use omp_lib, Only : omp_get_max_threads
 
   Use constants,                            Only : wp, li, pi, r4pie0
   Use lattice_module                      , Only : lattice
