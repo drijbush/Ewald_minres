@@ -4,25 +4,24 @@ Module domains_module
   ! Here we map purely using the grid
   ! DLP (effectively) maps using the fractional coordinates
   ! Use this for debugging for the moment
-  
+
   Implicit None
 
   Public :: domain_get_params
   Public :: domain_is_in_grid_volume
   Public :: domain_build
   Public :: domain_halo_build
-  
+
   Private
 
-Contains  
+Contains
 
   Pure Subroutine domain_build( l, q, r, n_grid, n_proc, domain_coords, q_domain, r_domain, id, id_domain )
 
     ! GRIDS START AT ZERO
     ! Determine aoms in this domain assuming the grid is comensurate with the space that holds the domain
-    
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
+    Use constants, Only : wp
     Use lattice_module, Only : lattice
 
     Implicit none
@@ -42,10 +41,10 @@ Contains
 
     Integer, Dimension( 1:3 ) :: domain_base_coords
     Integer, Dimension( 1:3 ) :: n_grid_domain
-    
+
     Integer :: n
     Integer :: i
-    
+
     n = Size( q )
 
     Call domain_get_params( n_grid, n_proc, domain_coords, n_grid_domain, domain_base_coords )
@@ -65,14 +64,14 @@ Contains
     If( Present( id ) .And. Present( id_domain ) ) Then
        id_domain = id( i_domain )
     End If
-    
+
   End Subroutine domain_build
 
   Subroutine domain_halo_build( l, q, r, n_grid, n_proc, domain_coords, halo_width, q_halo, r_halo, id, id_halo )
 
     ! GRIDS START AT ZERO
     ! Determine atoms in the halo assuming the grid is comensurate with the space that holds the domain
-    
+
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Use lattice_module, Only : lattice
@@ -92,23 +91,23 @@ Contains
     Integer   , Dimension(      : ), Allocatable, Intent(   Out ), Optional :: id_halo
 
     Real( wp ), Dimension( :, : ), Allocatable :: rtmp
-    
+
     Real( wp ), Dimension( 1:3 ) :: G, ri, riG
-    
+
     Integer, Dimension( 1:3 ) :: domain_base_coords
     Integer, Dimension( 1:3 ) :: n_grid_domain
-    
+
     Integer :: n
     Integer :: i
     Integer :: iGx, iGy, iGz
-    
+
     n = Size( q )
 
     Call domain_get_params( n_grid, n_proc, domain_coords, n_grid_domain, domain_base_coords )
 
     Allocate( q_halo( 1:0 ) )
     Allocate( r_halo( 1:3, 1:0 ) )
-    
+
     Do i = 1, n
        ! For the halo we have to consider periodic images
        ri = r( :, i )
@@ -139,7 +138,7 @@ Contains
           End Do
        End Do
     End Do
-    
+
   End Subroutine domain_halo_build
 
   Pure Function domain_is_in_grid_volume( l, ri, n_grid, lo, hi ) Result( in_volume )
@@ -167,7 +166,7 @@ Contains
     ! Floor NOT Int as the domain includes the lower bound but not the upper
     i_grid = Floor( fi * n_grid )
     in_volume = All( i_grid >= lo ) .And. All( i_grid < hi )
-    
+
   End Function domain_is_in_grid_volume
 
   Elemental Subroutine domain_get_params( n_grid, n_proc, domain_coords, n_grid_domain, domain_base_coords )
@@ -200,7 +199,7 @@ Contains
 
     n_grid_domain      = n_me
     domain_base_coords = n_first
-    
+
   End Subroutine domain_get_params
-  
+
 End Module domains_module

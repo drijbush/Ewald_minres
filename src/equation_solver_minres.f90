@@ -1,4 +1,3 @@
-
 !IJB Adapted to 3d grids and FD template from https://web.stanford.edu/group/SOL/software/minres/
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -32,8 +31,9 @@
 
 Module equation_solver_minres_module
 
+  Use constants, Only : wp
   Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
-  
+
   Implicit None
 
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_minres
@@ -42,7 +42,7 @@ Module equation_solver_minres_module
   End type equation_solver_minres
 
   Private
-  
+
 Contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -51,8 +51,7 @@ Contains
        lb, ub, b, rtol,  &
        x, istop, istop_message, itn, rnorm )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+    Use constants, only : zero, one
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
 
@@ -335,7 +334,6 @@ Contains
     Integer :: error
 
     ! Local constants
-    Real(wp),         Parameter :: zero =  0.0_wp,  one = 1.0_wp
     Real(wp),         Parameter :: ten  = 10.0_wp
     Character(len=*), Parameter :: msg(-1:8) =                  &
          (/ 'beta2 = 0.  If M = I, b and x are eigenvectors of A', & ! -1
@@ -540,8 +538,8 @@ Contains
          rnorm  = qrnorm
          rootl       = Sqrt( gbar**2 +dbar**2  )  ! norm([gbar; dbar]);
          Arnorml     = rnorml*rootl               ! ||A r_{k-1} ||
-         relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)     
-         !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A|| 
+         relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)
+         !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A||
 
          ! Estimate  cond(A).
          ! In this version we look at the diagonals of  R  in the

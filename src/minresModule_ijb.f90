@@ -1,4 +1,3 @@
-
 !IJB Adapted to 3d grids and FD template from https://web.stanford.edu/group/SOL/software/minres/
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -32,7 +31,7 @@
 
 Module minresModule
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+  Use constants, Only : wp
 
   Implicit None
   Public   :: MINRES
@@ -48,7 +47,7 @@ Contains
     Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
-  
+
     Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
     Class( FD_template ), Intent( In ) :: FD_operator
     Class( halo_setter_base_class ), Intent( InOut ) :: halo_swapper
@@ -315,7 +314,7 @@ Contains
     !-------------------------------------------------------------------
 
     !     Local arrays and variables
-
+    Use constants, Only : zero, one
     Real( wp ), Dimension( :, :, : ), Allocatable :: grid_with_halo
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: r1
@@ -335,12 +334,11 @@ Contains
          s     , sn    , t     , tnorm2, ynorm2, z
 
     Integer :: FD_order, halo_width
-    
+
     Logical   :: debug, prnt
     Integer :: error
-    
+
     ! Local constants
-    Real(wp),         Parameter :: zero =  0.0_wp,  one = 1.0_wp
     Real(wp),         Parameter :: ten  = 10.0_wp
     Character(len=*), Parameter :: msg(-1:8) =                  &
          (/ 'beta2 = 0.  If M = I, b and x are eigenvectors of A', & ! -1
@@ -358,7 +356,7 @@ Contains
     Intrinsic       :: abs, dot_product, epsilon, min, max, sqrt
 
     Allocate( r1, r2, v, w, w1, w2, y, mold = b )
-    
+
     ! Print heading and initialize.
 
     debug = .False.
@@ -374,7 +372,7 @@ Contains
     !IJB
     ! Note order is always even, so no worries about splitting it in 2
     FD_order  = FD_operator%get_order()
-    
+
 !!$    halo_width = FD_order / 2
     ! Looks like a bug in get order! Returns twice what expected ...
     halo_width = FD_order
@@ -383,7 +381,7 @@ Contains
     ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
     ! due to errors before the iteration starts
     Arnorml = Huge( Arnorml )
-    
+
     !-------------------------------------------------------------------
     ! Set up y and v for the first Lanczos vector v1.
     ! y = beta1 P' v1, where P = C**(-1).
@@ -393,7 +391,7 @@ Contains
     y      = b
     If ( precon ) Call Msolve( lb, ub, b, y )
     beta1 = contract( comms, b, y )
-    
+
     If (beta1 < zero) Then     ! M must be indefinite.
        istop = 8
        go to 900
@@ -433,7 +431,7 @@ Contains
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
             grid_with_halo, r2  )
        s = contract( comms, w, w  )
-       t = contract( comms, y, r2 )       
+       t = contract( comms, y, r2 )
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
        If (z > epsa) Then
@@ -578,8 +576,8 @@ Contains
        rnorm  = qrnorm
        rootl       = Sqrt( gbar**2 +dbar**2  )  ! norm([gbar; dbar]);
        Arnorml     = rnorml*rootl               ! ||A r_{k-1} ||
-       relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)     
-       !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A|| 
+       relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)
+       !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A||
 
        ! Estimate  cond(A).
        ! In this version we look at the diagonals of  R  in the
@@ -667,7 +665,7 @@ Contains
     !$omp end parallel    ! Use Kahan for accuracy
 
     Call comms%reduce( d )
-    
+
   End Function contract
-  
+
 End Module minresModule

@@ -1,7 +1,6 @@
 Module sort_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants, Only : wp
   Implicit None
 
   Integer, Parameter, Public :: SORT_ASCEND   = 1
@@ -44,7 +43,7 @@ Contains
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Real( wp ) :: part_val
-    
+
     Integer :: n
     Integer :: stack_size
     Integer :: part, bot, top
@@ -91,14 +90,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( i ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( j ) <= part_val ) Then
                    Exit
@@ -160,7 +159,7 @@ Contains
     End Subroutine insert_sort
 
     Pure Subroutine swap( i, j, a )
-      
+
       Integer                    , Intent( In    ) :: i
       Integer                    , Intent( In    ) :: j
       Real( wp ), Dimension( 1: ), Intent( InOut ) :: a
@@ -230,14 +229,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( i ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( j ) <= part_val ) Then
                    Exit
@@ -299,7 +298,7 @@ Contains
     End Subroutine insert_sort
 
     Pure Subroutine swap( i, j, a )
-      
+
       Integer                 , Intent( In    ) :: i
       Integer                 , Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
@@ -323,7 +322,7 @@ Contains
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Character( Len = Len( a ) ) :: part_val
-    
+
     Integer :: n
     Integer :: stack_size
     Integer :: part, bot, top
@@ -370,14 +369,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( i ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( j ) <= part_val ) Then
                    Exit
@@ -439,7 +438,7 @@ Contains
     End Subroutine insert_sort
 
     Pure Subroutine swap( i, j, a )
-      
+
       Integer                              , Intent( In    ) :: i
       Integer                              , Intent( In    ) :: j
       Character( Len = * ), Dimension( 1: ), Intent( InOut ) :: a
@@ -464,7 +463,7 @@ Contains
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Real( wp ) :: part_val
-    
+
     Integer :: n
     Integer :: ind_tmp
     Integer :: stack_size
@@ -515,14 +514,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( ind( i ) ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( ind( j ) ) <= part_val ) Then
                    Exit
@@ -587,7 +586,7 @@ Contains
     End Subroutine insert_index
 
     Pure Subroutine swap( i, j, a )
-      
+
       Integer                 , Intent( In    ) :: i
       Integer                 , Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
@@ -612,7 +611,7 @@ Contains
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Integer :: part_val
-    
+
     Integer :: n
     Integer :: ind_tmp
     Integer :: stack_size
@@ -663,14 +662,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( ind( i ) ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( ind( j ) ) <= part_val ) Then
                    Exit
@@ -734,7 +733,7 @@ Contains
     End Subroutine insert_index
 
     Pure Subroutine swap( i, j, a )
-      
+
       Integer                 , Intent( In    ) :: i
       Integer                 , Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
@@ -759,7 +758,7 @@ Contains
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Character( Len = Len( a ) ) :: part_val
-    
+
     Integer :: n
     Integer :: ind_tmp
     Integer :: stack_size
@@ -810,14 +809,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( ind( i ) ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( ind( j ) ) <= part_val ) Then
                    Exit
@@ -882,7 +881,7 @@ Contains
     End Subroutine insert_index
 
     Pure Subroutine swap( i, j, a )
-      
+
       Integer                 , Intent( In    ) :: i
       Integer                 , Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
@@ -933,24 +932,23 @@ Contains
 
     bot = stack( 1, stack_size )
     top = stack( 2, stack_size )
-      
+
     stack_size = stack_size - 1
 
   End Subroutine pop_stack
 
   Pure Subroutine push_stack( bot, top, stack_size, stack )
-    
+
     Integer                   , Intent( In    ) :: bot
     Integer                   , Intent( In    ) :: top
     Integer                   , Intent( InOut ) :: stack_size
     Integer, Dimension( :, : ), Intent( InOut ) :: stack
-    
+
     stack_size = stack_size + 1
-    
+
     stack( 1, stack_size ) = bot
     stack( 2, stack_size ) = top
-    
+
   End Subroutine push_stack
 
 End Module sort_module
-

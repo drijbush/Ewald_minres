@@ -3,15 +3,14 @@ Module grid_io_module
   Implicit None
 
   Public :: grid_io_save
-  
+
   Private
 
 Contains
 
   Subroutine grid_io_save( unit, filename, l, grid )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+    Use constants, Only : wp
     Use lattice_module, Only : lattice
 
     Integer                            , Intent( In ) :: unit
@@ -23,7 +22,7 @@ Contains
 
     Real( wp ), Dimension( 1:3 ) :: f_point
     Real( wp ), Dimension( 1:3 ) :: r_point
-    
+
     Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: i_grid
 
@@ -33,7 +32,7 @@ Contains
     n_grid = Ubound( grid ) + 1
 
     lattice_vectors = l%get_direct_vectors()
-    
+
     Open( unit, file = filename )
     Write( unit, * ) 'Sum over grid           ', Sum( grid )
     Write( unit, * ) 'Average per unit volume ', Sum( grid ) / l%get_volume()
@@ -52,8 +51,8 @@ Contains
        End Do
     End Do
     Close( unit )
-    
+
   End Subroutine grid_io_save
-  
-  
+
+
 End Module grid_io_module
