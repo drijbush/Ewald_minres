@@ -2,7 +2,8 @@ Program test_mpi
 
   !$ Use omp_lib
   Use mpi_f08, Only : mpi_comm, mpi_init, mpi_finalize, mpi_comm_world, mpi_bcast, mpi_double_precision, mpi_integer, &
-       mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place, mpi_character
+       mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place, mpi_character, mpi_comm_rank, &
+       mpi_comm_size
 
   Use constants,                                 Only : wp, li
   Use lattice_module                           , Only : lattice
@@ -104,18 +105,25 @@ Program test_mpi
 
      Write( *, * ) 'Ewald param ?'
      Read ( *, * ) alpha
+     Write( *, * ) alpha
      Write( *, * ) 'Number of ppoints for gaussians?'
      Read ( *, * ) range_gauss
+     Write( *, * ) range_gauss
      Write( *, * ) 'Cut off tolerance for gaussians?'
      Read ( *, * ) gauss_tol
+     Write( *, * ) gauss_tol
      Write( *, * ) 'REsidual tolerance for solver?'
      Read ( *, * ) rtol
+     Write( *, * ) rtol
      Write( *, * ) 'FD_order?'
      Read ( *, * ) FD_order
+     Write( *, * ) FD_order
      Write( *, * ) 'xshift?'
      Read ( *, * ) xshift
+     Write( *, * ) xshift
      Write( *, * ) 'which solver?'
      Read ( *, * ) what
+     Write( *, * ) what
 
      Select Case( Trim( Adjustl( what ) ) )
      Case( 'CG' )
