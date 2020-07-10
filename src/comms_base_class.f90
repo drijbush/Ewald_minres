@@ -1,6 +1,6 @@
 Module comms_base_class_module
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+  Use constants, Only : wp
 
   Implicit None
 
@@ -22,52 +22,52 @@ Module comms_base_class_module
      Subroutine set_comm( c, comm, error )
        Import :: comms_base_class
        Class( comms_base_class ), Intent(   Out ) :: c
-       Integer                  , Intent( In    ) :: comm
-       Integer                  , Intent(   Out ) :: error
+       Integer,                   Intent( In    ) :: comm
+       Integer,                   Intent(   Out ) :: error
      End Subroutine set_comm
 
-     Subroutine get_comm( c, comm ) 
+     Subroutine get_comm( c, comm )
        Import :: comms_base_class
        Class( comms_base_class ), Intent( In    ) :: c
-       Integer                  , Intent(   Out ) :: comm
+       Integer,                   Intent(   Out ) :: comm
      End Subroutine get_comm
 
      Subroutine inquiry_1d( c, data )
        Import :: comms_base_class
        Class( comms_base_class ), Intent( In    ) :: c
-       Integer                  , Intent(   Out ) :: data
+       Integer,                   Intent(   Out ) :: data
      End Subroutine inquiry_1d
 
      Subroutine inquiry_3d( c, data )
        Import :: comms_base_class
        Class( comms_base_class ), Intent( In    ) :: c
-       Integer, Dimension( : )  , Intent(   Out ) :: data
+       Integer, Dimension( : ),   Intent(   Out ) :: data
      End Subroutine inquiry_3d
 
      Subroutine reduce_int( c, data )
        Import :: comms_base_class
        Class( comms_base_class ), Intent( In    ) :: c
-       Integer                  , Intent( InOut ) :: data
+       Integer,                   Intent( InOut ) :: data
      End Subroutine reduce_int
 
      Subroutine reduce_int_1d( c, data )
        Import :: wp
        Import :: comms_base_class
-       Class( comms_base_class ) , Intent( In    ) :: c
-       Integer   , Dimension( : ), Intent( InOut ) :: data
+       Class( comms_base_class ),  Intent( In    ) :: c
+       Integer,    Dimension( : ), Intent( InOut ) :: data
      End Subroutine reduce_int_1d
 
      Subroutine reduce_real( c, data )
        Import :: wp
        Import :: comms_base_class
        Class( comms_base_class ), Intent( In    ) :: c
-       Real( wp )               , Intent( InOut ) :: data
+       Real( wp ),                Intent( InOut ) :: data
      End Subroutine reduce_real
 
      Subroutine reduce_real_1d( c, data )
        Import :: wp
        Import :: comms_base_class
-       Class( comms_base_class ) , Intent( In    ) :: c
+       Class( comms_base_class ),  Intent( In    ) :: c
        Real( wp ), Dimension( : ), Intent( InOut ) :: data
      End Subroutine reduce_real_1d
 
@@ -76,5 +76,5 @@ Module comms_base_class_module
   Private
 
 Contains
-  
+
 End Module comms_base_class_module

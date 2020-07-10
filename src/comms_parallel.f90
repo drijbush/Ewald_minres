@@ -25,8 +25,8 @@ Contains
     Implicit None
 
     Class( comms_parallel ), Intent(   Out ) :: c
-    Integer                , Intent( In    ) :: comm
-    Integer                , Intent(   Out ) :: error
+    Integer,                 Intent( In    ) :: comm
+    Integer,                 Intent(   Out ) :: error
 
     Type( mpi_comm ) :: comm_f08
 
@@ -50,7 +50,7 @@ Contains
     Implicit None
 
     Class( comms_parallel ), Intent( In    ) :: c
-    Integer              , Intent(   Out ) :: comm
+    Integer,               Intent(   Out ) :: comm
 
     comm = c%communicator
     
@@ -61,7 +61,7 @@ Contains
     Use mpi_f08, Only : mpi_comm, mpi_comm_rank
 
     Class( comms_parallel ), Intent( In    ) :: c
-    Integer              , Intent(   Out ) :: data
+    Integer,               Intent(   Out ) :: data
 
     Type( mpi_comm ) :: comm_f08
 
@@ -75,7 +75,7 @@ Contains
     Use mpi_f08, Only : mpi_comm, mpi_comm_size
 
     Class( comms_parallel ), Intent( In    ) :: c
-    Integer                , Intent(   Out ) :: data
+    Integer,                 Intent(   Out ) :: data
 
     Type( mpi_comm ) :: comm_f08
 
@@ -134,7 +134,7 @@ Contains
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
     
     Class( comms_parallel ), Intent( In    ) :: c
-    Real( wp )             , Intent( InOut ) :: data
+    Real( wp ),              Intent( InOut ) :: data
 
     Type( mpi_comm     ) :: comm_f08
     Type( mpi_datatype ) :: datatype
@@ -157,7 +157,7 @@ Contains
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
     
     Class( comms_parallel ), Intent( In    ) :: c
-    Real( wp )             , Intent( InOut ) :: data
+    Real( wp ),              Intent( InOut ) :: data
 
     Type( mpi_comm     ) :: comm_f08
     Type( mpi_datatype ) :: datatype

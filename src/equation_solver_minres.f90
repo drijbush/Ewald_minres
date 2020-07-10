@@ -1,4 +1,3 @@
-
 !IJB Adapted to 3d grids and FD template from https://web.stanford.edu/group/SOL/software/minres/
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -32,8 +31,9 @@
 
 Module equation_solver_minres_module
 
+  Use constants, Only : wp
   Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
-  
+
   Implicit None
 
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_minres
@@ -42,7 +42,7 @@ Module equation_solver_minres_module
   End type equation_solver_minres
 
   Private
-  
+
 Contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -51,21 +51,20 @@ Contains
        lb, ub, b, rtol,  &
        x, istop, istop_message, itn, rnorm )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+    Use constants, only : zero, one
     Use halo_setter_base_module, Only : halo_setter_base_class
-    Use FD_template_module     , Only : FD_template
+    Use FD_template_module,      Only : FD_template
 
-    Class( equation_solver_minres )                       , Intent( InOut ) :: method
-    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
-    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
-    Real( wp )                                            , Intent( In    ) :: rtol
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
-    Integer                                               , Intent(   Out ) :: istop
-    Character( Len = * )                                  , Intent(   Out ) :: istop_message
-    Real( wp )                                            , Intent(   Out ) :: rnorm
-    Integer                                               , Intent(   Out ) :: itn
+    Class( equation_solver_minres ),                        Intent( InOut ) :: method
+    Integer,  Dimension( 1:3 ),                             Intent( In    ) :: lb( 1:3 )
+    Integer,  Dimension( 1:3 ),                             Intent( In    ) :: ub( 1:3 )
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
+    Real( wp ),                                             Intent( In    ) :: rtol
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
+    Integer,                                                Intent(   Out ) :: istop
+    Character( Len = * ),                                   Intent(   Out ) :: istop_message
+    Real( wp ),                                             Intent(   Out ) :: rnorm
+    Integer,                                                Intent(   Out ) :: itn
 
     Real(wp) :: Anorm, Acond, Arnorm, ynorm
     !-------------------------------------------------------------------
@@ -320,22 +319,21 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: w1
     Real( wp ), Dimension( :, :, : ), Allocatable :: w2
     Real( wp ), Dimension( :, :, : ), Allocatable :: y
-    Real(wp)  :: alfa  , beta  , beta1 , cs    ,          &
-         dbar  , delta , denom , diag  ,          &
-         eps   , epsa  , epsln , epsr  , epsx  ,  &
-         gamma , gbar  , gmax  , gmin  ,          &
-         oldb  , oldeps, qrnorm, phi   , phibar,  &
-         rhs1  , rhs2  , rnorml, rootl ,          &
+    Real(wp)  :: alpha,   beta,   beta1,  cs,              &
+         dbar,   delta,  denom,  diag,            &
+         eps,    epsa,   epsln,  epsr,   epsx,    &
+         gamma,  gbar,   gmax,   gmin,            &
+         oldb,   oldeps, qrnorm, phi,    phibar,  &
+         rhs1,   rhs2,   rnorml, rootl,           &
          Arnorml,        relArnorml,              &
-         s     , sn    , t     , tnorm2, ynorm2, z
+         s,      sn,      tnorm2, ynorm2, z
 
     Integer :: FD_order, halo_width
 
-    Logical   :: debug, prnt
+    Logical   :: debug
     Integer :: error
 
     ! Local constants
-    Real(wp),         Parameter :: zero =  0.0_wp,  one = 1.0_wp
     Real(wp),         Parameter :: ten  = 10.0_wp
     Character(len=*), Parameter :: msg(-1:8) =                  &
          (/ 'beta2 = 0.  If M = I, b and x are eigenvectors of A', & ! -1
@@ -462,8 +460,8 @@ Contains
             y   = y - (beta/oldb)*r1    ! call daxpy ( n, (- beta/oldb), r1, 1, y, 1 )
          End If
 
-         alfa = method%contract( method%comms, v, y  )
-         y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
+         alpha = method%contract( method%comms, v, y  )
+         y      = y - (alpha/beta)*r2    ! call daxpy ( n, (- alpha/beta), r2, 1, y, 1 )
          r1     = r2
          r2     = y
          If ( Allocated( method%precon ) ) Then
@@ -478,24 +476,24 @@ Contains
          End If
 
          beta   = Sqrt( beta )          ! beta = betak+1
-         tnorm2 = tnorm2 + alfa**2 + oldb**2 + beta**2
+         tnorm2 = tnorm2 + alpha**2 + oldb**2 + beta**2
 
          If (itn == 1) Then                   ! Initialize a few things.
             If (beta/beta1 <= ten*eps) Then   ! beta2 = 0 or ~ 0.
                istop = -1                     ! Terminate later.
             End If
-            !tnorm2 = alfa**2
-            gmax   = Abs( alfa )              ! alpha1
+            !tnorm2 = alpha**2
+            gmax   = Abs( alpha )              ! alpha1
             gmin   = gmax                     ! alpha1
          End If
 
          ! Apply previous rotation Qk-1 to get
          !   [deltak epslnk+1] = [cs  sn][dbark    0   ]
-         !   [gbar k dbar k+1]   [sn -cs][alfak betak+1].
+         !   [gbar k dbar k+1]   [sn -cs][alphak betak+1].
 
          oldeps = epsln
-         delta  = cs * dbar  +  sn * alfa ! delta1 = 0         deltak
-         gbar   = sn * dbar  -  cs * alfa ! gbar 1 = alfa1     gbar k
+         delta  = cs * dbar  +  sn * alpha ! delta1 = 0         deltak
+         gbar   = sn * dbar  -  cs * alpha ! gbar 1 = alpha1     gbar k
          epsln  =               sn * beta ! epsln2 = 0         epslnk+1
          dbar   =            -  cs * beta ! dbar 2 = beta2     dbar k+1
 
@@ -540,8 +538,8 @@ Contains
          rnorm  = qrnorm
          rootl       = Sqrt( gbar**2 +dbar**2  )  ! norm([gbar; dbar]);
          Arnorml     = rnorml*rootl               ! ||A r_{k-1} ||
-         relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)     
-         !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A|| 
+         relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)
+         !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A||
 
          ! Estimate  cond(A).
          ! In this version we look at the diagonals of  R  in the

@@ -1,4 +1,3 @@
-
 !IJB Adapted to 3d grids and FD template from https://web.stanford.edu/group/SOL/software/minres/
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -32,7 +31,7 @@
 
 Module minresModule
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+  Use constants, Only : wp
 
   Implicit None
   Public   :: MINRES
@@ -47,8 +46,8 @@ Contains
 
     Use comms_base_class_module, Only : comms_base_class
     Use halo_setter_base_module, Only : halo_setter_base_class
-    Use FD_template_module     , Only : FD_template
-  
+    Use FD_template_module,      Only : FD_template
+
     Integer,  Intent(in)    :: lb( 1:3 ), ub( 1:3 )
     Class( FD_template ), Intent( In ) :: FD_operator
     Class( halo_setter_base_class ), Intent( InOut ) :: halo_swapper
@@ -315,7 +314,7 @@ Contains
     !-------------------------------------------------------------------
 
     !     Local arrays and variables
-
+    Use constants, Only : zero, one
     Real( wp ), Dimension( :, :, : ), Allocatable :: grid_with_halo
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: r1
@@ -325,22 +324,21 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: w1
     Real( wp ), Dimension( :, :, : ), Allocatable :: w2
     Real( wp ), Dimension( :, :, : ), Allocatable :: y
-    Real(wp)  :: alfa  , beta  , beta1 , cs    ,          &
-         dbar  , delta , denom , diag  ,          &
-         eps   , epsa  , epsln , epsr  , epsx  ,  &
-         gamma , gbar  , gmax  , gmin  ,          &
-         oldb  , oldeps, qrnorm, phi   , phibar,  &
-         rhs1  , rhs2  , rnorml, rootl ,          &
+    Real(wp)  :: alpha,   beta,   beta1,  cs,              &
+         dbar,   delta,  denom,  diag,            &
+         eps,    epsa,   epsln,  epsr,   epsx,    &
+         gamma,  gbar,   gmax,   gmin,            &
+         oldb,   oldeps, qrnorm, phi,    phibar,  &
+         rhs1,   rhs2,   rnorml, rootl,           &
          Arnorml,        relArnorml,              &
-         s     , sn    , t     , tnorm2, ynorm2, z
+         s,      sn,     t,      tnorm2, ynorm2, z
 
     Integer :: FD_order, halo_width
-    
+
     Logical   :: debug, prnt
     Integer :: error
-    
+
     ! Local constants
-    Real(wp),         Parameter :: zero =  0.0_wp,  one = 1.0_wp
     Real(wp),         Parameter :: ten  = 10.0_wp
     Character(len=*), Parameter :: msg(-1:8) =                  &
          (/ 'beta2 = 0.  If M = I, b and x are eigenvectors of A', & ! -1
@@ -358,7 +356,7 @@ Contains
     Intrinsic       :: abs, dot_product, epsilon, min, max, sqrt
 
     Allocate( r1, r2, v, w, w1, w2, y, mold = b )
-    
+
     ! Print heading and initialize.
 
     debug = .False.
@@ -374,7 +372,7 @@ Contains
     !IJB
     ! Note order is always even, so no worries about splitting it in 2
     FD_order  = FD_operator%get_order()
-    
+
 !!$    halo_width = FD_order / 2
     ! Looks like a bug in get order! Returns twice what expected ...
     halo_width = FD_order
@@ -383,7 +381,7 @@ Contains
     ! Otherwise Arnorml may be used uninitiliased if we have a quick exit
     ! due to errors before the iteration starts
     Arnorml = Huge( Arnorml )
-    
+
     !-------------------------------------------------------------------
     ! Set up y and v for the first Lanczos vector v1.
     ! y = beta1 P' v1, where P = C**(-1).
@@ -393,7 +391,7 @@ Contains
     y      = b
     If ( precon ) Call Msolve( lb, ub, b, y )
     beta1 = contract( comms, b, y )
-    
+
     If (beta1 < zero) Then     ! M must be indefinite.
        istop = 8
        go to 900
@@ -411,7 +409,7 @@ Contains
     !-------------------------------------------------------------------
     If (checkA  .And.  precon) Then
        Call Msolve( lb, ub, y, r2 )
-       s = contract( comms, y , y  )
+       s = contract( comms, y,  y  )
        t = contract( comms, r1, r2 )
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
@@ -433,7 +431,7 @@ Contains
        Call FD_operator%apply( Lbound( grid_with_halo ), Lbound( r2 ), Lbound( r2 ), Ubound( r2 ), &
             grid_with_halo, r2  )
        s = contract( comms, w, w  )
-       t = contract( comms, y, r2 )       
+       t = contract( comms, y, r2 )
        z      = Abs(s - t)
        epsa   = (s + eps) * eps**0.33333
        If (z > epsa) Then
@@ -502,8 +500,8 @@ Contains
           y   = y - (beta/oldb)*r1    ! call daxpy ( n, (- beta/oldb), r1, 1, y, 1 )
        End If
 
-       alfa = contract( comms, v, y  )
-       y      = y - (alfa/beta)*r2    ! call daxpy ( n, (- alfa/beta), r2, 1, y, 1 )
+       alpha = contract( comms, v, y  )
+       y      = y - (alpha/beta)*r2    ! call daxpy ( n, (- alpha/beta), r2, 1, y, 1 )
        r1     = r2
        r2     = y
        If ( precon ) Call Msolve( lb, ub, r2, y )
@@ -516,24 +514,24 @@ Contains
        End If
 
        beta   = Sqrt( beta )          ! beta = betak+1
-       tnorm2 = tnorm2 + alfa**2 + oldb**2 + beta**2
+       tnorm2 = tnorm2 + alpha**2 + oldb**2 + beta**2
 
        If (itn == 1) Then                   ! Initialize a few things.
           If (beta/beta1 <= ten*eps) Then   ! beta2 = 0 or ~ 0.
              istop = -1                     ! Terminate later.
           End If
-          !tnorm2 = alfa**2
-          gmax   = Abs( alfa )              ! alpha1
+          !tnorm2 = alpha**2
+          gmax   = Abs( alpha )              ! alpha1
           gmin   = gmax                     ! alpha1
        End If
 
        ! Apply previous rotation Qk-1 to get
        !   [deltak epslnk+1] = [cs  sn][dbark    0   ]
-       !   [gbar k dbar k+1]   [sn -cs][alfak betak+1].
+       !   [gbar k dbar k+1]   [sn -cs][alphak betak+1].
 
        oldeps = epsln
-       delta  = cs * dbar  +  sn * alfa ! delta1 = 0         deltak
-       gbar   = sn * dbar  -  cs * alfa ! gbar 1 = alfa1     gbar k
+       delta  = cs * dbar  +  sn * alpha ! delta1 = 0         deltak
+       gbar   = sn * dbar  -  cs * alpha ! gbar 1 = alpha1     gbar k
        epsln  =               sn * beta ! epsln2 = 0         epslnk+1
        dbar   =            -  cs * beta ! dbar 2 = beta2     dbar k+1
 
@@ -578,8 +576,8 @@ Contains
        rnorm  = qrnorm
        rootl       = Sqrt( gbar**2 +dbar**2  )  ! norm([gbar; dbar]);
        Arnorml     = rnorml*rootl               ! ||A r_{k-1} ||
-       relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)     
-       !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A|| 
+       relArnorml  = rootl  /  Anorm;           ! ||Ar|| / (||A|| ||r||)
+       !relArnorml = Arnorml / Anorm;           ! ||Ar|| / ||A||
 
        ! Estimate  cond(A).
        ! In this version we look at the diagonals of  R  in the
@@ -640,7 +638,7 @@ Contains
 
     Real( wp ) :: d
 
-    Class( comms_base_class )       , Intent( In ) :: comms
+    Class( comms_base_class ),        Intent( In ) :: comms
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: x
     Real( wp ), Dimension( :, :, : ), Intent( In ) :: y
 
@@ -667,7 +665,7 @@ Contains
     !$omp end parallel    ! Use Kahan for accuracy
 
     Call comms%reduce( d )
-    
+
   End Function contract
-  
+
 End Module minresModule

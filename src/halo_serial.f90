@@ -1,9 +1,8 @@
 Module halo_serial_module
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
+  Use constants, Only : wp
   Use halo_setter_base_module, Only : halo_setter_base_class
-  
+
   Implicit None
 
   ! Mostly dummy type for the moment, eventually will contain things like MPI communicator
@@ -14,18 +13,18 @@ Module halo_serial_module
   End Type halo_serial_setter
 
   Private
-  
+
 Contains
 
   Subroutine halo_fill( H, halo_width, hdlb, gin, hout, error )
 
     Class( halo_serial_setter ),                                 Intent( InOut ) :: H
-    Integer   ,                                                  Intent( In    ) :: halo_width
-    Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
-    Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
+    Integer,                                                     Intent( In    ) :: halo_width
+    Integer,    Dimension( 1:3 ),                                Intent( In    ) :: hdlb
+    Real( wp ), Dimension( 0:, 0:, 0: ),                         Intent( In    ) :: gin
     Real( wp ), Dimension( hdlb( 1 ):, hdlb( 2 ):, hdlb( 3 ): ), Intent(   Out ) :: hout
-    Integer                                                    , Intent(   Out ) :: error
-    
+    Integer,                                                     Intent(   Out ) :: error
+
     Integer, Dimension( 1:3 ) :: gub, gn
     Integer, Dimension( 1:3 ) :: hub, hlb
 
@@ -44,7 +43,7 @@ Contains
 
     ! Bounds on grid with halo
     ! Have to be careful as HOUT might be declared bigger than needed
-    hlb =     - halo_width  
+    hlb =     - halo_width
     hub = gub + halo_width
 
     ! Size
@@ -52,11 +51,11 @@ Contains
 
     ! Fill the central section
     hout( 0:gub( 1 ), 0:gub( 2 ), 0:gub( 3 ) ) = gin
-    
+
     ! Need to finish actually filling halos!!!
     ! First all the stuff below the bottom face of the non-haloed grid
     Do hi3 = hlb( 3 ), -1
-       Do hi2 = hlb( 2 ), hub( 2 ) 
+       Do hi2 = hlb( 2 ), hub( 2 )
           Do hi1 = hlb( 1 ), hub( 1 )
              hi = [ hi1, hi2, hi3 ]
              gi = Modulo( hi, gn )
@@ -67,7 +66,7 @@ Contains
 
     ! Now above the top face
     Do hi3 = gub( 3 ) + 1, hub( 3 )
-       Do hi2 = hlb( 2 ), hub( 2 ) 
+       Do hi2 = hlb( 2 ), hub( 2 )
           Do hi1 = hlb( 1 ), hub( 1 )
              hi = [ hi1, hi2, hi3 ]
              gi = Modulo( hi, gn )

@@ -1,7 +1,6 @@
 Module sort_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants, Only : wp
   Implicit None
 
   Integer, Parameter, Public :: SORT_ASCEND   = 1
@@ -38,13 +37,13 @@ Contains
   Pure Subroutine sort_real_1d( a, dir )
 
     Real( wp ), Dimension( 1: ), Intent( InOut ) :: a
-    Integer                    , Intent( In    ) :: dir
+    Integer,                     Intent( In    ) :: dir
 
     ! Stack big enough for all arrays indexed by 64 bit integers
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Real( wp ) :: part_val
-    
+
     Integer :: n
     Integer :: stack_size
     Integer :: part, bot, top
@@ -91,14 +90,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( i ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( j ) <= part_val ) Then
                    Exit
@@ -138,8 +137,8 @@ Contains
 
     Pure Subroutine insert_sort( bot, top, a )
 
-      Integer                    , Intent( In    ) :: bot
-      Integer                    , Intent( In    ) :: top
+      Integer,                     Intent( In    ) :: bot
+      Integer,                     Intent( In    ) :: top
       Real( wp ), Dimension( 1: ), Intent( InOut ) :: a
 
       Real( wp ) :: tmp
@@ -160,9 +159,9 @@ Contains
     End Subroutine insert_sort
 
     Pure Subroutine swap( i, j, a )
-      
-      Integer                    , Intent( In    ) :: i
-      Integer                    , Intent( In    ) :: j
+
+      Integer,                     Intent( In    ) :: i
+      Integer,                     Intent( In    ) :: j
       Real( wp ), Dimension( 1: ), Intent( InOut ) :: a
 
       Real( wp ) :: tmp
@@ -178,7 +177,7 @@ Contains
   Pure Subroutine sort_integer_1d( a, dir )
 
     Integer, Dimension( 1: ), Intent( InOut ) :: a
-    Integer                 , Intent( In    ) :: dir
+    Integer,                  Intent( In    ) :: dir
 
     ! Stack big enough for all arrays indexed by 64 bit integers
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
@@ -230,14 +229,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( i ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( j ) <= part_val ) Then
                    Exit
@@ -277,8 +276,8 @@ Contains
 
     Pure Subroutine insert_sort( bot, top, a )
 
-      Integer                 , Intent( In    ) :: bot
-      Integer                 , Intent( In    ) :: top
+      Integer,                  Intent( In    ) :: bot
+      Integer,                  Intent( In    ) :: top
       Integer, Dimension( 1: ), Intent( InOut ) :: a
 
       Integer :: tmp
@@ -299,9 +298,9 @@ Contains
     End Subroutine insert_sort
 
     Pure Subroutine swap( i, j, a )
-      
-      Integer                 , Intent( In    ) :: i
-      Integer                 , Intent( In    ) :: j
+
+      Integer,                  Intent( In    ) :: i
+      Integer,                  Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
 
       Integer :: tmp
@@ -317,13 +316,13 @@ Contains
   Pure Subroutine sort_character_1d( a, dir )
 
     Character( Len = * ), Dimension( 1: ), Intent( InOut ) :: a
-    Integer                              , Intent( In    ) :: dir
+    Integer,                               Intent( In    ) :: dir
 
     ! Stack big enough for all arrays indexed by 64 bit integers
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Character( Len = Len( a ) ) :: part_val
-    
+
     Integer :: n
     Integer :: stack_size
     Integer :: part, bot, top
@@ -370,14 +369,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( i ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( j ) <= part_val ) Then
                    Exit
@@ -417,8 +416,8 @@ Contains
 
     Pure Subroutine insert_sort( bot, top, a )
 
-      Integer                              , Intent( In    ) :: bot
-      Integer                              , Intent( In    ) :: top
+      Integer,                               Intent( In    ) :: bot
+      Integer,                               Intent( In    ) :: top
       Character( Len = * ), Dimension( 1: ), Intent( InOut ) :: a
 
       Character( Len = Len( a ) ) :: tmp
@@ -439,9 +438,9 @@ Contains
     End Subroutine insert_sort
 
     Pure Subroutine swap( i, j, a )
-      
-      Integer                              , Intent( In    ) :: i
-      Integer                              , Intent( In    ) :: j
+
+      Integer,                               Intent( In    ) :: i
+      Integer,                               Intent( In    ) :: j
       Character( Len = * ), Dimension( 1: ), Intent( InOut ) :: a
 
       Character( Len = Len( a ) ) :: tmp
@@ -457,14 +456,14 @@ Contains
   Pure Subroutine index_real_1d( a, dir, ind )
 
     Real( wp ), Dimension( 1: ), Intent( In    ) :: a
-    Integer                    , Intent( In    ) :: dir
-    Integer   , Dimension( 1: ), Intent(   Out ) :: ind
+    Integer,                     Intent( In    ) :: dir
+    Integer,    Dimension( 1: ), Intent(   Out ) :: ind
 
     ! Stack big enough for all arrays indexed by 64 bit integers
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Real( wp ) :: part_val
-    
+
     Integer :: n
     Integer :: ind_tmp
     Integer :: stack_size
@@ -515,14 +514,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( ind( i ) ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( ind( j ) ) <= part_val ) Then
                    Exit
@@ -562,10 +561,10 @@ Contains
 
     Pure Subroutine insert_index( bot, top, a, ind )
 
-      Integer                    , Intent( In    ) :: bot
-      Integer                    , Intent( In    ) :: top
+      Integer,                     Intent( In    ) :: bot
+      Integer,                     Intent( In    ) :: top
       Real( wp ), Dimension( 1: ), Intent( In    ) :: a
-      Integer   , Dimension( 1: ), Intent( InOut ) :: ind
+      Integer,    Dimension( 1: ), Intent( InOut ) :: ind
 
       Real( wp ) :: tmp
 
@@ -587,9 +586,9 @@ Contains
     End Subroutine insert_index
 
     Pure Subroutine swap( i, j, a )
-      
-      Integer                 , Intent( In    ) :: i
-      Integer                 , Intent( In    ) :: j
+
+      Integer,                  Intent( In    ) :: i
+      Integer,                  Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
 
       Integer :: tmp
@@ -605,14 +604,14 @@ Contains
   Pure Subroutine index_integer_1d( a, dir, ind )
 
     Integer, Dimension( 1: ), Intent( In    ) :: a
-    Integer                 , Intent( In    ) :: dir
+    Integer,                  Intent( In    ) :: dir
     Integer, Dimension( 1: ), Intent(   Out ) :: ind
 
     ! Stack big enough for all arrays indexed by 64 bit integers
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Integer :: part_val
-    
+
     Integer :: n
     Integer :: ind_tmp
     Integer :: stack_size
@@ -663,14 +662,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( ind( i ) ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( ind( j ) ) <= part_val ) Then
                    Exit
@@ -710,8 +709,8 @@ Contains
 
     Pure Subroutine insert_index( bot, top, a, ind )
 
-      Integer                 , Intent( In    ) :: bot
-      Integer                 , Intent( In    ) :: top
+      Integer,                  Intent( In    ) :: bot
+      Integer,                  Intent( In    ) :: top
       Integer, Dimension( 1: ), Intent( In    ) :: a
       Integer, Dimension( 1: ), Intent( InOut ) :: ind
 
@@ -734,9 +733,9 @@ Contains
     End Subroutine insert_index
 
     Pure Subroutine swap( i, j, a )
-      
-      Integer                 , Intent( In    ) :: i
-      Integer                 , Intent( In    ) :: j
+
+      Integer,                  Intent( In    ) :: i
+      Integer,                  Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
 
       Integer :: tmp
@@ -752,14 +751,14 @@ Contains
   Pure Subroutine index_character_1d( a, dir, ind )
 
     Character( Len = * ), Dimension( 1: ), Intent( In    ) :: a
-    Integer                              , Intent( In    ) :: dir
-    Integer             , Dimension( 1: ), Intent(   Out ) :: ind
+    Integer,                               Intent( In    ) :: dir
+    Integer,              Dimension( 1: ), Intent(   Out ) :: ind
 
     ! Stack big enough for all arrays indexed by 64 bit integers
     Integer, Dimension( 1:2, 1:64 ) :: qsort_stack
 
     Character( Len = Len( a ) ) :: part_val
-    
+
     Integer :: n
     Integer :: ind_tmp
     Integer :: stack_size
@@ -810,14 +809,14 @@ Contains
 
           Do
 
-             Do 
+             Do
                 i = i + 1
                 If( a( ind( i ) ) >= part_val ) Then
                    Exit
                 End If
              End Do
 
-             Do 
+             Do
                 j = j - 1
                 If( a( ind( j ) ) <= part_val ) Then
                    Exit
@@ -857,10 +856,10 @@ Contains
 
     Pure Subroutine insert_index( bot, top, a, ind )
 
-      Integer                              , Intent( In    ) :: bot
-      Integer                              , Intent( In    ) :: top
+      Integer,                               Intent( In    ) :: bot
+      Integer,                               Intent( In    ) :: top
       Character( Len = * ), Dimension( 1: ), Intent( In    ) :: a
-      Integer             , Dimension( 1: ), Intent( InOut ) :: ind
+      Integer,              Dimension( 1: ), Intent( InOut ) :: ind
 
       Character( Len = Len( a ) ) :: tmp
 
@@ -882,9 +881,9 @@ Contains
     End Subroutine insert_index
 
     Pure Subroutine swap( i, j, a )
-      
-      Integer                 , Intent( In    ) :: i
-      Integer                 , Intent( In    ) :: j
+
+      Integer,                  Intent( In    ) :: i
+      Integer,                  Intent( In    ) :: j
       Integer, Dimension( 1: ), Intent( InOut ) :: a
 
       Integer :: tmp
@@ -899,7 +898,7 @@ Contains
 
   Pure Subroutine move_by_index_real_1d( ind, a )
 
-    Integer   , Dimension( : ), Intent( In    ) :: ind
+    Integer,    Dimension( : ), Intent( In    ) :: ind
     Real( wp ), Dimension( : ), Intent( InOut ) :: a
 
     a = a( (/ ind /) )
@@ -917,7 +916,7 @@ Contains
 
   Pure Subroutine move_by_index_character_1d( ind, a )
 
-    Integer             , Dimension( : ), Intent( In    ) :: ind
+    Integer,              Dimension( : ), Intent( In    ) :: ind
     Character( Len = * ), Dimension( : ), Intent( InOut ) :: a
 
     a = a( (/ ind /) )
@@ -927,30 +926,29 @@ Contains
   Pure Subroutine pop_stack( stack, stack_size, bot, top )
 
     Integer, Dimension( :, : ), Intent( In    ) :: stack
-    Integer                   , Intent( InOut ) :: stack_size
-    Integer                   , Intent(   Out ) :: bot
-    Integer                   , Intent(   Out ) :: top
+    Integer,                    Intent( InOut ) :: stack_size
+    Integer,                    Intent(   Out ) :: bot
+    Integer,                    Intent(   Out ) :: top
 
     bot = stack( 1, stack_size )
     top = stack( 2, stack_size )
-      
+
     stack_size = stack_size - 1
 
   End Subroutine pop_stack
 
   Pure Subroutine push_stack( bot, top, stack_size, stack )
-    
-    Integer                   , Intent( In    ) :: bot
-    Integer                   , Intent( In    ) :: top
-    Integer                   , Intent( InOut ) :: stack_size
+
+    Integer,                    Intent( In    ) :: bot
+    Integer,                    Intent( In    ) :: top
+    Integer,                    Intent( InOut ) :: stack_size
     Integer, Dimension( :, : ), Intent( InOut ) :: stack
-    
+
     stack_size = stack_size + 1
-    
+
     stack( 1, stack_size ) = bot
     stack( 2, stack_size ) = top
-    
+
   End Subroutine push_stack
 
 End Module sort_module
-

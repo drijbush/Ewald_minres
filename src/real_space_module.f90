@@ -3,22 +3,21 @@ Module real_space_module
   Implicit None
 
   Public :: real_space_energy
-  
+
   Private
 
 Contains
-  
+
   Subroutine real_space_energy( l, q, r, alpha, n_G_shells, E )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+    Use constants,      Only : wp
     Use lattice_module, Only : lattice
 
-    Type( lattice )              , Intent( In    ) :: l
+    Type( lattice ),               Intent( In    ) :: l
     Real( wp ), Dimension( :    ), Intent( In    ) :: q
     Real( wp ), Dimension( :, : ), Intent( In    ) :: r
     Real( wp ),                    Intent( In    ) :: alpha
-    Integer   ,                    Intent( In    ) :: n_G_shells
+    Integer,                       Intent( In    ) :: n_G_shells
     Real( wp ),                    Intent(   Out ) :: E
 
     Real( wp ), Dimension( 1:3 ) :: G
@@ -94,7 +93,7 @@ Contains
                 rj = r( :, j )
                 ! Apply minimum image convention
                 Call l%minimum_image( ri - rj, rij )
-                rijG_sq = Dot_product( rij, rij ) 
+                rijG_sq = Dot_product( rij, rij )
                 rijG = Sqrt( rijG_sq )
                 ! Should implement rcut at some point
 !!$                If( rijG <= 11.0_wp ) Then
