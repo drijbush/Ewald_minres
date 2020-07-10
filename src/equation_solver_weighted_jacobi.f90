@@ -21,20 +21,20 @@ Contains
 
     Use constants, Only : wp
     Use halo_setter_base_module, Only : halo_setter_base_class
-    Use FD_template_module     , Only : FD_template
+    Use FD_template_module,      Only : FD_template
 
     Implicit None
 
-    Class( equation_solver_weighted_jacobi )              , Intent( InOut ) :: method
-    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
-    Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
-    Real( wp )                                            , Intent( In    ) :: rtol
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
-    Integer                                               , Intent(   Out ) :: istop
-    Character( Len = * )                                  , Intent(   Out ) :: istop_message
-    Real( wp )                                            , Intent(   Out ) :: rnorm
-    Integer                                               , Intent(   Out ) :: itn
+    Class( equation_solver_weighted_jacobi ),               Intent( InOut ) :: method
+    Integer,  Dimension( 1:3 ),                             Intent( In    ) :: lb( 1:3 )
+    Integer,  Dimension( 1:3 ),                             Intent( In    ) :: ub( 1:3 )
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: b
+    Real( wp ),                                             Intent( In    ) :: rtol
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: x
+    Integer,                                                Intent(   Out ) :: istop
+    Character( Len = * ),                                   Intent(   Out ) :: istop_message
+    Real( wp ),                                             Intent(   Out ) :: rnorm
+    Integer,                                                Intent(   Out ) :: itn
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: soln_in
 

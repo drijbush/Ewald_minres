@@ -6,20 +6,20 @@ Program test_mpi
        mpi_comm_size
 
   Use constants,                                 Only : wp
-  Use lattice_module                           , Only : lattice
-  Use charge_grid_module                       , Only : charge_grid_get_n_grid
-  Use fast_fourier_poisson_module              , Only : ffp_long_range, ffp_sic
-!!$  Use symetrically_screened_poisson_module     , Only : ssp_long_range, ssp_sic
-  Use grid_io_module                           , Only : grid_io_save
-  Use domains_module                           , Only : domain_build, domain_halo_build, domain_get_params
-  Use comms_parallel_module                    , Only : comms_parallel
-  Use halo_parallel_module                     , Only : halo_parallel_setter
-  Use quadrature_trapezium_rule_module         , Only : quadrature_trapezium_rule
-  Use FD_Laplacian_3d_module                   , Only : FD_Laplacian_3D
-  Use equation_solver_base_class_module        , Only : equation_solver_base_class
-  Use equation_solver_minres_module            , Only : equation_solver_minres
+  Use lattice_module,                            Only : lattice
+  Use charge_grid_module,                        Only : charge_grid_get_n_grid
+  Use fast_fourier_poisson_module,               Only : ffp_long_range, ffp_sic
+!!$  Use symetrically_screened_poisson_module,      Only : ssp_long_range, ssp_sic
+  Use grid_io_module,                            Only : grid_io_save
+  Use domains_module,                            Only : domain_build, domain_halo_build, domain_get_params
+  Use comms_parallel_module,                     Only : comms_parallel
+  Use halo_parallel_module,                      Only : halo_parallel_setter
+  Use quadrature_trapezium_rule_module,          Only : quadrature_trapezium_rule
+  Use FD_Laplacian_3d_module,                    Only : FD_Laplacian_3D
+  Use equation_solver_base_class_module,         Only : equation_solver_base_class
+  Use equation_solver_minres_module,             Only : equation_solver_minres
   Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
-  Use Ewald_3d_module                          , Only : Ewald_3d_recipe, Ewald_3d_status
+  Use Ewald_3d_module,                           Only : Ewald_3d_recipe, Ewald_3d_status
 
   Implicit None
 
@@ -142,14 +142,14 @@ Program test_mpi
 
   End If Read_params_on_proc_0
 
-  Call mpi_bcast( alpha        ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( range_gauss  ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( gauss_tol    ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( rtol         ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( FD_order     ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( n            ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( a            , Size( a ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( which_solver ,         1, mpi_integer         , 0, mpi_comm_world )
+  Call mpi_bcast( alpha,                 1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( range_gauss,           1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( gauss_tol,             1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( rtol,                  1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( FD_order,              1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( n,                     1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( a,             Size( a ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( which_solver,          1, mpi_integer,          0, mpi_comm_world )
 
   Call mpi_bcast( what, Len( what ), mpi_character, 0, mpi_comm_world )
 
@@ -264,7 +264,7 @@ Program test_mpi
   Call mpi_cart_create( mpi_comm_world, 3, np_grid, [ .True., .True., .True. ], .True., &
        cart_comm )
   Call mpi_comm_size( cart_comm, nproc_cart, error )
-  Call mpi_comm_rank( cart_comm, me_cart   , error )
+  Call mpi_comm_rank( cart_comm, me_cart,    error )
   If( me_cart == 0 ) Then
      Write( *, '( "Process grid dimensions: ", 3( i3, 1x ) )' ) np_grid
   End If
@@ -519,9 +519,9 @@ Contains
 
   Subroutine read_header( unit, n, level, vecs )
 
-    Integer                      , Intent( In    ) :: unit
-    Integer                      , Intent(   Out ) :: n
-    Integer                      , Intent(   Out ) :: level
+    Integer,                       Intent( In    ) :: unit
+    Integer,                       Intent(   Out ) :: n
+    Integer,                       Intent(   Out ) :: level
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: vecs
 
     Integer :: junk
@@ -534,8 +534,8 @@ Contains
 
   Subroutine read_config( level, unit, q, r )
 
-    Integer                      , Intent( In    ) :: level
-    Integer                      , Intent( In    ) :: unit
+    Integer,                       Intent( In    ) :: level
+    Integer,                       Intent( In    ) :: unit
     Real( wp ), Dimension( :    ), Intent(   Out ) :: q
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: r
 

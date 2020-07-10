@@ -12,10 +12,10 @@ Module halo_parallel_module
   Implicit None
 
   Type, Private :: halo_comms
-     Integer   , Dimension( 1:3 )                  :: remote_coord
+     Integer,    Dimension( 1:3 )                  :: remote_coord
      Integer                                       :: remote_rank
-     Integer   , Dimension( 1:3 )                  :: comm_size
-     Integer   , Dimension( 1:3 )                  :: comm_start
+     Integer,    Dimension( 1:3 )                  :: comm_size
+     Integer,    Dimension( 1:3 )                  :: comm_start
      Integer                                       :: tag
      Logical                                       :: is_local
      Real( wp ), Dimension( :, :, : ), Allocatable :: buffer
@@ -23,20 +23,20 @@ Module halo_parallel_module
 
   Type, Public, Extends( halo_setter_base_class ) :: halo_parallel_setter
      Private
-     Type( mpi_comm )   ,                                Private :: comm
-     Integer            ,                                Private :: halo_width
-     Integer            , Dimension( 1:3 ),              Private :: local_size
-     Integer            , Dimension( 1:3 ),              Private :: total_size
-     Integer            , Dimension( 1:3 ),              Private :: first_point
-     Integer            , Dimension( 1:3 ),              Private :: n_procs
-     Integer            , Dimension( 1:3 ),              Private :: my_coords
-     Logical            , Dimension( 1:3 ),              Private :: is_periodic
+     Type( mpi_comm ),                                   Private :: comm
+     Integer,                                            Private :: halo_width
+     Integer,             Dimension( 1:3 ),              Private :: local_size
+     Integer,             Dimension( 1:3 ),              Private :: total_size
+     Integer,             Dimension( 1:3 ),              Private :: first_point
+     Integer,             Dimension( 1:3 ),              Private :: n_procs
+     Integer,             Dimension( 1:3 ),              Private :: my_coords
+     Logical,             Dimension( 1:3 ),              Private :: is_periodic
      Type( mpi_request ), Dimension(  :  ), Allocatable, Private :: msg_requests
-     Type( halo_comms ) , Dimension(  :  ), Allocatable, Private :: recv_comms
-     Type( halo_comms ) , Dimension(  :  ), Allocatable, Private :: send_comms
+     Type( halo_comms ),  Dimension(  :  ), Allocatable, Private :: recv_comms
+     Type( halo_comms ),  Dimension(  :  ), Allocatable, Private :: send_comms
    Contains
-     Generic  , Public  :: init => halo_parallel_init_old
-     Generic  , Public  :: init => halo_parallel_init_f08
+     Generic,   Public  :: init => halo_parallel_init_old
+     Generic,   Public  :: init => halo_parallel_init_f08
      Procedure, Public  :: fill => halo_fill
      Procedure, Private :: halo_parallel_init_old
      Procedure, Private :: halo_parallel_init_f08
@@ -58,10 +58,10 @@ Contains
     ! GRIDS START AT ZERO
 
     Class( halo_parallel_setter ),                   Intent( InOut ) :: H
-    Integer                      , Dimension( 1:3 ), Intent( In    ) :: local_size
-    Integer                      ,                   Intent( In    ) :: halo_width
-    Type( mpi_comm )             ,                   Intent( In    ) :: comm
-    Integer                      ,                   Intent(   Out ) :: error
+    Integer,                       Dimension( 1:3 ), Intent( In    ) :: local_size
+    Integer,                                         Intent( In    ) :: halo_width
+    Type( mpi_comm ),                                Intent( In    ) :: comm
+    Integer,                                         Intent(   Out ) :: error
 
     Type one_d_comms
        Integer, Dimension( : ), Allocatable :: coords
@@ -155,8 +155,8 @@ Contains
       Use mpi_f08, Only : mpi_cart_rank
 
       Class( halo_parallel_setter ),                   Intent( InOut ) :: H
-      Type( one_d_comms )          , Dimension( 1:3 ), Intent( In    ) :: one_d_recv
-      Type( one_d_comms )          , Dimension( 1:3 ), Intent( In    ) :: one_d_send
+      Type( one_d_comms ),           Dimension( 1:3 ), Intent( In    ) :: one_d_recv
+      Type( one_d_comms ),           Dimension( 1:3 ), Intent( In    ) :: one_d_send
 
       Integer, Dimension( 1:3 ) :: remote_coords
       Integer, Dimension( 1:3 ) :: comm_vec
@@ -201,7 +201,7 @@ Contains
                ! comm vec is the data direction for a recv
                comm_vec = remote_coords - H%my_coords
 
-               comm_size   = [ one_d_recv( 1 )%sizes( ix ) , one_d_recv( 2 )%sizes( iy ) , one_d_recv( 3 )%sizes( iz ) ]
+               comm_size   = [ one_d_recv( 1 )%sizes( ix ),  one_d_recv( 2 )%sizes( iy ),  one_d_recv( 3 )%sizes( iz ) ]
                comm_start  = [ one_d_recv( 1 )%starts( ix ), one_d_recv( 2 )%starts( iy ), one_d_recv( 3 )%starts( iz ) ]
 
                H%recv_comms( i_comms )%remote_coord = remote_coords
@@ -236,7 +236,7 @@ Contains
                comm_vec = remote_coords - H%my_coords
                comm_vec = - comm_vec
 
-               comm_size   = [ one_d_send( 1 )%sizes( ix ) , one_d_send( 2 )%sizes( iy ) , one_d_send( 3 )%sizes( iz ) ]
+               comm_size   = [ one_d_send( 1 )%sizes( ix ),  one_d_send( 2 )%sizes( iy ),  one_d_send( 3 )%sizes( iz ) ]
                comm_start  = [ one_d_send( 1 )%starts( ix ), one_d_send( 2 )%starts( iy ), one_d_send( 3 )%starts( iz ) ]
 
                H%send_comms( i_comms )%remote_coord = remote_coords
@@ -279,20 +279,20 @@ Contains
 
       Use mpi_f08, Only : mpi_allgather, mpi_integer
 
-      Type( mpi_comm )   , Intent( In    ) :: comm
-      Integer            , Intent( In    ) :: n_procs
-      Logical            , Intent( In    ) :: is_periodic ! pass this for future support of open boundary cases
-      Integer            , Intent( In    ) :: my_coord
-      Integer            , Intent( In    ) :: local_size
-      Integer            , Intent( In    ) :: halo_width
-      Integer            , Intent(   Out ) :: total_size
-      Integer            , Intent(   Out ) :: first_point
+      Type( mpi_comm ),    Intent( In    ) :: comm
+      Integer,             Intent( In    ) :: n_procs
+      Logical,             Intent( In    ) :: is_periodic ! pass this for future support of open boundary cases
+      Integer,             Intent( In    ) :: my_coord
+      Integer,             Intent( In    ) :: local_size
+      Integer,             Intent( In    ) :: halo_width
+      Integer,             Intent(   Out ) :: total_size
+      Integer,             Intent(   Out ) :: first_point
       Type( one_d_comms ), Intent(   Out ) :: one_d_recv
       Type( one_d_comms ), Intent(   Out ) :: one_d_send
 
       Integer, Dimension( : ), Allocatable :: axis_local_sizes
       Integer, Dimension( : ), Allocatable :: coord_to_recv_from, size_to_recv_from, recv_start
-      Integer, Dimension( : ), Allocatable :: coord_to_send_to  , size_to_send_to  , send_start
+      Integer, Dimension( : ), Allocatable :: coord_to_send_to,   size_to_send_to,   send_start
 
       Integer :: left_first_proc, right_last_proc
       Integer :: points_remaining, size_this_proc
@@ -330,16 +330,16 @@ Contains
          size_this_proc = Min( points_remaining, axis_local_sizes( proc_periodic ) )
          start_comm = end_comm - size_this_proc + 1
          coord_to_recv_from = [ coord_to_recv_from, left_first_proc ]
-         size_to_recv_from  = [ size_to_recv_from , size_this_proc  ]
-         recv_start         = [ recv_start        , start_comm      ]
+         size_to_recv_from  = [ size_to_recv_from,  size_this_proc  ]
+         recv_start         = [ recv_start,         start_comm      ]
          points_remaining = points_remaining - size_this_proc
          end_comm = start_comm - 1
       End Do
 
       ! Now the middle - i.e. comms orthogonal to this axis, so just a local size length bit
       coord_to_recv_from = [ coord_to_recv_from, my_coord   ]
-      size_to_recv_from  = [ size_to_recv_from , local_size ]
-      recv_start         = [ recv_start        , 0          ]
+      size_to_recv_from  = [ size_to_recv_from,  local_size ]
+      recv_start         = [ recv_start,         0          ]
 
       ! And now to the right
       points_remaining = halo_width
@@ -350,8 +350,8 @@ Contains
          proc_periodic = Merge( Modulo( right_last_proc, n_procs ), right_last_proc, is_periodic )
          size_this_proc = Min( points_remaining, axis_local_sizes( proc_periodic ) )
          coord_to_recv_from = [ coord_to_recv_from, right_last_proc ]
-         size_to_recv_from  = [ size_to_recv_from , size_this_proc  ]
-         recv_start         = [ recv_start        , start_comm      ]
+         size_to_recv_from  = [ size_to_recv_from,  size_this_proc  ]
+         recv_start         = [ recv_start,         start_comm      ]
          points_remaining = points_remaining - size_this_proc
          start_comm = start_comm + size_this_proc
       End Do
@@ -380,16 +380,16 @@ Contains
          proc_periodic = Merge( Modulo( right_last_proc, n_procs ), right_last_proc, is_periodic )
          size_this_proc = Min( points_remaining, axis_local_sizes( proc_periodic ) )
          coord_to_send_to = [ coord_to_send_to, right_last_proc ]
-         size_to_send_to  = [ size_to_send_to , size_this_proc  ]
-         send_start       = [ send_start      , start_comm      ]
+         size_to_send_to  = [ size_to_send_to,  size_this_proc  ]
+         send_start       = [ send_start,       start_comm      ]
          points_remaining = points_remaining - size_this_proc
          start_comm = start_comm + size_this_proc
       End Do
 
       ! Now the middle - i.e. comms orthogonal to this axis, so just a local size length bit
       coord_to_send_to = [ coord_to_send_to, my_coord   ]
-      size_to_send_to  = [ size_to_send_to , local_size ]
-      send_start       = [ send_start      , 0          ]
+      size_to_send_to  = [ size_to_send_to,  local_size ]
+      send_start       = [ send_start,       0          ]
 
       ! Last consider to the left
       points_remaining = halo_width
@@ -401,8 +401,8 @@ Contains
          size_this_proc = Min( points_remaining, axis_local_sizes( proc_periodic ) )
          start_comm = end_comm - size_this_proc + 1
          coord_to_send_to = [ coord_to_send_to, left_first_proc ]
-         size_to_send_to  = [ size_to_send_to , size_this_proc  ]
-         send_start       = [ send_start        , start_comm    ]
+         size_to_send_to  = [ size_to_send_to,  size_this_proc  ]
+         send_start       = [ send_start,         start_comm    ]
          points_remaining = points_remaining - size_this_proc
          end_comm = start_comm - 1
       End Do
@@ -422,10 +422,10 @@ Contains
     ! GRIDS START AT ZERO
 
     Class( halo_parallel_setter ),                   Intent( InOut ) :: H
-    Integer                      , Dimension( 1:3 ), Intent( In    ) :: local_size
-    Integer                      ,                   Intent( In    ) :: halo_width
-    Integer                      ,                   Intent( In    ) :: comm
-    Integer                      ,                   Intent(   Out ) :: error
+    Integer,                       Dimension( 1:3 ), Intent( In    ) :: local_size
+    Integer,                                         Intent( In    ) :: halo_width
+    Integer,                                         Intent( In    ) :: comm
+    Integer,                                         Intent(   Out ) :: error
 
     Type( mpi_comm ) :: comm_f08
 
@@ -442,11 +442,11 @@ Contains
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Class( halo_parallel_setter ),                               Intent( InOut ) :: H
-    Integer   ,                                                  Intent( In    ) :: halo_width
-    Integer   , Dimension( 1:3 ),                                Intent( In    ) :: hdlb
-    Real( wp ), Dimension( 0:, 0:, 0: )                        , Intent( In    ) :: gin
+    Integer,                                                     Intent( In    ) :: halo_width
+    Integer,    Dimension( 1:3 ),                                Intent( In    ) :: hdlb
+    Real( wp ), Dimension( 0:, 0:, 0: ),                         Intent( In    ) :: gin
     Real( wp ), Dimension( - halo_width:, - halo_width:, - halo_width: ), Intent(   Out ) :: hout
-    Integer                                                    , Intent(   Out ) :: error
+    Integer,                                                     Intent(   Out ) :: error
 
     Integer, Dimension( 1:3 ) :: s, e, ss, es
 

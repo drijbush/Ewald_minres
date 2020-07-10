@@ -13,11 +13,11 @@ Contains
     Use constants,      Only : wp
     Use lattice_module, Only : lattice
 
-    Type( lattice )              , Intent( In    ) :: l
+    Type( lattice ),               Intent( In    ) :: l
     Real( wp ), Dimension( :    ), Intent( In    ) :: q
     Real( wp ), Dimension( :, : ), Intent( In    ) :: r
     Real( wp ),                    Intent( In    ) :: alpha
-    Integer   ,                    Intent( In    ) :: n_G_shells
+    Integer,                       Intent( In    ) :: n_G_shells
     Real( wp ),                    Intent(   Out ) :: E
 
     Real( wp ), Dimension( 1:3 ) :: G

@@ -13,33 +13,33 @@ Contains
 
   Subroutine ffp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, recip_E, q_grid, pot_grid, ei, f, t_grid, t_recip, error )
 
-    Use lattice_module         , Only : lattice
-    Use charge_grid_module     , Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
-    Use FFT_module             , Only : fft_fft3d
+    Use lattice_module,          Only : lattice
+    Use charge_grid_module,      Only : charge_grid_calculate, charge_grid_find_range, charge_grid_forces
+    Use FFT_module,              Only : fft_fft3d
     Use comms_base_class_module, Only : comms_base_class
-    Use comms_serial_module    , Only : comms_serial
-    Use quadrature_base_module , Only : quadrature_base_class
+    Use comms_serial_module,     Only : comms_serial
+    Use quadrature_base_module,  Only : quadrature_base_class
     Use quadrature_trapezium_rule_module, Only : quadrature_trapezium_rule
     Use halo_setter_base_module, Only : halo_setter_base_class
-    Use halo_serial_module     , Only : halo_serial_setter
+    Use halo_serial_module,      Only : halo_serial_setter
 
     Implicit None
 
-    Type( lattice )                    , Intent( In    ) :: l
-    Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q
-    Real( wp ), Dimension( 1:, 1:  )   , Intent( In    ) :: r
-    Real( wp )                         , Intent( In    ) :: alpha
-    Integer                            , Intent( In    ) :: FD_order
-    Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
-    Real( wp ), Dimension( 1:, 1:  )   , Intent( In    ) :: r_halo
-    Real( wp )                         , Intent(   Out ) :: recip_E
+    Type( lattice ),                     Intent( In    ) :: l
+    Real( wp ), Dimension( 1:     ),     Intent( In    ) :: q
+    Real( wp ), Dimension( 1:, 1:  ),    Intent( In    ) :: r
+    Real( wp ),                          Intent( In    ) :: alpha
+    Integer,                             Intent( In    ) :: FD_order
+    Real( wp ), Dimension( 1:     ),     Intent( In    ) :: q_halo
+    Real( wp ), Dimension( 1:, 1:  ),    Intent( In    ) :: r_halo
+    Real( wp ),                          Intent(   Out ) :: recip_E
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( 0:, 0:, 0: ), Intent(   Out ) :: pot_grid
-    Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
-    Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
-    Real( wp )                         , Intent(   Out ) :: t_grid
-    Real( wp )                         , Intent(   Out ) :: t_recip
-    Integer                            , Intent(   Out ) :: error
+    Real( wp ), Dimension( 1: ),         Intent(   Out ) :: ei
+    Real( wp ), Dimension( 1:, 1: ),     Intent(   Out ) :: f
+    Real( wp ),                          Intent(   Out ) :: t_grid
+    Real( wp ),                          Intent(   Out ) :: t_recip
+    Integer,                             Intent(   Out ) :: error
 
     Class( comms_base_class             ), Allocatable :: comms
     Class( quadrature_base_class        ), Allocatable :: grid_integrator
@@ -137,7 +137,7 @@ Contains
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Real( wp ), Dimension( : ), Intent( In    ) :: q
-    Real( wp )                , Intent( In    ) :: alpha
+    Real( wp ),                 Intent( In    ) :: alpha
 
     Real( wp ) :: sic
 

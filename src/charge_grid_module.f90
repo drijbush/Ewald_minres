@@ -14,31 +14,31 @@ Contains
   Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, n_grid, lb, ub, comms, grid_integrator, q_grid,error )
 
     !$ Use omp_lib, only : omp_get_max_threads, omp_get_thread_num
-    Use lattice_module         , Only : lattice
+    Use lattice_module,          Only : lattice
     Use comms_base_class_module, Only : comms_base_class
-    Use quadrature_base_module , Only : quadrature_base_class
+    Use quadrature_base_module,  Only : quadrature_base_class
 
     Implicit None
 
-    Type( lattice )                    , Intent( In    ) :: l
+    Type( lattice ),                     Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
-    Integer   ,                          Intent( In    ) :: range_gauss
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
+    Integer,                             Intent( In    ) :: range_gauss
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Class( quadrature_base_class      ), Intent( In    ) :: grid_integrator
     Class( comms_base_class           ), Intent( In    ) :: comms
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent(   Out ) :: q_grid
-    Integer                            , Intent(   Out ) :: error
+    Integer,                             Intent(   Out ) :: error
 
     ! If set adjust the charge so it adds to zero. If we have zero charge there is
     ! gauranteed to be a solution of the linear equations, as the RHS vector
     ! has no component of the null space of the LHS matrix
     ! If we have to do this this really tells us that our representation of the charge density
     ! is not good enough, so print a warning
-    Logical   , Parameter :: stabilise_q     = .True.
+    Logical,    Parameter :: stabilise_q     = .True.
 
     Real( wp ), Parameter :: stabilise_q_tol = 1e-10_wp
 
@@ -184,20 +184,20 @@ Contains
 
   Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, lb, ub, pot_grid, ei, f )
 
-    Use lattice_module          , Only : lattice
-    Use halo_setter_base_module , Only : halo_setter_base_class
+    Use lattice_module,           Only : lattice
+    Use halo_setter_base_module,  Only : halo_setter_base_class
 
     Implicit none
 
-    Type( lattice )                    , Intent( In    ) :: l
+    Type( lattice ),                     Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1:         ), Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
-    Integer   ,                          Intent( In    ) :: range_gauss
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
-    Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
+    Integer,                             Intent( In    ) :: range_gauss
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
+    Class( halo_setter_base_class ),     Intent( InOut ) :: pot_swapper
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: pot_grid
     Real( wp ), Dimension( 1:         ), Intent(   Out ) :: ei
     Real( wp ), Dimension( 1:, 1:     ), Intent(   Out ) :: f
@@ -322,10 +322,10 @@ Contains
 
     Implicit None
 
-    Type( lattice )             , Intent( In    ) :: l
+    Type( lattice ),              Intent( In    ) :: l
     Real( wp ),                   Intent( In    ) :: alpha
-    Integer   , Dimension( 1:3 ), Intent( In    ) :: n_grid
-    Integer   , Dimension( 1:3 ), Intent(   Out ) :: range_gauss
+    Integer,    Dimension( 1:3 ), Intent( In    ) :: n_grid
+    Integer,    Dimension( 1:3 ), Intent(   Out ) :: range_gauss
 
     Real( wp ), Dimension( 1:3 ) :: G
     Real( wp ), Dimension( 1:3 ) :: grid_vec
@@ -357,9 +357,9 @@ Contains
 
     Type( lattice ),              Intent( In    ) :: l
     Real( wp ),                   Intent( In    ) :: alpha
-    Integer   ,                   Intent( In    ) :: range_gauss
+    Integer,                      Intent( In    ) :: range_gauss
     Real( wp ),                   Intent( In    ) :: gauss_tol
-    Integer   , Dimension( 1:3 ), Intent(   Out ) :: n_grid
+    Integer,    Dimension( 1:3 ), Intent(   Out ) :: n_grid
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dir_vecs
 

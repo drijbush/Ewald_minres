@@ -5,15 +5,15 @@ Module lattice_module
 
   Type, Public :: lattice
      Private
-     Integer   ,                                     Private :: dim           !! Dimensionality
+     Integer,                                        Private :: dim           !! Dimensionality
      Real( wp ),                                     Private :: V             !! Volume
      Real( wp ), Dimension( :, :     ), Allocatable, Private :: given_vecs    !! Vectors initally given
      Real( wp ), Dimension( 1:3, 1:3 ),              Private :: given_vecs_3d !! Vectors Used
      Real( wp ), Dimension( 1:3, 1:3 ),              Private :: rotation      !! Rotation given -> used
      Real( wp ), Dimension( 1:3, 1:3 ),              Private :: dir_vecs      !! Direct vectors Used
      Real( wp ), Dimension( 1:3, 1:3 ),              Private :: rec_vecs      !! Recip vectors used
-     Integer   , Dimension(  :,   :  ), Allocatable, Private :: dir_vec_list
-     Integer   , Dimension(  :,   :  ), Allocatable, Private :: rec_vec_list
+     Integer,    Dimension(  :,   :  ), Allocatable, Private :: dir_vec_list
+     Integer,    Dimension(  :,   :  ), Allocatable, Private :: rec_vec_list
    Contains
      Procedure :: initialise
      Procedure :: print
@@ -41,13 +41,13 @@ Contains
 
   Pure Subroutine initialise( l, nd, vecs, alpha )
 
-    Use sort_module          , Only : sort_index, SORT_ASCEND
+    Use sort_module,           Only : sort_index, SORT_ASCEND
     Use vec3_utilities_module, Only : Operator( .vec. ), vec3_invert
 
     Class( lattice ),                    Intent( InOut ) :: l
-    Integer         ,                    Intent( In    ) :: nd
-    Real( wp )      , Dimension( :, : ), Intent( In    ) :: vecs
-    Real( wp )      ,                    Intent( In    ) :: alpha
+    Integer,                             Intent( In    ) :: nd
+    Real( wp ),       Dimension( :, : ), Intent( In    ) :: vecs
+    Real( wp ),                          Intent( In    ) :: alpha
 
     Real( wp ), Parameter :: default_dir_vec_cutoff = 500.0_wp
     Real( wp ), Parameter :: default_rec_vec_cutoff = 100.0_wp
@@ -121,7 +121,7 @@ Contains
        Q = Matmul( Q12, Q23 )
 
        ! Rotate the y and z axes to produce the new vectors
-       l%given_vecs_3d( :, 2 ) = Matmul( Transpose( Q ), [  0.0_wp, l1    , 0.0_wp ] )
+       l%given_vecs_3d( :, 2 ) = Matmul( Transpose( Q ), [  0.0_wp, l1,     0.0_wp ] )
        l%given_vecs_3d( :, 3 ) = Matmul( Transpose( Q ), [  0.0_wp, 0.0_wp, l1     ] )
 
     Case( 2 )
@@ -169,10 +169,10 @@ Contains
 
     Pure Subroutine generate_vec_list( dim, vec_cutoff, vecs, vectors )
 
-      Integer   ,                                 Intent( In    ) :: dim
+      Integer,                                    Intent( In    ) :: dim
       Real( wp ),                                 Intent( In    ) :: vec_cutoff
       Real( wp ), Dimension( :, : ),              Intent( In    ) :: vecs
-      Integer   , Dimension( :, : ), Allocatable, Intent(   Out ) :: vectors
+      Integer,    Dimension( :, : ), Allocatable, Intent(   Out ) :: vectors
 
       Real( wp ), Dimension( : ), Allocatable :: vec_lengths
 
@@ -447,8 +447,8 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
-    Integer                   , Intent( In    ) :: n
+    Class( lattice ),           Intent( In    ) :: l
+    Integer,                    Intent( In    ) :: n
     Real( wp ), Dimension( : ), Intent(   Out ) :: vec
 
     vec( 1:l%dim ) = Matmul( l%dir_vecs, Real( l%dir_vec_list( :, n ), wp ) )
@@ -459,8 +459,8 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
-    Integer                   , Intent( In    ) :: n
+    Class( lattice ),           Intent( In    ) :: l
+    Integer,                    Intent( In    ) :: n
     Real( wp ), Dimension( : ), Intent(   Out ) :: vec
 
     vec( 1:l%dim ) = Matmul( l%rec_vecs, Real( l%rec_vec_list( :, n ), wp ) )
@@ -471,8 +471,8 @@ Contains
 
     Implicit None
 
-    Class( lattice )       , Intent( In    ) :: l
-    Integer                , Intent( In    ) :: n
+    Class( lattice ),        Intent( In    ) :: l
+    Integer,                 Intent( In    ) :: n
     Integer, Dimension( : ), Intent(   Out ) :: vec
 
     vec( 1:l%dim ) = l%rec_vec_list( 1:l%dim, n )
@@ -495,7 +495,7 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
+    Class( lattice ),           Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: vec
 
@@ -507,7 +507,7 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
+    Class( lattice ),           Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: t
 
@@ -521,7 +521,7 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
+    Class( lattice ),           Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: t
 
@@ -541,7 +541,7 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
+    Class( lattice ),           Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: f
     Real( wp ), Dimension( : ), Intent(   Out ) :: r
 
@@ -553,7 +553,7 @@ Contains
 
     Implicit None
 
-    Class( lattice )          , Intent( In    ) :: l
+    Class( lattice ),           Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: f
 
@@ -564,8 +564,8 @@ Contains
   Pure Subroutine get_dir_vec( l, n, G )
 
     Implicit None
-    Class( lattice )          , Intent( In    ) :: l
-    Integer   , Dimension( : ), Intent( In    ) :: n
+    Class( lattice ),           Intent( In    ) :: l
+    Integer,    Dimension( : ), Intent( In    ) :: n
     Real( wp ), Dimension( : ), Intent(   Out ) :: G
 
     G( 1:l%dim ) = Matmul( l%dir_vecs, Real( n( 1:l%dim ), wp ) )
@@ -575,8 +575,8 @@ Contains
   Pure Subroutine get_rec_vec( l, n, G )
 
     Implicit None
-    Class( lattice )          , Intent( In    ) :: l
-    Integer   , Dimension( : ), Intent( In    ) :: n
+    Class( lattice ),           Intent( In    ) :: l
+    Integer,    Dimension( : ), Intent( In    ) :: n
     Real( wp ), Dimension( : ), Intent(   Out ) :: G
 
     G( 1:l%dim ) = Matmul( l%rec_vecs, Real( n( 1:l%dim ), wp ) )
