@@ -19,7 +19,7 @@ if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
 endif()
 
 # Add OMP
-find_package(OpenMP)
+#find_package(OpenMP)
 if (OpenMP_Fortran_FOUND)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
 endif()
