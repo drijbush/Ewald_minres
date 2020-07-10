@@ -1,11 +1,11 @@
 Program test_mpi
 
-  !$ Use omp_lib
+  !!$ Use omp_lib
   Use mpi_f08, Only : mpi_comm, mpi_init, mpi_finalize, mpi_comm_world, mpi_bcast, mpi_double_precision, mpi_integer, &
        mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place, mpi_character, mpi_comm_rank, &
        mpi_comm_size
 
-  Use constants,                                 Only : wp, li
+  Use constants,                                 Only : wp
   Use lattice_module                           , Only : lattice
   Use charge_grid_module                       , Only : charge_grid_get_n_grid
   Use fast_fourier_poisson_module              , Only : ffp_long_range, ffp_sic
@@ -23,15 +23,15 @@ Program test_mpi
 
   Implicit None
 
-  Class( equation_solver_base_class ), Allocatable :: solver
+!  Class( equation_solver_base_class ), Allocatable :: solver
 
   Type( lattice  ) :: l
   Type( mpi_comm ) :: cart_comm
-  Type( halo_parallel_setter          ) :: fd_swapper
-  Type( halo_parallel_setter          ) :: pot_swapper
-  Type( quadrature_trapezium_rule     ) :: grid_integrator
-  Type( comms_parallel                ) :: comms
-  Type( FD_Laplacian_3D               ) :: FD
+!  Type( halo_parallel_setter          ) :: fd_swapper
+!  Type( halo_parallel_setter          ) :: pot_swapper
+!  Type( quadrature_trapezium_rule     ) :: grid_integrator
+!  Type( comms_parallel                ) :: comms
+!  Type( FD_Laplacian_3D               ) :: FD
   Type( Ewald_3d_recipe               ) :: ewald_recipe
   Type( Ewald_3d_status               ) :: status
 
@@ -50,7 +50,7 @@ Program test_mpi
   Real( wp ), Dimension( :, : ), Allocatable :: dr
 
   Real( wp ), Dimension( 1:3, 1:3 ) :: a
-  Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
+!  Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
   Real( wp ), Dimension( 1:3, 1:3 ) :: stress
 
   Real( wp ), Dimension( : ), Allocatable :: q
@@ -67,11 +67,11 @@ Program test_mpi
   Real( wp ) :: gauss_tol
   Real( wp ) :: xshift
   Real( wp ) :: recip_E_ffp
-  Real( wp ) :: rnorm
+!  Real( wp ) :: rnorm
   Real( wp ) :: t_grid_ffp, t_pot_solve_ffp
   Real( wp ) :: recip_E_ssp
   Real( wp ) :: ei_full
-  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
+!  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
 
   Integer, Dimension( : ), Allocatable :: id, id_domain
 
@@ -88,12 +88,12 @@ Program test_mpi
   Integer :: level
   Integer :: n
   Integer :: n_at_loc, n_at
-  Integer :: itn, istop
+!  Integer :: itn, istop
   Integer :: which_solver
   Integer :: error
   Integer :: i
 
-  Character( Len = 132 ) :: istop_message
+!  Character( Len = 132 ) :: istop_message
   Character( Len = 132 ) :: what
 
   Call mpi_init( error )
