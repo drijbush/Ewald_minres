@@ -93,6 +93,8 @@ Program test_mpi
   Integer :: error
   Integer :: i
 
+  Integer :: config_unit
+
 !  Character( Len = 132 ) :: istop_message
   Character( Len = 132 ) :: what
 
@@ -103,16 +105,16 @@ Program test_mpi
 
   Read_params_on_proc_0: If( me == 0 ) Then
 
-     Write( *, * ) 'Ewald param ?'
+     Write( *, * ) 'Ewald param (alpha)?'
      Read ( *, * ) alpha
      Write( *, * ) alpha
-     Write( *, * ) 'Number of ppoints for gaussians?'
+     Write( *, * ) 'Number of points for gaussians?'
      Read ( *, * ) range_gauss
      Write( *, * ) range_gauss
      Write( *, * ) 'Cut off tolerance for gaussians?'
      Read ( *, * ) gauss_tol
      Write( *, * ) gauss_tol
-     Write( *, * ) 'REsidual tolerance for solver?'
+     Write( *, * ) 'Residual tolerance for solver?'
      Read ( *, * ) rtol
      Write( *, * ) rtol
      Write( *, * ) 'FD_order?'
@@ -136,8 +138,8 @@ Program test_mpi
         Error Stop 'Unrecongnized solver'
      End Select
 
-     Open( 10, File = 'CONFIG' )
-     Call read_header( 10, n, level, a )
+     Open( newunit=config_unit, File = 'CONFIG', status='OLD' )
+     Call read_header( config_unit, n, level, a )
      Write( *, * ) 'n = ', n
 
   End If Read_params_on_proc_0
@@ -167,8 +169,8 @@ Program test_mpi
 
   Read_CONFIG_on_proc_0: If( me == 0 ) Then
 
-     Call read_config( level, 10, q, r )
-     Close( 10 )
+     Call read_config( level, config_unit, q, r )
+     Close( config_unit )
 
      ! Shift and move into reference cell
      Write( *, * ) 'r(1) before shift and reference = ', r( :, 1 )
