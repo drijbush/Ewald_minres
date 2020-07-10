@@ -1,8 +1,8 @@
 Module equation_solver_weighted_jacobi_module
 
   Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+  Use constants, Only : wp
 
   Implicit None
 
@@ -19,13 +19,12 @@ Contains
        lb, ub, b, rtol, &
        x, istop, istop_message, itn, rnorm )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+    Use constants, Only : wp
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module     , Only : FD_template
 
     Implicit None
-    
+
     Class( equation_solver_weighted_jacobi )              , Intent( InOut ) :: method
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
     Integer,  Dimension( 1:3 )                            , Intent( In    ) :: ub( 1:3 )
@@ -40,7 +39,7 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: soln_in
 
     Real( wp ) :: diff, max_diff
-    
+
     Integer :: halo_width
     Integer :: FD_order
     Integer :: iteration
@@ -56,7 +55,7 @@ Contains
 
     ! Initial guess at result - assume diagonal matrix
     x = b * method%FD_operator%get_diag_inv()
-    
+
     !IJB
     ! Note order is always even, so no worries about splitting it in 2
     FD_order  = method%FD_operator%get_order()
@@ -65,7 +64,7 @@ Contains
     ! Looks like a bug in get order! Returns twice what expected ...
     halo_width = FD_order
     Call method%halo_swapper%allocate( lb, ub, halo_width, soln_in  )
-    
+
     jacobi_iteration: Do iteration = 1, method%max_iter
        Call method%halo_swapper%fill( halo_width, Lbound( soln_in ), x, soln_in, error )
        Call method%FD_operator%jacobi_sweep( Lbound( b ), Lbound( soln_in ), Lbound( b ), Ubound( b ), &
@@ -100,7 +99,7 @@ Contains
     End If
 
     rnorm = max_diff
-    
+
   End Subroutine weighted_jacobi
 
 End Module equation_solver_weighted_jacobi_module

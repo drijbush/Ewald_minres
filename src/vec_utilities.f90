@@ -1,7 +1,6 @@
 Module vec3_utilities_module
-    
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
+  Use constants, Only: wp
   Implicit None
 
   Interface Operator( .vec. )
@@ -10,11 +9,11 @@ Module vec3_utilities_module
 
   Public :: Operator( .vec. )
   Public :: vec3_invert
-  
+
   Private
 
 Contains
-  
+
   Pure Function cross( a, b )
 
     ! perform a vector product
@@ -38,13 +37,13 @@ Contains
     Real( wp ) :: V
 
     V = Dot_product( A( :, 1 ), A( :, 2 ) .vec. A( :, 3 ) )
-    
+
     B( 1, : ) = A( :, 2 ) .vec. A( :, 3 )
     B( 2, : ) = A( :, 3 ) .vec. A( :, 1 )
     B( 3, : ) = A( :, 1 ) .vec. A( :, 2 )
 
     B = B / V
-    
+
   End Subroutine vec3_invert
-   
+
 End Module vec3_utilities_module

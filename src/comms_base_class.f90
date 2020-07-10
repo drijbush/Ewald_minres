@@ -1,6 +1,6 @@
 Module comms_base_class_module
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+  Use constants, Only : wp
 
   Implicit None
 
@@ -26,7 +26,7 @@ Module comms_base_class_module
        Integer                  , Intent(   Out ) :: error
      End Subroutine set_comm
 
-     Subroutine get_comm( c, comm ) 
+     Subroutine get_comm( c, comm )
        Import :: comms_base_class
        Class( comms_base_class ), Intent( In    ) :: c
        Integer                  , Intent(   Out ) :: comm
@@ -76,5 +76,5 @@ Module comms_base_class_module
   Private
 
 Contains
-  
+
 End Module comms_base_class_module

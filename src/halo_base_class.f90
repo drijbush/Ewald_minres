@@ -1,7 +1,6 @@
 Module halo_setter_base_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants, Only : wp
   Implicit None
 
   Type, Public, Abstract :: halo_setter_base_class
@@ -13,13 +12,13 @@ Module halo_setter_base_module
      Procedure        ,           Public  :: free        => halo_free
      Procedure        ,           Public  :: inc_n_calls => halo_inc_n_calls
      Procedure( fill ), Deferred, Public  :: fill
-     Procedure        ,           Private :: base_init 
+     Procedure        ,           Private :: base_init
   End type halo_setter_base_class
 
   Abstract Interface
 
      Subroutine fill( H, halo_width, hdlb, gin, hout, error )
-       Import :: wp
+       Use constants, Only : wp
        Import :: halo_setter_base_class
        Class( halo_setter_base_class ),                             Intent( InOut ) :: H
        Integer   ,                                                  Intent( In    ) :: halo_width
@@ -39,7 +38,7 @@ Contains
     Integer                             , Intent(   Out ) :: error
 
     H%n_calls = 0
-    
+
     error = 0
 
   End Subroutine base_init
@@ -80,5 +79,5 @@ Contains
     H%n_calls = H%n_calls + 1
 
   End Subroutine halo_inc_n_calls
-  
+
 End Module halo_setter_base_module

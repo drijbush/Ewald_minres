@@ -1,7 +1,6 @@
 Module Ewald_3d_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants,                                Only : wp
   Use lattice_module                          , Only : lattice
   Use comms_base_class_module                 , Only : comms_base_class
   Use FD_template_module                      , Only : FD_template
@@ -18,7 +17,7 @@ Module Ewald_3d_module
   Integer, Parameter :: EWALD_3D_INIT_POT_SWAPPER_SETUP_FAILED = 3
   Integer, Parameter :: EWALD_3D_INIT_UNKNOWN_EQUATION_SOLVER  = 4
   Integer, Parameter :: EWALD_3D_SOLVER_FAILED                 = 5
-  
+
   Type, Public :: Ewald_3d_recipe
      Private
      Type( lattice )                                         :: l
@@ -37,7 +36,7 @@ Module Ewald_3d_module
      Class( quadrature_base_class             ), Allocatable :: grid_integrator
    Contains
      Procedure, Public :: mix             => Ewald_3d_init
-     Procedure, Public :: consume         => Ewald_3d 
+     Procedure, Public :: consume         => Ewald_3d
      Procedure, Public :: get_ingredients => Ewald_3d_get_ingredients
   End type Ewald_3d_recipe
 
@@ -51,25 +50,24 @@ Module Ewald_3d_module
      Character( Len = 132  ) :: solver_stop_message     = "How should I know?"
      Real( wp )              :: solver_residual_norm    = - Huge( 1.0_wp )
   End type Ewald_3d_status
-  
+
   Private
 
   ! Default values for the methods parameters
   Real( wp )          , Parameter :: gauss_tol_default    = 1e-15_wp ! Value for cutting of the gaussian
   Integer             , Parameter :: range_gauss_default  = 12       ! Number of points to grid one side of a gaussian
   Integer             , Parameter :: FD_order_default     = 12       ! Default order of the finite difference approximation
-  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver 
-!!$  Character( Len = * ), Parameter :: default_solver       = "CG" 
-!!$  Character( Len = * ), Parameter :: default_solver       = "wjac" 
+  Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver
+!!$  Character( Len = * ), Parameter :: default_solver       = "CG"
+!!$  Character( Len = * ), Parameter :: default_solver       = "wjac"
   Real( wp )          , Parameter :: residual_tol_default = 1e-7_wp ! Tolerance on residual in equation solver
-  
+
 Contains
 
   Subroutine Ewald_3d( recipe, q, r, q_halo, r_halo, &
-       recip_E, forces, stress, error, q_grid_old, pot_grid_old, ei, q_grid, pot_grid, status ) 
+       recip_E, forces, stress, error, q_grid_old, pot_grid_old, ei, q_grid, pot_grid, status )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-    
+    Use constants, Only : wp
     Use symetrically_screened_poisson_module, Only : ssp_long_range
 
     Implicit None
@@ -96,7 +94,7 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_loc
 
     Real( wp ), Dimension( : ), Allocatable :: ei_loc
-    
+
     ! Stress not calculated yet
     stress = 0.0_wp
 
@@ -165,20 +163,20 @@ Contains
 
     Use quadrature_base_module           , Only : quadrature_base_class
     Use quadrature_trapezium_rule_module , Only : quadrature_trapezium_rule
-    
+
     Use equation_solver_precon_base_class_module , Only : equation_solver_precon_base_class
     Use equation_solver_minres_module            , Only : equation_solver_minres
     Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
     Use equation_solver_weighted_jacobi_module   , Only : equation_solver_weighted_jacobi
 
     Use symetrically_screened_poisson_module, Only : ssp_long_range
-    
+
     ! Should eventually get rid of this one once HALO_HACK is sorted
     ! But will need a more general solution to find base coords of domain
     Use domains_module, Only : domain_get_params
 
     Implicit None
-    
+
 
     Class( Ewald_3d_recipe ), Intent(   Out )           :: recipe
     Type( lattice )         , Intent( In    )           :: l
@@ -196,7 +194,7 @@ Contains
     Class( quadrature_base_class             ), Allocatable :: grid_integrator
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: Grid_vecs, dGrid_vecs
-    
+
     Real( wp ) :: gauss_tol
     Real( wp ) :: residual_tol
 
@@ -206,7 +204,7 @@ Contains
     Integer, Dimension( 1:3 ) :: n_grid_domain
     Integer, Dimension( 1:3 ) :: domain_base_coords
     Integer, Dimension( 1:3 ) :: domain_end_coords
-    
+
     Integer :: range_gauss
     Integer :: FD_order
     Integer :: max_swap
@@ -243,7 +241,7 @@ Contains
     ! Set the size of the grid
     ! First find the minimum consistent with input alpha and the current gauss sizing parameters
     range_gauss = range_gauss_default
-    gauss_tol   = gauss_tol_default    
+    gauss_tol   = gauss_tol_default
     Call charge_grid_get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
 
     ! Due to the current domain mapping routines working on the grid and not the actual volumes of the
@@ -255,7 +253,7 @@ Contains
          n_grid = ( n_grid / n_proc_grid + 1 ) * n_proc_grid
       End Where
     End Block Domain_hack
-    
+
     ! Due to the halo swapping routines only coping with halos of maximum size one domain
     ! make the grid size consistent with this. An issue for small grids compared to proc count
     ! WANT TO FIX THIS SO THE NEXT BLOCK GOES AWAY
@@ -337,7 +335,7 @@ Contains
     Allocate( equation_solver_weighted_jacobi :: precon )
     Call precon%init( max_iter = 3, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
     If( Present( equation_solver ) ) Then
-       loc_equation_solver = equation_solver 
+       loc_equation_solver = equation_solver
     Else
        loc_equation_solver = default_solver
     End If
@@ -397,7 +395,7 @@ Contains
     Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
 
     Implicit None
-    
+
     Class( Ewald_3d_recipe )                               , Intent( In    )           :: recipe
     Type( lattice )                                        , Intent(   Out ), Optional :: l
     Real( wp )                                             , Intent(   Out ), Optional :: alpha
@@ -425,7 +423,7 @@ Contains
     If( Present( n_grid ) ) Then
        n_grid = recipe%n_grid
     End If
-       
+
     If( Present( domain_base_coords ) ) Then
        domain_base_coords = recipe%domain_base_coords
     End If
@@ -437,7 +435,7 @@ Contains
     If( Present( range_gauss ) ) Then
        range_gauss = recipe%range_gauss
     End If
-       
+
     If( Present( gauss_tol ) ) Then
        gauss_tol = recipe%gauss_tol
     End If
@@ -471,5 +469,5 @@ Contains
     End If
 
   End Subroutine Ewald_3d_get_ingredients
-  
+
 End Module Ewald_3d_module

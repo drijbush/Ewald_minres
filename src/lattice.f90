@@ -1,7 +1,6 @@
 Module lattice_module
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
+  Use constants, Only : wp, pi
   Implicit None
 
   Type, Public :: lattice
@@ -35,18 +34,16 @@ Module lattice_module
      Procedure :: get_rec_vec
      Procedure :: rotate_given_to_used
   End type lattice
-  
+
   Private
 
-  Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
-  
 Contains
 
   Pure Subroutine initialise( l, nd, vecs, alpha )
 
     Use sort_module          , Only : sort_index, SORT_ASCEND
     Use vec3_utilities_module, Only : Operator( .vec. ), vec3_invert
-    
+
     Class( lattice ),                    Intent( InOut ) :: l
     Integer         ,                    Intent( In    ) :: nd
     Real( wp )      , Dimension( :, : ), Intent( In    ) :: vecs
@@ -126,7 +123,7 @@ Contains
        ! Rotate the y and z axes to produce the new vectors
        l%given_vecs_3d( :, 2 ) = Matmul( Transpose( Q ), [  0.0_wp, l1    , 0.0_wp ] )
        l%given_vecs_3d( :, 3 ) = Matmul( Transpose( Q ), [  0.0_wp, 0.0_wp, l1     ] )
-       
+
     Case( 2 )
        ! Generate a vector orthogonal to the two exisiting vectors
        l1 = Sqrt( Dot_product( l%given_vecs_3d( :, 1 ), l%given_vecs_3d( :, 1 ) ) )
@@ -191,7 +188,7 @@ Contains
       Integer :: n_vecs, max_vecs
       Integer :: g1_max, g2_max, g3_max
       Integer :: g1, g2, g3
-      
+
       n_vecs = 0
       Select Case( dim )
 
@@ -321,8 +318,8 @@ Contains
 
     Class( lattice ), Intent( In ) :: l
 
-    Real( wp ), Dimension( 1:3 ) :: vec 
-    
+    Real( wp ), Dimension( 1:3 ) :: vec
+
     Real( wp ) :: l1, l2, l3, llat
     Real( wp ) :: alpha, beta, gamma
 
@@ -331,10 +328,10 @@ Contains
     l1 = Sqrt( Dot_product( l%dir_vecs( :, 1 ), l%dir_vecs( :, 1 ) ) )
     l2 = Sqrt( Dot_product( l%dir_vecs( :, 2 ), l%dir_vecs( :, 2 ) ) )
     l3 = Sqrt( Dot_product( l%dir_vecs( :, 3 ), l%dir_vecs( :, 3 ) ) )
-    
+
     alpha = Acos( Dot_product( l%dir_vecs( :, 1 ), l%dir_vecs( :, 2 ) ) / ( l1 * l2 ) )
     beta  = Acos( Dot_product( l%dir_vecs( :, 1 ), l%dir_vecs( :, 3 ) ) / ( l1 * l3 ) )
-    gamma = Acos( Dot_product( l%dir_vecs( :, 2 ), l%dir_vecs( :, 3 ) ) / ( l2 * l3 ) ) 
+    gamma = Acos( Dot_product( l%dir_vecs( :, 2 ), l%dir_vecs( :, 3 ) ) / ( l2 * l3 ) )
 
     alpha = alpha * 180.0_wp / ( 4.0_wp * Atan( 1.0_wp ) )
     beta  = beta  * 180.0_wp / ( 4.0_wp * Atan( 1.0_wp ) )
@@ -387,19 +384,19 @@ Contains
        End Do
     End If
     Write( *, * )
-    
+
   End Subroutine print
 
   Pure Function get_volume( l ) Result( V )
 
     Implicit None
-    
+
     Real( wp ) :: V
 
     Class( lattice ), Intent( In ) :: l
 
     V = l%V
-    
+
   End Function get_volume
 
   Pure Function get_direct_vectors( l ) Result( G )
@@ -425,28 +422,28 @@ Contains
   Pure Function get_n_dir_vecs( l ) Result( n )
 
     Implicit None
-    
+
     Integer :: n
 
     Class( lattice ), Intent( In ) :: l
 
     n = Size( l%dir_vec_list, Dim = 2 )
-    
+
   End Function get_n_dir_vecs
-  
+
   Pure Function get_n_rec_vecs( l ) Result( n )
 
     Implicit None
-    
+
     Integer :: n
 
     Class( lattice ), Intent( In ) :: l
 
     n = Size( l%rec_vec_list, Dim = 2 )
-    
+
   End Function get_n_rec_vecs
-  
-  Pure Subroutine get_nth_dir_vec( l, n, vec ) 
+
+  Pure Subroutine get_nth_dir_vec( l, n, vec )
 
     Implicit None
 
@@ -455,43 +452,43 @@ Contains
     Real( wp ), Dimension( : ), Intent(   Out ) :: vec
 
     vec( 1:l%dim ) = Matmul( l%dir_vecs, Real( l%dir_vec_list( :, n ), wp ) )
-    
+
   End Subroutine get_nth_dir_vec
-  
-  Pure Subroutine get_nth_rec_vec( l, n, vec ) 
+
+  Pure Subroutine get_nth_rec_vec( l, n, vec )
 
     Implicit None
-    
+
     Class( lattice )          , Intent( In    ) :: l
     Integer                   , Intent( In    ) :: n
     Real( wp ), Dimension( : ), Intent(   Out ) :: vec
 
     vec( 1:l%dim ) = Matmul( l%rec_vecs, Real( l%rec_vec_list( :, n ), wp ) )
-    
+
   End Subroutine get_nth_rec_vec
 
-  Pure Subroutine get_nth_rec_vec_index( l, n, vec ) 
+  Pure Subroutine get_nth_rec_vec_index( l, n, vec )
 
     Implicit None
-    
+
     Class( lattice )       , Intent( In    ) :: l
     Integer                , Intent( In    ) :: n
     Integer, Dimension( : ), Intent(   Out ) :: vec
 
     vec( 1:l%dim ) = l%rec_vec_list( 1:l%dim, n )
-    
+
   End Subroutine get_nth_rec_vec_index
 
-  Pure Function get_rec_vec_max_index( l ) Result( max_index ) 
+  Pure Function get_rec_vec_max_index( l ) Result( max_index )
 
     Implicit None
-    
+
     Integer :: max_index
 
     Class( lattice ), Intent( In    ) :: l
 
     max_index = Maxval( l%rec_vec_list( 1:l%dim, : ) )
-    
+
   End Function get_rec_vec_max_index
 
   Pure Subroutine rotate_given_to_used( l, r, vec )
@@ -501,26 +498,26 @@ Contains
     Class( lattice )          , Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: vec
-    
+
     vec( 1:l%dim )  = Matmul( l%rotation, r( 1:l%dim ) )
-    
+
   End Subroutine rotate_given_to_used
 
-  Pure Subroutine to_reference( l, r, t ) 
+  Pure Subroutine to_reference( l, r, t )
 
     Implicit None
 
     Class( lattice )          , Intent( In    ) :: l
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: t
-    
+
     t( 1:l%dim ) = Matmul( Transpose( l%rec_vecs ), r( 1:l%dim ) )
     t( 1:l%dim ) = t( 1:l%dim ) - Floor( t( 1:l%dim ) )
     t( 1:l%dim ) = Matmul( l%dir_vecs, t( 1:l%dim ) )
-    
+
   End Subroutine to_reference
 
-  Subroutine minimum_image( l, r, t ) 
+  Subroutine minimum_image( l, r, t )
 
     Implicit None
 
@@ -528,7 +525,7 @@ Contains
     Real( wp ), Dimension( : ), Intent( In    ) :: r
     Real( wp ), Dimension( : ), Intent(   Out ) :: t
 
-    ! Find the fractional coordinates 
+    ! Find the fractional coordinates
     t( 1:l%dim ) = Matmul( Transpose( l%rec_vecs ), r( 1:l%dim ) )
     ! Shift into reference cell in range 0 < f < 1
     t( 1:l%dim ) = t( 1:l%dim ) - Floor( t( 1:l%dim ) )
@@ -537,10 +534,10 @@ Contains
     End Where
     ! And back to direct
     t( 1:l%dim ) = Matmul( l%dir_vecs, t( 1:l%dim ) )
-    
+
   End Subroutine minimum_image
 
-  Pure Subroutine to_direct( l, f, r ) 
+  Pure Subroutine to_direct( l, f, r )
 
     Implicit None
 
@@ -549,10 +546,10 @@ Contains
     Real( wp ), Dimension( : ), Intent(   Out ) :: r
 
     r( 1:l%dim ) = Matmul( l%dir_vecs, f( 1:l%dim ) )
-    
+
   End Subroutine to_direct
 
-  Pure Subroutine to_fractional( l, r, f ) 
+  Pure Subroutine to_fractional( l, r, f )
 
     Implicit None
 
@@ -561,7 +558,7 @@ Contains
     Real( wp ), Dimension( : ), Intent(   Out ) :: f
 
     f( 1:l%dim ) = Matmul( Transpose( l%rec_vecs ), r( 1:l%dim ) )
-    
+
   End Subroutine to_fractional
 
   Pure Subroutine get_dir_vec( l, n, G )
@@ -572,9 +569,9 @@ Contains
     Real( wp ), Dimension( : ), Intent(   Out ) :: G
 
     G( 1:l%dim ) = Matmul( l%dir_vecs, Real( n( 1:l%dim ), wp ) )
-    
+
   End Subroutine get_dir_vec
-  
+
   Pure Subroutine get_rec_vec( l, n, G )
 
     Implicit None
@@ -583,7 +580,7 @@ Contains
     Real( wp ), Dimension( : ), Intent(   Out ) :: G
 
     G( 1:l%dim ) = Matmul( l%rec_vecs, Real( n( 1:l%dim ), wp ) )
-    
+
   End Subroutine get_rec_vec
-  
+
 End Module lattice_module

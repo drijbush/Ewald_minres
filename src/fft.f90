@@ -1,21 +1,17 @@
 Module fft_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants, Only : wp, li
   Implicit None
 
   Public :: fft_fft3d
 
   Private
 
-  Integer, Parameter :: long = Selected_int_kind( 12 )
-
   Interface
      Subroutine dfftw_plan_dft_3d( plan, k1, k2, k3, a, b, dir, method )
-       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+       Use constants, Only : wp, li
        Implicit None
-       Integer, Parameter :: long = Selected_int_kind( 12 )
-       Integer( long )                             , Intent(   Out ) :: plan
+       Integer( li )                             , Intent(   Out ) :: plan
        Integer                                     , Intent( In    ) :: k1
        Integer                                     , Intent( In    ) :: k2
        Integer                                     , Intent( In    ) :: k3
@@ -25,16 +21,14 @@ Module fft_module
        Integer                                     , Intent( In    ) :: method
      End Subroutine dfftw_plan_dft_3d
      Subroutine dfftw_destroy_plan( plan )
-       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+       Use constants, Only : wp, li
        Implicit None
-       Integer, Parameter :: long = Selected_int_kind( 12 )
-       Integer( long ), Intent( InOut ) :: plan
+       Integer( li ), Intent( InOut ) :: plan
      End Subroutine dfftw_destroy_plan
      Subroutine dfftw_execute( plan )
-       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+       Use constants, Only : wp, li
        Implicit None
-       Integer, Parameter :: long = Selected_int_kind( 12 )
-       Integer( long ), Intent( InOut ) :: plan
+       Integer( li ), Intent( InOut ) :: plan
      End Subroutine dfftw_execute
   End Interface
 
@@ -45,7 +39,7 @@ Contains
     Integer                             , Intent( In    ) :: direction
     Complex( wp ), Dimension( :, :, :  ), Intent( InOut ) :: data
 
-    Integer( long ) :: plan
+    Integer( li ) :: plan
 
     Integer :: k1, k2, k3
 

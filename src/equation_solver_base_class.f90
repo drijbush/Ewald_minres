@@ -1,13 +1,12 @@
 Module equation_solver_base_class_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants, Only : wp
   Use comms_base_class_module, Only : comms_base_class
   Use halo_setter_base_module, Only : halo_setter_base_class
   Use FD_template_module     , Only : FD_template
-  
+
   Implicit None
-       
+
   Type, Public, Abstract :: equation_solver_base_class
      Integer                                         , Public :: max_iter = 1000
      Class( comms_base_class           ), Allocatable, Public :: comms
@@ -28,9 +27,9 @@ Module equation_solver_base_class_module
      Subroutine solver( method, &
           lb, ub, b, rtol, &
           x, istop, istop_message, itn, rnorm )
+       Use constants, Only : wp
        Use halo_setter_base_module, Only : halo_setter_base_class
        Use FD_template_module     , Only : FD_template
-       Import :: wp
        Import :: equation_solver_base_class
        Class( equation_solver_base_class )                   , Intent( InOut ) :: method
        Integer,  Dimension( 1:3 )                            , Intent( In    ) :: lb( 1:3 )
@@ -43,11 +42,11 @@ Module equation_solver_base_class_module
        Real( wp )                                            , Intent(   Out ) :: rnorm
        Integer                                               , Intent(   Out ) :: itn
     End Subroutine solver
-     
+
   End Interface
 
   Private
-  
+
 Contains
 
   Subroutine base_init( method, max_iter, comms, FD_operator, halo_swapper )
@@ -55,7 +54,7 @@ Contains
     Use comms_base_class_module          , Only : comms_base_class
     Use halo_setter_base_module          , Only : halo_setter_base_class
     Use FD_template_module               , Only : FD_template
-    
+
     Implicit None
 
     Class( equation_solver_base_class ), Intent( InOut )           :: method
@@ -75,13 +74,13 @@ Contains
     If( Present( FD_operator ) ) Then
        method%FD_operator = FD_operator
     End If
-    
+
     If( Present( halo_swapper ) ) Then
        method%halo_swapper = halo_swapper
     End If
-    
+
   End Subroutine base_init
-  
+
   Function contract( comms, x, y ) Result( d )
 
     Use comms_base_class_module, Only : comms_base_class
@@ -100,7 +99,7 @@ Contains
 
     ! Sum using Kahan summation for accuracy
     d = 0.0_wp
-    !$omp parallel default( none ) shared( grid, d ) private( c, yk, t, i1, i2, i3 )
+    !$omp parallel default( none ) shared( x, y, d ) private( c, yk, t, i1, i2, i3 )
     c = 0.0_wp
     !$omp do collapse( 3 ) reduction( +:d )
     Do i3 = Lbound( x, Dim = 3 ), Ubound( x, Dim = 3 )
@@ -119,5 +118,5 @@ Contains
     Call comms%reduce( d )
 
   End Function contract
-   
+
 End Module equation_solver_base_class_module
