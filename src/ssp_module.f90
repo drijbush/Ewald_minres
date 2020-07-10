@@ -1,15 +1,12 @@
 Module symetrically_screened_poisson_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
-
+  Use constants, Only : wp, li, pi
   Implicit None
 
   Public :: ssp_long_range
   Public :: ssp_sic
-  
+
   Private
-  
-  Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
 
 Contains
 
@@ -17,44 +14,42 @@ Contains
        recip_E, q_grid, pot_grid, solver, pot_swapper, grid_integrator, &
        ei, f, t_grid, t_pot_solve, t_forces, itn, istop, istop_message, rnorm, error, q_grid_old, pot_grid_old )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
-
-    Use lattice_module                          , Only : lattice
-    Use charge_grid_module                      , Only : charge_grid_calculate, charge_grid_forces
-    Use halo_setter_base_module                 , Only : halo_setter_base_class
-    Use quadrature_base_module                  , Only : quadrature_base_class
+    Use lattice_module,                           Only : lattice
+    Use charge_grid_module,                       Only : charge_grid_calculate, charge_grid_forces
+    Use halo_setter_base_module,                  Only : halo_setter_base_class
+    Use quadrature_base_module,                   Only : quadrature_base_class
     Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
-    
+
     Implicit None
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: rhs
-    
-    Type( lattice )                    , Intent( In    ) :: l
-    Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q
-    Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r
-    Real( wp )                         , Intent( In    ) :: alpha
-    Real( wp ), Dimension( 1:     )    , Intent( In    ) :: q_halo
-    Real( wp ), Dimension( 1:, 1: )    , Intent( In    ) :: r_halo
-    Integer   ,                          Intent( In    ) :: range_gauss
-    Integer   , Dimension( 1:3 )       , Intent( In    ) :: n_grid
-    Integer   , Dimension( 1:3 )       , Intent( In    ) :: lb
-    Real( wp )                         , Intent(   Out ) :: recip_E
-    Real( wp )                         , Intent( In    ) :: rtol
+
+    Type( lattice ),                     Intent( In    ) :: l
+    Real( wp ), Dimension( 1:     ),     Intent( In    ) :: q
+    Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
+    Real( wp ),                          Intent( In    ) :: alpha
+    Real( wp ), Dimension( 1:     ),     Intent( In    ) :: q_halo
+    Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r_halo
+    Integer,                             Intent( In    ) :: range_gauss
+    Integer,    Dimension( 1:3 ),        Intent( In    ) :: n_grid
+    Integer,    Dimension( 1:3 ),        Intent( In    ) :: lb
+    Real( wp ),                          Intent(   Out ) :: recip_E
+    Real( wp ),                          Intent( In    ) :: rtol
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: q_grid
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: pot_grid
     Class( equation_solver_precon_base_class ), Intent( InOut ) :: solver ! Need to check and fix these InOuts
-    Class( halo_setter_base_class  )   , Intent( InOut ) :: pot_swapper 
-    Class( quadrature_base_class   )   , Intent( InOut ) :: grid_integrator
-    Real( wp ), Dimension( 1: )        , Intent(   Out ) :: ei
-    Real( wp ), Dimension( 1:, 1: )    , Intent(   Out ) :: f
-    Real( wp )                         , Intent(   Out ) :: t_grid
-    Real( wp )                         , Intent(   Out ) :: t_pot_solve
-    Real( wp )                         , Intent(   Out ) :: t_forces
-    Integer                            , Intent(   Out ) :: itn
-    Integer                            , Intent(   Out ) :: istop
-    Character( Len = * )               , Intent(   Out ) :: istop_message
-    Real( wp )                         , Intent(   Out ) :: rnorm
-    Integer                            , Intent(   Out ) :: error
+    Class( halo_setter_base_class  ),    Intent( InOut ) :: pot_swapper
+    Class( quadrature_base_class   ),    Intent( InOut ) :: grid_integrator
+    Real( wp ), Dimension( 1: ),         Intent(   Out ) :: ei
+    Real( wp ), Dimension( 1:, 1: ),     Intent(   Out ) :: f
+    Real( wp ),                          Intent(   Out ) :: t_grid
+    Real( wp ),                          Intent(   Out ) :: t_pot_solve
+    Real( wp ),                          Intent(   Out ) :: t_forces
+    Integer,                             Intent(   Out ) :: itn
+    Integer,                             Intent(   Out ) :: istop
+    Character( Len = * ),                Intent(   Out ) :: istop_message
+    Real( wp ),                          Intent(   Out ) :: rnorm
+    Integer,                             Intent(   Out ) :: error
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ), Optional :: q_grid_old
     Real( wp ), Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ), Optional :: pot_grid_old
 
@@ -107,7 +102,7 @@ Contains
     ! Two minus signs as a) this is the SCREENED charge
     !                    b) I like to just add up the energies, having to subtract it is confusing
     recip_E = - 0.5_wp * grid_integrator%integrate( solver%comms, l, n_grid, - q_grid * pot_grid )
-    
+
     ! Calculate the forces and energy per site
     ! Initalise the halo swapper
     Call System_clock( start, rate )
@@ -115,7 +110,7 @@ Contains
          pot_grid, ei, f )
     Call System_clock( finish, rate )
     t_forces = Real( finish - start, wp ) / rate
-    
+
   End Subroutine ssp_long_range
 
   Pure Function ssp_sic( q, alpha ) Result( sic )
@@ -123,7 +118,7 @@ Contains
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Real( wp ), Dimension( : ), Intent( In    ) :: q
-    Real( wp )                , Intent( In    ) :: alpha
+    Real( wp ),                 Intent( In    ) :: alpha
 
     Real( wp ) :: sic
 
@@ -134,13 +129,16 @@ Contains
   Subroutine dummy_msolve( lb, ub, x, y )                   ! Solve M*y = x
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-    
-    Integer                                               , Intent( In    ) :: lb( 1:3 )
-    Integer                                               , Intent( In    ) :: ub( 1:3 )
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
-    Real( wp ) , Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
-    
+
+    Integer,                                                Intent( In    ) :: lb( 1:3 )
+    Integer,                                                Intent( In    ) :: ub( 1:3 )
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
+    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
+
     ! Shut up compiler
+    if (lb(1) /= 0) continue
+    if (ub(1) /= 0) continue
+
     y = x
 
   End Subroutine dummy_msolve

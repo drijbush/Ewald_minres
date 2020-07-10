@@ -1,7 +1,6 @@
 Module charge_grid_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants, Only : wp, pi
   Use lattice_module, Only : lattice
 
   Implicit None
@@ -10,43 +9,36 @@ Module charge_grid_module
 
   Private
 
-  Real( wp ), Parameter, Private :: pi = 3.141592653589793238462643383279502884197_wp
-
 Contains
 
   Subroutine charge_grid_calculate( l, alpha, q, r, range_gauss, n_grid, lb, ub, comms, grid_integrator, q_grid,error )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
-    !$ Use omp_lib
-
-    Use lattice_module         , Only : lattice
+    !$ Use omp_lib, only : omp_get_max_threads, omp_get_thread_num
+    Use lattice_module,          Only : lattice
     Use comms_base_class_module, Only : comms_base_class
-    Use quadrature_base_module , Only : quadrature_base_class
+    Use quadrature_base_module,  Only : quadrature_base_class
 
     Implicit None
 
-    Type( lattice )                    , Intent( In    ) :: l
+    Type( lattice ),                     Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1: ),         Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
-    Integer   ,                          Intent( In    ) :: range_gauss
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
+    Integer,                             Intent( In    ) :: range_gauss
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Class( quadrature_base_class      ), Intent( In    ) :: grid_integrator
     Class( comms_base_class           ), Intent( In    ) :: comms
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent(   Out ) :: q_grid
-    Integer                            , Intent(   Out ) :: error
-
-    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+    Integer,                             Intent(   Out ) :: error
 
     ! If set adjust the charge so it adds to zero. If we have zero charge there is
     ! gauranteed to be a solution of the linear equations, as the RHS vector
     ! has no component of the null space of the LHS matrix
     ! If we have to do this this really tells us that our representation of the charge density
     ! is not good enough, so print a warning
-    Logical   , Parameter :: stabilise_q     = .True.
+    Logical,    Parameter :: stabilise_q     = .True.
 
     Real( wp ), Parameter :: stabilise_q_tol = 1e-10_wp
 
@@ -64,7 +56,7 @@ Contains
     Real( wp ) :: q_tot, q_av
 
     Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
-    
+
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_point
     Integer, Dimension( 1:3 ) :: i_grid
@@ -78,9 +70,9 @@ Contains
 
     domain_lo = Lbound( q_grid )
     n_domain  = Ubound( q_grid ) - Lbound( q_grid ) + 1
-    
+
     domain_hi = domain_lo + n_domain - 1
-    
+
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
 
     ! What follows is a complete HACK to avoid gfortran stupidly putting
@@ -101,7 +93,7 @@ Contains
          Lbound( q_grid, Dim = 3 ):Ubound( q_grid, Dim = 3 ), 0:n_th - 1 ) )
 
     ! Should have default none - unfortunately bug in gfortran 7 stops this working
-    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, q_grid, range_gauss, q_grid_red_hack, n_th, &
+    !$omp parallel shared( l, alpha, r, q, q_norm, n_grid, q_grid, range_gauss, q_grid_red_hack, n_th, &
     !$omp                                  domain_lo, domain_hi ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
     !$omp                                   i_point, f_point, r_point, grid_vec, q_val, i_grid, iam, i_th,   &
@@ -126,7 +118,7 @@ Contains
     ! No need to sync at this point as in the next loop nest we only write to the
     ! bit we have just initalised
     ! Loop over atoms
-    !$omp do 
+    !$omp do
     Do i = 1, Size( q )
        ! Loop over points associated with this atom which are in this domain
        ! Find point nearest to the atom, and call this the centre for the atom grid
@@ -192,32 +184,28 @@ Contains
 
   Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, lb, ub, pot_grid, ei, f )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
-    Use lattice_module          , Only : lattice
-    Use halo_setter_base_module , Only : halo_setter_base_class
+    Use lattice_module,           Only : lattice
+    Use halo_setter_base_module,  Only : halo_setter_base_class
 
     Implicit none
-    
-    Type( lattice )                    , Intent( In    ) :: l
+
+    Type( lattice ),                     Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
     Real( wp ), Dimension( 1:         ), Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1:     ), Intent( In    ) :: r
-    Integer   ,                          Intent( In    ) :: range_gauss
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
-    Class( halo_setter_base_class )    , Intent( InOut ) :: pot_swapper
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
-    Integer   , Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
+    Integer,                             Intent( In    ) :: range_gauss
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: n_grid ! global size of grid
+    Class( halo_setter_base_class ),     Intent( InOut ) :: pot_swapper
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: lb( 1:3 )
+    Integer,    Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: pot_grid
     Real( wp ), Dimension( 1:         ), Intent(   Out ) :: ei
     Real( wp ), Dimension( 1:, 1:     ), Intent(   Out ) :: f
 
-    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
-
     Real( wp ), Dimension( :, :, : ), Allocatable :: pot_with_halo
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: stress
-    
+
     Real( wp ), Dimension( 1:3 ) :: ri
     Real( wp ), Dimension( 1:3 ) :: fi
     Real( wp ), Dimension( 1:3 ) :: f_point
@@ -229,7 +217,7 @@ Contains
     Real( wp ) :: g_val
     Real( wp ) :: dV
     Real( wp ) :: s
-    
+
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_atom_grid
     Integer, Dimension( 1:3 ) :: i_point
@@ -237,7 +225,7 @@ Contains
 
     Integer :: n
     Integer :: i1, i2, i3
-    Integer :: i, i_alpha, i_beta
+    Integer :: i
     Integer :: error
 
     n      = Size( q )
@@ -259,7 +247,7 @@ Contains
     If( error /= 0 ) Then
        Error Stop "halo filler problem in forces"
     End If
-    
+
     !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
     !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
@@ -303,7 +291,7 @@ Contains
 !!$                Do i_beta = 1, 3
 !!$                   Do i_alpha = i_beta, 3
 !!$                      s = - 2.0_wp * g_val * alpha * alpha * grid_vec( i_alpha ) * grid_vec( i_beta )
-!!$                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s 
+!!$                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s
 !!$                   End Do
 !!$                End Do
              End Do
@@ -320,24 +308,24 @@ Contains
 !!$          stress( i_beta, i_alpha ) = stress( i_alpha, i_beta )
 !!$       End Do
 !!$    End Do
-    
+
   End Subroutine charge_grid_forces
 
   Subroutine charge_grid_find_range( l, alpha, n_grid, range_gauss )
 
     ! DEPRECATED!!!!  -base all on range_gauss now, not n_grid
     ! i.e. invert the argument
-    
+
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
 
     Use lattice_module, Only : lattice
 
     Implicit None
 
-    Type( lattice )             , Intent( In    ) :: l
+    Type( lattice ),              Intent( In    ) :: l
     Real( wp ),                   Intent( In    ) :: alpha
-    Integer   , Dimension( 1:3 ), Intent( In    ) :: n_grid
-    Integer   , Dimension( 1:3 ), Intent(   Out ) :: range_gauss
+    Integer,    Dimension( 1:3 ), Intent( In    ) :: n_grid
+    Integer,    Dimension( 1:3 ), Intent(   Out ) :: range_gauss
 
     Real( wp ), Dimension( 1:3 ) :: G
     Real( wp ), Dimension( 1:3 ) :: grid_vec
@@ -369,18 +357,16 @@ Contains
 
     Type( lattice ),              Intent( In    ) :: l
     Real( wp ),                   Intent( In    ) :: alpha
-    Integer   ,                   Intent( In    ) :: range_gauss
+    Integer,                      Intent( In    ) :: range_gauss
     Real( wp ),                   Intent( In    ) :: gauss_tol
-    Integer   , Dimension( 1:3 ), Intent(   Out ) :: n_grid
-
-    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+    Integer,    Dimension( 1:3 ), Intent(   Out ) :: n_grid
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dir_vecs
-    
+
     Real( wp ), Dimension( 1:3 ) :: dr
 
     Real( wp ) :: Gsq
-    
+
     Real( wp ) :: max_r
 
     Integer :: i

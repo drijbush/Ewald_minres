@@ -1,7 +1,6 @@
 Module quadrature_trapezium_rule_module
 
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
+  Use constants,              Only : wp
   Use quadrature_base_module, Only : quadrature_base_class
 
   Implicit None
@@ -16,18 +15,16 @@ Contains
 
   Function trapezium_rule( q, comms, l, n_grid, grid ) Result( r )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
     Use comms_base_class_module, Only : comms_base_class
-    Use lattice_module         , Only : lattice
+    Use lattice_module,          Only : lattice
 
     Real( wp ) :: r
 
     Class( quadrature_trapezium_rule   ), Intent( In ) :: q
     Class( comms_base_class            ), Intent( In ) :: comms
-    Type( lattice )                     , Intent( In ) :: l
-    Integer   , Dimension( :       )    , Intent( In ) :: n_grid
-    Real( wp ), Dimension( :, :, : )    , Intent( In ) :: grid
+    Type( lattice ),                      Intent( In ) :: l
+    Integer,    Dimension( :       ),     Intent( In ) :: n_grid
+    Real( wp ), Dimension( :, :, : ),     Intent( In ) :: grid
 
     Real( wp ) :: dV
     Real( wp ) :: c, y, t
@@ -56,7 +53,7 @@ Contains
     r = r * dV
 
     Call comms%reduce( r )
-    
+
   End Function trapezium_rule
-  
+
 End Module quadrature_trapezium_rule_module

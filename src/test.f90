@@ -1,22 +1,21 @@
 Program test
 
-  !$ Use omp_lib
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
+  !$ Use omp_lib, Only : omp_get_max_threads
 
-  Use lattice_module                      , Only : lattice
-  Use charge_grid_module                  , Only : charge_grid_find_range
-  Use fast_fourier_poisson_module         , Only : ffp_long_range, ffp_sic
+  Use constants,                            Only : wp, li, pi, r4pie0
+  Use lattice_module,                       Only : lattice
+  Use charge_grid_module,                   Only : charge_grid_find_range
+  Use fast_fourier_poisson_module,          Only : ffp_long_range, ffp_sic
   Use symetrically_screened_poisson_module, Only : ssp_long_range, ssp_sic
-  Use real_space_module                   , Only : real_space_energy
-  Use grid_io_module                      , Only : grid_io_save
-  Use domains_module                      , Only : domain_build, domain_halo_build
-  Use comms_serial_module                 , Only : comms_serial
-  Use halo_serial_module                  , Only : halo_serial_setter
-  Use quadrature_trapezium_rule_module    , Only : quadrature_trapezium_rule
-  Use FD_Laplacian_3d_module              , Only : FD_Laplacian_3D
-  Use equation_solver_minres_module       , Only : equation_solver_minres
- 
+  Use real_space_module,                    Only : real_space_energy
+  Use grid_io_module,                       Only : grid_io_save
+  Use domains_module,                       Only : domain_build, domain_halo_build
+  Use comms_serial_module,                  Only : comms_serial
+  Use halo_serial_module,                   Only : halo_serial_setter
+  Use quadrature_trapezium_rule_module,     Only : quadrature_trapezium_rule
+  Use FD_Laplacian_3d_module,               Only : FD_Laplacian_3D
+  Use equation_solver_minres_module,        Only : equation_solver_minres
+
   Implicit None
 
   Type( lattice ) :: l
@@ -26,19 +25,16 @@ Program test
   Type( comms_serial              ) :: comms
   Type( FD_Laplacian_3D           ) :: FD
   Type( equation_solver_minres    ) :: solver
-  
+
   Complex( wp ), Dimension( : ), Allocatable :: ew_func
 
-  Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
-
-  Real( wp ), Parameter :: r4pie0 = 138935.48350000000_wp
 
   Real( wp ) :: gauss_tol = 1e-15_wp
-  
+
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ssp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ffp
-  
+
   Real( wp ), Dimension( :, : ), Allocatable :: a
   Real( wp ), Dimension( :, : ), Allocatable :: r
   Real( wp ), Dimension( :, : ), Allocatable :: force_ffp
@@ -66,7 +62,7 @@ Program test
   Real( wp ) :: rms_delta_pot, rms_delta_force, q_error
   Real( wp ) :: t_grid, t_real, t_pot_solve, t_forces
   Real( wp ) :: rnorm
-  
+
   Integer, Dimension( 1:3 ) :: n_grid
 
   Integer, Dimension( 1:3 ) :: np = [ 1, 1, 1 ]
@@ -81,14 +77,14 @@ Program test
   Integer :: ipx, ipy, ipz
   Integer :: itn, istop
   Integer :: error
-  
+
   Integer( li ) :: start, finish, rate
 
   Logical :: fexist
   Logical :: l_bad_charge
 
   Character( Len = 132 ) :: istop_message
-  
+
   Write( *, * ) 'Ewald param ?'
   Read ( *, * ) alpha
   Write( *, * ) 'Number of ppoints for gaussians?'
@@ -103,9 +99,9 @@ Program test
   Read ( *, * ) xshift
 
   Write( *, * ) 'Param, dims, order ', alpha, range_gauss, FD_order, xshift
-  
+
   !$ Write( *, * ) 'Running on ', omp_get_max_threads(), ' threads'
-  
+
   nd = 3
 
   Allocate( a( 1:3, 1:nd ) )
@@ -116,15 +112,15 @@ Program test
   Allocate( q( 1:n ) )
   Allocate( r( 1:3, 1:n ) )
   Call read_config( level, 10, q, r )
-  
+
   Call l%initialise( nd, a, alpha )
-  
+
   Write( *, '( a, 3( t25, 3( f10.5, 1x ) / ) )' ) &
        'Lattice vectors: ', l%get_direct_vectors()
-  
+
   Call get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
   Write( *, * ) 'N_grid = ', n_grid
-  
+
 !!$  Call l%print
   Do i = 1, 3
      dG( i ) = Sqrt( Dot_product( a( :, i ), a( :, i ) ) ) / n_grid( i )
@@ -134,7 +130,7 @@ Program test
   Do i = 1, n
      t = r( :, i )
      t( 1 ) = t( 1 ) + xshift
-     Call l%to_reference( t, r( :, i ) ) 
+     Call l%to_reference( t, r( :, i ) )
   End Do
   Write( *, * ) 'r(1) after  shift and reference = ', r( :, 1 )
 
@@ -158,21 +154,21 @@ Program test
   Do i = 1, Size( q_domain )
      Call l%to_fractional( r_domain( :, i ), t )
      Write( 11, '( i4, 1x, sp, f3.0, 1x, ss, 3( f7.3, 1x ), 3( f6.4, 1x ) )' ) &
-          i, q_domain( i ), r_domain( :, i ), t 
+          i, q_domain( i ), r_domain( :, i ), t
   End Do
   Close( 11 )
   Open( 11, file = 'halo.dat' )
   Do i = 1, Size( q_halo )
      Call l%to_fractional( r_halo( :, i ), t )
      Write( 11, '( i4, 1x, sp, f3.0, 1x, ss, 3( f7.3, 1x ), 3( f6.4, 1x ) )' ) &
-          i, q_halo( i ), r_halo( :, i ), t 
+          i, q_halo( i ), r_halo( :, i ), t
   End Do
   Close( 11 )
-  
+
   ! How big is my gaussian?
 !!$  Call  charge_grid_find_range( l, alpha, n_grid, range_gauss )
 !!$  Write( *, * ) 'Gauss range: ', range_gauss
-  
+
   ! Generate the useful fourier space function
   Call system_clock( start, rate )
   Allocate( ew_func( 0:l%get_n_rec_vecs() - 1 ) )
@@ -235,7 +231,7 @@ Program test
   Write( *, * ) 'FFP: Sum of charge over grid: ', Sum( q_grid )
   Write( *, * ) 'FFP: Sum over pot grid      : ', Sum( pot_grid_ffp )
 
-  ! SIC 
+  ! SIC
   sic_ffp = ffp_sic( q, alpha )
 
   ! Calculate short range
@@ -247,13 +243,13 @@ Program test
   Call system_clock( finish, rate )
   Write( *, * ) 'FFP real time: ', Real( finish - start, wp ) / rate
 
-  ! And hence total energy 
+  ! And hence total energy
   tot_E_ffp = real_E_ffp + sic_ffp + recip_E_ffp
 
   ! END FFP SECTION
   !
 !!!!!!!!!!!!!!!!!!!!!
-  
+
 !!!!!!!!!!
   !
   ! SYMETRICALLY SCREENED POISSON (SSP) - purely real space methods used, finite difference to solve eqns
@@ -311,26 +307,26 @@ Program test
   Write( *, * ) 'SSP: Sum of charge over grid: ', Sum( q_grid )
   Write( *, * ) 'SSP: Sum over pot grid      : ', Sum( pot_grid_ssp )
 
-  ! SIC ( Really same as ffp but let's be methodical ) 
+  ! SIC ( Really same as ffp but let's be methodical )
   sic_ssp = ssp_sic( q, alpha )
 
   ! long range same as for ffp
   real_E_ssp = real_E_ffp
 
-  ! And hence total energy 
+  ! And hence total energy
   tot_E_ssp = real_E_ssp + sic_ssp + recip_E_ssp
 
   ! END SSP SECTION
   !
 !!!!!!!!!!!!!!!!!!!!!
-  
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !
   ! REPORT RESULTS
-  
+
   Write( *, '( t39, a, t149, a )' ) 'Internal', 'DL_POLY'
   Write( *, '( t14, a, t39, a, t64, a, t89, a, t124, a, t149, a, t174, a, t199, a  )' ) &
-       'Reciprocal', 'SIC', 'Real', 'Total', 'Reciprocal', 'SIC', 'Real', 'Total' 
+       'Reciprocal', 'SIC', 'Real', 'Total', 'Reciprocal', 'SIC', 'Real', 'Total'
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) 'Ew  ', Real( recip_E, wp ), sic, real_E, tot_E, &
        Real( recip_E, wp ) * r4pie0, sic * r4pie0, real_E * r4pie0, tot_E * r4pie0
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
@@ -339,7 +335,7 @@ Program test
   Write( *, '( a4, 2( 4( g24.14, 1x ), :, 10x ) )' ) &
        'SSP ', recip_E_ssp, sic_ssp, real_E_ssp, tot_E_ssp, &
        recip_E_ssp * r4pie0, sic_ssp * r4pie0, real_E_ssp * r4pie0, tot_E_ssp * r4pie0
-  
+
   Write( *, * )
   Write( *, '( "Difference in energy FFP - EW:  ", g30.16 )' ) tot_E_ffp - tot_E
   Write( *, '( "Difference in energy SSP - EW:  ", g30.16 )' ) tot_E_ssp - tot_E
@@ -359,7 +355,7 @@ Program test
      Write( 11, '( a7, 2x, a5, 2x, a2, 1x, a6, 1x, a2, 1x, a9, &
           & t40, 3( a14, 11x ), t120, 3( a14, 11x ), t200, a14, t230, a, t260, a )' ) &
           'alpha', 'dg', 'Od', 'xshift', 'Rg', 'Q error', &
-          'tot E'  , 'tot E SSP'  , 'Delta tot E', &
+          'tot E',   'tot E SSP',   'Delta tot E', &
           'recip E FFP', 'recip E SSP', 'Delta recip E', &
           'RMS delta pot', 'RMS Delta force', 'Bad Charge'
   End If
@@ -379,13 +375,13 @@ Contains
 
   Subroutine read_header( unit, n, level, vecs )
 
-    Integer                      , Intent( In    ) :: unit
-    Integer                      , Intent(   Out ) :: n
-    Integer                      , Intent(   Out ) :: level    
+    Integer,                       Intent( In    ) :: unit
+    Integer,                       Intent(   Out ) :: n
+    Integer,                       Intent(   Out ) :: level
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: vecs
 
     Integer :: junk
-    
+
     Read( unit, * )
     Read( unit, * ) level, junk, n
     Read( unit, * ) vecs
@@ -394,8 +390,8 @@ Contains
 
   Subroutine read_config( level, unit, q, r )
 
-    Integer                      , Intent( In    ) :: level
-    Integer                      , Intent( In    ) :: unit
+    Integer,                       Intent( In    ) :: level
+    Integer,                       Intent( In    ) :: unit
     Real( wp ), Dimension( :    ), Intent(   Out ) :: q
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: r
 
@@ -403,7 +399,7 @@ Contains
     Integer :: i
 
     Character( Len = 3 ) :: what
-    
+
     n = Size( q )
 
     Do i = 1, n
@@ -417,21 +413,21 @@ Contains
           Stop 'Error in CONFIG reading'
        End If
        Read( unit, * ) r( :, i )
-       If( level >= 1 ) Then 
+       If( level >= 1 ) Then
           Read( unit, * )
        End If
-       If( level >= 2 ) Then 
+       If( level >= 2 ) Then
           Read( unit, * )
        End If
     End Do
-    
+
   End Subroutine read_config
 
   Subroutine generate_ew_func( l, q, r, alpha, ew_func )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Type( lattice )               , Intent( In    ) :: l
+    Type( lattice ),                Intent( In    ) :: l
     Real( wp ), Dimension( :     ), Intent( In    ) :: q
     Real( wp ), Dimension( :, :  ), Intent( In    ) :: r
     Real( wp ),                     Intent( In    ) :: alpha
@@ -442,9 +438,9 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: G
 
     Real( wp ) :: G_len_sq, G_fac
-    
+
     Integer :: iG
-    
+
     ew_func( 0 ) = 0.0_wp
     ! Bug in gfortran 7 stops default none working
     !$omp parallel shared( n, ew_func, l, alpha, q, r ) &
@@ -477,34 +473,34 @@ Contains
 
     Use lattice_module, Only : lattice
 
-    Type( lattice )               , Intent( In    ) :: l
+    Type( lattice ),                Intent( In    ) :: l
     Real( wp ), Dimension( :     ), Intent( In    ) :: q
     Real( wp ), Dimension( :, :  ), Intent( In    ) :: r
     Real( wp ),                     Intent( In    ) :: alpha
     Complex( wp ), Dimension( 0: ), Intent( In    ) :: ew_func
-    Real( wp )                    , Intent( Out   ) :: recip_E
-    Real( wp )                    , Intent( Out   ) :: SIC
-    Real( wp )                    , Intent( Out   ) :: real_E
-    Real( wp )                    , Intent( Out   ) :: tot_E
-    Real( wp )                    , Intent( Out   ) :: t_pot_solve
-    Real( wp )                    , Intent( Out   ) :: t_real
+    Real( wp ),                     Intent( Out   ) :: recip_E
+    Real( wp ),                     Intent( Out   ) :: SIC
+    Real( wp ),                     Intent( Out   ) :: real_E
+    Real( wp ),                     Intent( Out   ) :: tot_E
+    Real( wp ),                     Intent( Out   ) :: t_pot_solve
+    Real( wp ),                     Intent( Out   ) :: t_real
 
     Complex( wp ) :: potg
     Complex( wp ) :: cc, cy, ct
 
     Real( wp ), Dimension( 1:3 ) :: G
     Real( wp ), Dimension( 1:3 ) :: ri
-    
+
     Real( wp ) :: pot
-    
+
     Integer :: max_G_shells = 2
     Integer :: n
     Integer :: i, iG
-    
+
     Integer( li ) :: start, finish, rate
 
     n = Size( q )
-    
+
     Call system_clock( start, rate )
     recip_E = 0.0_wp
     ! Bug in gfortran 7 stops default none working
@@ -551,18 +547,16 @@ Contains
 
     Type( lattice ),              Intent( In    ) :: l
     Real( wp ),                   Intent( In    ) :: alpha
-    Integer   ,                   Intent( In    ) :: range_gauss
+    Integer,                      Intent( In    ) :: range_gauss
     Real( wp ),                   Intent( In    ) :: gauss_tol
-    Integer   , Dimension( 1:3 ), Intent(   Out ) :: n_grid
-
-    Real( wp ), Parameter :: pi = 3.141592653589793238462643383279502884197_wp
+    Integer,    Dimension( 1:3 ), Intent(   Out ) :: n_grid
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: dir_vecs
-    
+
     Real( wp ), Dimension( 1:3 ) :: dr
 
     Real( wp ) :: Gsq
-    
+
     Real( wp ) :: max_r
 
     Integer :: i
@@ -586,7 +580,5 @@ Contains
     End Do
 
   End Subroutine get_n_grid
-  
+
 End Program test
-
-

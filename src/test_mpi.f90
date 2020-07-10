@@ -1,46 +1,46 @@
 Program test_mpi
 
-  !$ Use omp_lib
+  !!$ Use omp_lib
   Use mpi_f08, Only : mpi_comm, mpi_init, mpi_finalize, mpi_comm_world, mpi_bcast, mpi_double_precision, mpi_integer, &
-       mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place, mpi_character
-  
-  Use, Intrinsic :: iso_fortran_env, Only :  wp => real64, li => int64
+       mpi_dims_create, mpi_cart_create, mpi_cart_coords, mpi_allreduce, mpi_sum, mpi_in_place, mpi_character, mpi_comm_rank, &
+       mpi_comm_size
 
-  Use lattice_module                           , Only : lattice
-  Use charge_grid_module                       , Only : charge_grid_get_n_grid
-  Use fast_fourier_poisson_module              , Only : ffp_long_range, ffp_sic
-!!$  Use symetrically_screened_poisson_module     , Only : ssp_long_range, ssp_sic
-  Use grid_io_module                           , Only : grid_io_save
-  Use domains_module                           , Only : domain_build, domain_halo_build, domain_get_params
-  Use comms_parallel_module                    , Only : comms_parallel
-  Use halo_parallel_module                     , Only : halo_parallel_setter
-  Use quadrature_trapezium_rule_module         , Only : quadrature_trapezium_rule
-  Use FD_Laplacian_3d_module                   , Only : FD_Laplacian_3D
-  Use equation_solver_base_class_module        , Only : equation_solver_base_class
-  Use equation_solver_minres_module            , Only : equation_solver_minres
+  Use constants,                                 Only : wp
+  Use lattice_module,                            Only : lattice
+  Use charge_grid_module,                        Only : charge_grid_get_n_grid
+  Use fast_fourier_poisson_module,               Only : ffp_long_range, ffp_sic
+!!$  Use symetrically_screened_poisson_module,      Only : ssp_long_range, ssp_sic
+  Use grid_io_module,                            Only : grid_io_save
+  Use domains_module,                            Only : domain_build, domain_halo_build, domain_get_params
+  Use comms_parallel_module,                     Only : comms_parallel
+  Use halo_parallel_module,                      Only : halo_parallel_setter
+  Use quadrature_trapezium_rule_module,          Only : quadrature_trapezium_rule
+  Use FD_Laplacian_3d_module,                    Only : FD_Laplacian_3D
+  Use equation_solver_base_class_module,         Only : equation_solver_base_class
+  Use equation_solver_minres_module,             Only : equation_solver_minres
   Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
-  Use Ewald_3d_module                          , Only : Ewald_3d_recipe, Ewald_3d_status
-  
+  Use Ewald_3d_module,                           Only : Ewald_3d_recipe, Ewald_3d_status
+
   Implicit None
 
-  Class( equation_solver_base_class ), Allocatable :: solver
+!  Class( equation_solver_base_class ), Allocatable :: solver
 
   Type( lattice  ) :: l
   Type( mpi_comm ) :: cart_comm
-  Type( halo_parallel_setter          ) :: fd_swapper
-  Type( halo_parallel_setter          ) :: pot_swapper
-  Type( quadrature_trapezium_rule     ) :: grid_integrator
-  Type( comms_parallel                ) :: comms
-  Type( FD_Laplacian_3D               ) :: FD
+!  Type( halo_parallel_setter          ) :: fd_swapper
+!  Type( halo_parallel_setter          ) :: pot_swapper
+!  Type( quadrature_trapezium_rule     ) :: grid_integrator
+!  Type( comms_parallel                ) :: comms
+!  Type( FD_Laplacian_3D               ) :: FD
   Type( Ewald_3d_recipe               ) :: ewald_recipe
   Type( Ewald_3d_status               ) :: status
-  
+
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_ffp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ffp
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_ssp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ssp
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_full
-  
+
   Real( wp ), Dimension( :, : ), Allocatable :: r
   Real( wp ), Dimension( :, : ), Allocatable :: r_domain
   Real( wp ), Dimension( :, : ), Allocatable :: r_halo
@@ -50,9 +50,9 @@ Program test_mpi
   Real( wp ), Dimension( :, : ), Allocatable :: dr
 
   Real( wp ), Dimension( 1:3, 1:3 ) :: a
-  Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
+!  Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
   Real( wp ), Dimension( 1:3, 1:3 ) :: stress
-  
+
   Real( wp ), Dimension( : ), Allocatable :: q
   Real( wp ), Dimension( : ), Allocatable :: q_domain
   Real( wp ), Dimension( : ), Allocatable :: q_halo
@@ -67,33 +67,35 @@ Program test_mpi
   Real( wp ) :: gauss_tol
   Real( wp ) :: xshift
   Real( wp ) :: recip_E_ffp
-  Real( wp ) :: rnorm
+!  Real( wp ) :: rnorm
   Real( wp ) :: t_grid_ffp, t_pot_solve_ffp
   Real( wp ) :: recip_E_ssp
   Real( wp ) :: ei_full
-  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
+!  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
 
   Integer, Dimension( : ), Allocatable :: id, id_domain
-  
+
   Integer, Dimension( 1:3 ) :: n_grid
   Integer, Dimension( 1:3 ) :: np_grid, np_grid_serial
   Integer, Dimension( 1:3 ) :: p_coords
   Integer, Dimension( 1:3 ) :: n_grid_domain
   Integer, Dimension( 1:3 ) :: domain_base_coords
   Integer, Dimension( 1:3 ) :: domain_end_coords
-  
+
   Integer :: range_gauss, FD_order
   Integer :: nproc, me
   Integer :: nproc_cart, me_cart
   Integer :: level
   Integer :: n
   Integer :: n_at_loc, n_at
-  Integer :: itn, istop
+!  Integer :: itn, istop
   Integer :: which_solver
   Integer :: error
   Integer :: i
 
-  Character( Len = 132 ) :: istop_message
+  Integer :: config_unit
+
+!  Character( Len = 132 ) :: istop_message
   Character( Len = 132 ) :: what
 
   Call mpi_init( error )
@@ -103,20 +105,27 @@ Program test_mpi
 
   Read_params_on_proc_0: If( me == 0 ) Then
 
-     Write( *, * ) 'Ewald param ?'
+     Write( *, * ) 'Ewald param (alpha)?'
      Read ( *, * ) alpha
-     Write( *, * ) 'Number of ppoints for gaussians?'
+     Write( *, * ) alpha
+     Write( *, * ) 'Number of points for gaussians?'
      Read ( *, * ) range_gauss
+     Write( *, * ) range_gauss
      Write( *, * ) 'Cut off tolerance for gaussians?'
      Read ( *, * ) gauss_tol
-     Write( *, * ) 'REsidual tolerance for solver?'
+     Write( *, * ) gauss_tol
+     Write( *, * ) 'Residual tolerance for solver?'
      Read ( *, * ) rtol
+     Write( *, * ) rtol
      Write( *, * ) 'FD_order?'
      Read ( *, * ) FD_order
+     Write( *, * ) FD_order
      Write( *, * ) 'xshift?'
      Read ( *, * ) xshift
+     Write( *, * ) xshift
      Write( *, * ) 'which solver?'
      Read ( *, * ) what
+     Write( *, * ) what
 
      Select Case( Trim( Adjustl( what ) ) )
      Case( 'CG' )
@@ -128,22 +137,22 @@ Program test_mpi
      Case Default
         Error Stop 'Unrecongnized solver'
      End Select
-     
-     Open( 10, File = 'CONFIG' )
-     Call read_header( 10, n, level, a )
+
+     Open( newunit=config_unit, File = 'CONFIG', status='OLD' )
+     Call read_header( config_unit, n, level, a )
      Write( *, * ) 'n = ', n
 
   End If Read_params_on_proc_0
-     
-  Call mpi_bcast( alpha        ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( range_gauss  ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( gauss_tol    ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( rtol         ,         1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( FD_order     ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( n            ,         1, mpi_integer         , 0, mpi_comm_world )
-  Call mpi_bcast( a            , Size( a ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( which_solver ,         1, mpi_integer         , 0, mpi_comm_world )
-  
+
+  Call mpi_bcast( alpha,                 1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( range_gauss,           1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( gauss_tol,             1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( rtol,                  1, mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( FD_order,              1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( n,                     1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( a,             Size( a ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( which_solver,          1, mpi_integer,          0, mpi_comm_world )
+
   Call mpi_bcast( what, Len( what ), mpi_character, 0, mpi_comm_world )
 
 !!$  Select Case( which_solver )
@@ -154,21 +163,21 @@ Program test_mpi
 !!$  End Select
 
   Call l%initialise( 3, a, alpha )
-  
+
   Allocate( q( 1:n ) )
   Allocate( r( 1:3, 1:n ) )
 
-  Read_CONFIG_on_proc_0: If( me == 0 ) Then  
-  
-     Call read_config( level, 10, q, r )
-     Close( 10 )
-     
+  Read_CONFIG_on_proc_0: If( me == 0 ) Then
+
+     Call read_config( level, config_unit, q, r )
+     Close( config_unit )
+
      ! Shift and move into reference cell
      Write( *, * ) 'r(1) before shift and reference = ', r( :, 1 )
      Do i = 1, n
         t = r( :, i )
         t( 1 ) = t( 1 ) + xshift
-        Call l%to_reference( t, r( :, i ) ) 
+        Call l%to_reference( t, r( :, i ) )
      End Do
      Write( *, * ) 'r(1) after  shift and reference = ', r( :, 1 )
 
@@ -199,7 +208,7 @@ Program test_mpi
   If( me == 0 ) Then
      Write( *, * ) 'N_grid = ', n_grid
   End If
-  
+
   Do i = 1, 3
      dG( i ) = Sqrt( Dot_product( a( :, i ), a( :, i ) ) ) / n_grid( i )
   End Do
@@ -252,12 +261,12 @@ Program test_mpi
   ! Factor the procs into a grid
   np_grid = 0
   Call mpi_dims_create( nproc, 3, np_grid )
-  
+
   ! Create a cartesian communicator
   Call mpi_cart_create( mpi_comm_world, 3, np_grid, [ .True., .True., .True. ], .True., &
        cart_comm )
   Call mpi_comm_size( cart_comm, nproc_cart, error )
-  Call mpi_comm_rank( cart_comm, me_cart   , error )
+  Call mpi_comm_rank( cart_comm, me_cart,    error )
   If( me_cart == 0 ) Then
      Write( *, '( "Process grid dimensions: ", 3( i3, 1x ) )' ) np_grid
   End If
@@ -369,7 +378,7 @@ Program test_mpi
 
   ! START USE OF FULL INTERFACE !!!!!!!!!!!!!!
   ! ------------------------------------------
-  
+
   ! Need to set these up earlier so use consistent sizes throughout calculation
   ! Set the recipe for the calculation
   Call ewald_recipe%mix( l, alpha, error, communicator = cart_comm%mpi_val, equation_solver = what )
@@ -382,7 +391,7 @@ Program test_mpi
      Write( *, * )
      Write( *, * ) 'N_grid in full interface ', n_grid
   End If
-  
+
   recip_E_ssp   = 0.0_wp
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error,          &
@@ -470,7 +479,7 @@ Program test_mpi
 !!$!!!!$  dr = r
   Do i = 1, n
      t = r( :, i )
-     Call l%to_reference( t, r( :, i ) ) 
+     Call l%to_reference( t, r( :, i ) )
   End Do
 !!$!!!!$  Write( *, * ) Maxval( dr - r )
 !!$!!!!$  r( :, 1 ) = r( :, 1 ) + 0.00001_wp
@@ -507,18 +516,18 @@ Program test_mpi
   End If
 
   Call mpi_finalize( error )
-  
+
 Contains
 
   Subroutine read_header( unit, n, level, vecs )
 
-    Integer                      , Intent( In    ) :: unit
-    Integer                      , Intent(   Out ) :: n
-    Integer                      , Intent(   Out ) :: level    
+    Integer,                       Intent( In    ) :: unit
+    Integer,                       Intent(   Out ) :: n
+    Integer,                       Intent(   Out ) :: level
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: vecs
 
     Integer :: junk
-    
+
     Read( unit, * )
     Read( unit, * ) level, junk, n
     Read( unit, * ) vecs
@@ -527,8 +536,8 @@ Contains
 
   Subroutine read_config( level, unit, q, r )
 
-    Integer                      , Intent( In    ) :: level
-    Integer                      , Intent( In    ) :: unit
+    Integer,                       Intent( In    ) :: level
+    Integer,                       Intent( In    ) :: unit
     Real( wp ), Dimension( :    ), Intent(   Out ) :: q
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: r
 
@@ -536,7 +545,7 @@ Contains
     Integer :: i
 
     Character( Len = 3 ) :: what
-    
+
     n = Size( q )
 
     Do i = 1, n
@@ -550,14 +559,14 @@ Contains
           Stop 'Error in CONFIG reading'
        End If
        Read( unit, * ) r( :, i )
-       If( level >= 1 ) Then 
+       If( level >= 1 ) Then
           Read( unit, * )
        End If
-       If( level >= 2 ) Then 
+       If( level >= 2 ) Then
           Read( unit, * )
        End If
     End Do
-    
+
   End Subroutine read_config
 
 End Program test_mpi
