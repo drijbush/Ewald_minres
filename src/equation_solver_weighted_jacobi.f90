@@ -19,7 +19,6 @@ Contains
        lb, ub, b, rtol, &
        x, istop, istop_message, itn, rnorm )
 
-    Use constants, Only : wp
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module,      Only : FD_template
 
