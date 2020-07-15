@@ -212,6 +212,10 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: r_point
     Real( wp ), Dimension( 1:3 ) :: grid_vec
 
+    Real( wp ), Dimension( 1:3, 1:3 ) :: dr
+    Real( wp ) :: g_r
+    Real( wp ), Dimension( 1:3 ) :: g_dr, g_2dr, f_rdr, f_drdr
+
     Real( wp ) :: q_norm
     Real( wp ) :: qi_norm
     Real( wp ) :: g_val
@@ -232,6 +236,17 @@ Contains
     dV     = l%get_volume() / Product( n_grid )
 
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
+
+    dr = l%get_direct_vectors()
+    Do i = 1, 3
+       dr( :, i ) = dr( :, i ) / n_grid( i )
+    End Do
+
+    do i = 1, 3
+      g_dr(i) = g(dr(:, i), alpha)
+      g_2dr(i) = g( Sqrt( 2.0_wp ) * dr(:, i), alpha)
+      f_drdr(i) = f(dr(:, i), dr(:, i), alpha)
+    end do
 
     stress = 0.0_wp
 
@@ -262,6 +277,17 @@ Contains
        qi_norm = q_norm * q( i ) * dV
        Call l%to_fractional( ri, fi )
        i_atom_centre = Nint( fi * n_grid )
+
+       ! Transform to fractional coordinates
+       f_point = Real( i_atom_centre, wp ) / n_grid
+       ! And fractional to real
+       Call l%to_direct( f_point, r_point )
+       ! Vector to the point of interest from the centre of the gaussin
+       grid_vec = r_point - ri
+       ! Gaussian at that point times normalisation times the volume element
+       g_r = g(grid_vec, alpha)
+       f_rdr = [(f(grid_vec, dr(:,i), alpha), i1 = 1, 3)]
+
        !
        ei(    i ) = 0.0_wp
        f ( :, i ) = 0.0_wp
@@ -390,5 +416,24 @@ Contains
     End Do
 
   End Subroutine charge_grid_get_n_grid
+
+  function g(r, alpha)
+    Real( wp ) :: g
+    Real( wp ), Dimension(3), Intent( In    ) :: r
+    Real( wp ), Intent( In    ) :: alpha
+
+    g = exp(-alpha**2 * dot_product(r, r))
+
+  end function g
+
+  function f(r, dr, alpha)
+    Real( wp ) :: f
+    Real( wp ), Dimension(3), Intent( In    ) :: r
+    Real( wp ), Dimension(3), Intent( In    ) :: dr
+    Real( wp ), Intent( In    ) :: alpha
+
+    f = exp(-2.0_wp * alpha**2 * dot_product(r, dr))
+
+  end function f
 
 End Module charge_grid_module
