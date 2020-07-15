@@ -8,14 +8,17 @@ program test_exp
   Real( wp ), Dimension(3) :: g_r0, g_2dr, g_dr, f_rdr, f_rdr0, f_drdr
   Real( wp ), Dimension(3,3), Parameter :: dr = Reshape([&
        0.01_wp, 0.00_wp, 0.00_wp, &
-       0.00_wp, 0.01_wp, 0.00_wp, &
-       0.00_wp, 0.00_wp, 0.01_wp], [3,3])
+       0.00_wp, 0.00_wp, 0.00_wp, &
+       0.00_wp, 0.00_wp, 0.00_wp], [3,3])
   Real( wp ), Parameter :: alpha = 0.4_wp
   Integer,    Parameter :: nSamp = 10
   Integer :: i, j, k
 
+  r = r_0
+
   g_r0 = g(r, alpha)
   g_r = g_r0(1)
+
   do i = 1, 3
     print*, dr(:, i)
     g_dr(i) = g(dr(:, i), alpha)
@@ -24,17 +27,18 @@ program test_exp
     f_drdr(i) = f(dr(:, i), dr(:, i), alpha)
   end do
 
-  r = r_0
   f_rdr = f_rdr0
 
   i=0;j=0;k=0
 
   print*, 'i   j   k     rx     ry     rz           apprx                exact                 diff'
-  do k = 0, nSamp
-    do j = 0, nSamp
-      do i = 0, nSamp
+  do k = 0, 4
+    do j = 0, 4
+      do i = 0, 4
         r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
-        print('(3(i3.1, 1X),1X,3(f6.3,1X),1X,3(g21.15, 1x) )'), i, j, k, r, g_r, g(r, alpha), g_r - g(r, alpha)
+        !print('(3(i3.1, 1X),1X,3(f6.3,1X),1X,3(g21.15, 1x) )'), i, j, k, r, g_r, g(r, alpha), g_r - g(r, alpha)
+        print*, i, j, k, g_r - g(r, alpha)
+
         g_r = g_r * f_rdr(1) * g_dr(1)
         f_rdr(1) = f_rdr(1) * g_2dr(1)
       end do
