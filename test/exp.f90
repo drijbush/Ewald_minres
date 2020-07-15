@@ -9,10 +9,10 @@ program test_exp
   Real( wp ), Parameter :: alpha = 0.4_wp
   Integer,    Parameter :: nSamp = 100
   Integer :: i
-  Real( wp ), Parameter :: gauss_exact(0:nSamp) = [(exp(alpha*(i*dr)**2), i = 0, nSamp)]
+  Real( wp ), Parameter :: gauss_exact(0:nSamp) = [(exp(alpha*alpha*(i*dr)**2), i = 0, nSamp)]
 
   g_dr = g(dr, alpha)
-  g_2dr = g(2.0_wp * dr, alpha)
+  g_2dr = g( Sqrt( 2.0_wp ) * dr, alpha)
   g_r = g(r, alpha)
   f_rdr = f(r, dr, alpha)
   f_drdr = f(dr, dr, alpha)
