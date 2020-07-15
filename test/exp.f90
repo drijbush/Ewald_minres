@@ -5,7 +5,7 @@ program test_exp
 
   Real( wp ), Dimension(3) :: r = 0.0_wp
   Real( wp ), Dimension(3) :: g_2dr, g_dr, g_r, f_rdr, f_drdr
-  Real( wp ), Dimension(3), Parameter :: dr = 0.01_wp
+  Real( wp ), Dimension(3), Parameter :: dr = [0.02_wp, 0.01_wp, 0.01_wp]
   Real( wp ), Parameter :: alpha = 0.4_wp
   Integer,    Parameter :: nSamp = 100
   Integer :: i
@@ -33,7 +33,7 @@ contains
     Real( wp ), Dimension(3), Intent( In    ) :: r
     Real( wp ), Intent( In    ) :: alpha
 
-    g = exp(alpha**2 * dot_product(r, r))
+    g = exp(- (alpha**2) * dot_product(r, r))
 
   end function g
 
@@ -43,7 +43,7 @@ contains
     Real( wp ), Dimension(3), Intent( In    ) :: dr
     Real( wp ), Intent( In    ) :: alpha
 
-    f = exp(alpha**2 * dot_product(r, dr))
+    f = exp(- (alpha**2) * dot_product(r, dr))
 
   end function f
 
@@ -52,7 +52,7 @@ contains
     Real( wp ), Dimension(3), Intent( In    ) :: r
     Real( wp ), Intent( In    ) :: alpha
 
-    exact = exp(alpha*alpha*dot_product(r,r))
+    exact = exp(- (alpha**2) * dot_product(r,r))
   end function exact
 
 
