@@ -284,9 +284,12 @@ Contains
        Call l%to_direct( f_point, r_point )
        ! Vector to the point of interest from the centre of the gaussin
        grid_vec = r_point - ri
-       ! Gaussian at that point times normalisation times the volume element
+
+       ! Gaussian at that point
        g_r = g(grid_vec, alpha)
-       f_rdr = [(f(grid_vec, dr(:,i), alpha), i1 = 1, 3)]
+       do i1 = 1,3
+         f_rdr(i1) = f(grid_vec, dr(:,i), alpha)
+       end do
 
        !
        ei(    i ) = 0.0_wp
