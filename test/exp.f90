@@ -5,11 +5,12 @@ program test_exp
 
   Real( wp ), Dimension(3) :: r_0 = 0.0_wp, r
   Real( wp ) :: g_r
-  Real( wp ), Dimension(3) :: g_r0, g_2dr, g_dr, f_rdr, f_rdr0, f_drdr
+  Real( wp ), Dimension(3) :: g_r0, g_2dr, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
+  Real( wp ), Dimension(3,3) :: g_drdr
   Real( wp ), Dimension(3,3), Parameter :: dr = Reshape([&
-       0.01_wp, 0.01_wp, 0.00_wp, &
-       0.00_wp, 0.01_wp, 0.00_wp, &
-       0.00_wp, 0.00_wp, 0.00_wp], [3,3])
+       0.01_wp, 0.01_wp, - 0.01_wp, &
+       0.02_wp, 0.02_wp, 0.05_wp, &
+       0.10_wp, -0.03_wp, 0.03_wp], [3,3])
   Real( wp ), Parameter :: alpha = 0.4_wp
   Integer,    Parameter :: nSamp = 10
   Integer :: i, j, k
@@ -27,42 +28,59 @@ program test_exp
     f_drdr(i) = f(dr(:, i), dr(:, i), alpha)
   end do
 
+  do j = 1, 3
+    do i = 1, 3
+      g_drdr(i, j) = f(dr(:,i), dr(:,j), alpha)
+    end do
+    print*, g_2dr(j)
+    print*, g_drdr(:,j)
+  end do
+
+
+
+  f_rdr00 = f_rdr0
   f_rdr = f_rdr0
 
   i=0;j=0;k=0
 
   print*, 'i   j   k     rx     ry     rz           apprx                exact                 diff'
   do k = 0, 4
-     i = 0; j = 0
-     r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
-     f_rdr(2) = f(r, dr(:, 2), alpha)
      do j = 0, 4
-       ! i = 0
-       ! r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
-       ! f_rdr(1) = f(r, dr(:, 1), alpha)
        do i = 0, 4
         r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
-        !print('(3(i3.1, 1X),1X,3(f6.3,1X),1X,3(g21.15, 1x) )'), i, j, k, r, g_r, g(r, alpha), g_r - g(r, alpha)
-        print*, i, j, k, g_r - g(r, alpha)
+        ! print('(3(i3.1, 1X),1X,3(f6.3,1X),1X,3(g21.15, 1x) )'), i, j, k, r, g_r, g(r, alpha), g_r - g(r, alpha)
+        print*, "INFO ",i, j, k, g_r - g(r, alpha)
+        print*, "F_RDR", f_rdr
+        print*, "EXACT", [(f(r, dr(:, i), alpha), i=1,3)]
+        print*, "DIFF ", f_rdr - [(f(r, dr(:, i), alpha), i=1,3)]
 
-        g_r = g_r * f_rdr(1) * g_dr(1)
-        f_rdr(1) = f_rdr(1) * g_2dr(1)
+        g_r = g_r * f_rdr(1) * g_drdr(1,1)
+        f_rdr = f_rdr * g_drdr(:, 1)
+        ! f_rdr(2) = f_rdr(2) * g_2dr(1)  ! Temp
+        ! f_rdr(3) = f_rdr(3) * g_2dr(1)  ! Temp
       end do
       g_r = g_r0(2)
-      g_r = g_r * f_rdr(2) * g_dr(2)
+      g_r = g_r * f_rdr0(2) * g_drdr(2,2)
       g_r0(2) = g_r
-      f_rdr(2) = f_rdr(2) * g_2dr(2)
-      f_rdr(1) = f_rdr0(1) * g_2dr(2)
-      f_rdr0(1) = f_rdr(1)
+      ! f_rdr(2) = f_rdr(2) * g_2dr(2)
+      f_rdr = f_rdr0 * g_drdr(:, 2)
+      f_rdr0 = f_rdr
+      ! f_rdr0(1) = f_rdr(1)
+      ! f_rdr(3) = f_rdr0(3) ! Temp
     end do
     g_r = g_r0(1)
-    g_r = g_r * f_rdr(3) * g_dr(3)
+    g_r = g_r * f_rdr0(3) * g_drdr(3,3)
     g_r0(1) = g_r
     g_r0(2) = g_r
-    f_rdr(3) = f_rdr(3) * g_2dr(3)
-    f_rdr(2) = f_rdr0(2) * g_2dr(3)
-    f_rdr0(2) = f_rdr(2)
-    ! f_rdr(1) = f_rdr0(1) * g_2dr(3)
+    f_rdr = f_rdr00 * g_drdr(:, 3)
+    f_rdr0 = f_rdr
+    f_rdr00 = f_rdr
+    ! f_rdr(3) = f_rdr0(3) ! Temp
+    ! f_rdr(3) = f_rdr(3) * g_2dr(3)
+    ! f_rdr0(3) = f_rdr(3) ! Temp
+    ! f_rdr(2) = f_rdr0(2) * g_2dr(3)
+    ! f_rdr0(2) = f_rdr(2)
+    ! f_rdr(1) = f_rdr00(1) * g_2dr(3)
     ! f_rdr0(1) = f_rdr(1)
   end do
 
