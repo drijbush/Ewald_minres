@@ -7,9 +7,9 @@ program test_exp
   Real( wp ) :: g_r
   Real( wp ), Dimension(3) :: g_r0, g_2dr, g_dr, f_rdr, f_rdr0, f_drdr
   Real( wp ), Dimension(3,3), Parameter :: dr = Reshape([&
-       0.10_wp, 0.15_wp, - 0.05_wp, &
-       0.30_wp, 0.13_wp,   0.01_wp, &
-       0.18_wp, 0.20_wp, - 0.10_wp], [3,3])
+       0.01_wp, 0.01_wp, 0.00_wp, &
+       0.00_wp, 0.01_wp, 0.00_wp, &
+       0.00_wp, 0.00_wp, 0.00_wp], [3,3])
   Real( wp ), Parameter :: alpha = 0.4_wp
   Integer,    Parameter :: nSamp = 10
   Integer :: i, j, k
@@ -37,9 +37,9 @@ program test_exp
      r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
      f_rdr(2) = f(r, dr(:, 2), alpha)
      do j = 0, 4
-       i = 0
-       r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
-       f_rdr(1) = f(r, dr(:, 1), alpha)
+       ! i = 0
+       ! r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
+       ! f_rdr(1) = f(r, dr(:, 1), alpha)
        do i = 0, 4
         r = r_0 + i*dr(:, 1) + j*dr(:, 2) + k*dr(:, 3)
         !print('(3(i3.1, 1X),1X,3(f6.3,1X),1X,3(g21.15, 1x) )'), i, j, k, r, g_r, g(r, alpha), g_r - g(r, alpha)
@@ -48,18 +48,22 @@ program test_exp
         g_r = g_r * f_rdr(1) * g_dr(1)
         f_rdr(1) = f_rdr(1) * g_2dr(1)
       end do
-      f_rdr(1) = f_rdr0(1)
       g_r = g_r0(2)
       g_r = g_r * f_rdr(2) * g_dr(2)
       g_r0(2) = g_r
       f_rdr(2) = f_rdr(2) * g_2dr(2)
+      f_rdr(1) = f_rdr0(1) * g_2dr(2)
+      f_rdr0(1) = f_rdr(1)
     end do
-    f_rdr(2) = f_rdr0(2)
     g_r = g_r0(1)
     g_r = g_r * f_rdr(3) * g_dr(3)
     g_r0(1) = g_r
     g_r0(2) = g_r
     f_rdr(3) = f_rdr(3) * g_2dr(3)
+    f_rdr(2) = f_rdr0(2) * g_2dr(3)
+    f_rdr0(2) = f_rdr(2)
+    ! f_rdr(1) = f_rdr0(1) * g_2dr(3)
+    ! f_rdr0(1) = f_rdr(1)
   end do
 
 contains
