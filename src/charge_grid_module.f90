@@ -182,7 +182,7 @@ Contains
 
   End Subroutine charge_grid_calculate
 
-  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, lb, ub, pot_grid, ei, f )
+  Subroutine charge_grid_forces( l, alpha, q, r, range_gauss, n_grid, pot_swapper, lb, ub, pot_grid, ei, force )
 
     Use lattice_module,           Only : lattice
     Use halo_setter_base_module,  Only : halo_setter_base_class
@@ -200,7 +200,7 @@ Contains
     Integer,    Dimension( 1:3        ), Intent( In    ) :: ub( 1:3 )
     Real( wp ), Dimension( lb( 1 ):ub( 1 ), lb( 2 ):ub( 2 ), lb( 3 ):ub( 3 ) ), Intent( In    ) :: pot_grid
     Real( wp ), Dimension( 1:         ), Intent(   Out ) :: ei
-    Real( wp ), Dimension( 1:, 1:     ), Intent(   Out ) :: f
+    Real( wp ), Dimension( 1:, 1:     ), Intent(   Out ) :: force
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: pot_with_halo
 
@@ -212,9 +212,11 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: r_point
     Real( wp ), Dimension( 1:3 ) :: grid_vec
 
+    Real( wp ), Dimension( 1:3 ) :: r_0
     Real( wp ), Dimension( 1:3, 1:3 ) :: dr
     Real( wp ) :: g_r
-    Real( wp ), Dimension( 1:3 ) :: g_dr, g_2dr, f_rdr, f_drdr
+    Real( wp ), Dimension(3) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
+    Real( wp ), Dimension(3,3) :: g_drdr
 
     Real( wp ) :: q_norm
     Real( wp ) :: qi_norm
@@ -238,14 +240,16 @@ Contains
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
 
     dr = l%get_direct_vectors()
-    Do i = 1, 3
-       dr( :, i ) = dr( :, i ) / n_grid( i )
-    End Do
+    Do i1 = 1, 3
+       dr( :, i1 ) = dr( :, i1 ) / n_grid( i1 )
+       g_dr(i1) = g(dr(:, i1), alpha)
+       f_drdr(i1) = f(dr(:, i1), dr(:, i1), alpha)
+    end do
 
-    do i = 1, 3
-      g_dr(i) = g(dr(:, i), alpha)
-      g_2dr(i) = g( Sqrt( 2.0_wp ) * dr(:, i), alpha)
-      f_drdr(i) = f(dr(:, i), dr(:, i), alpha)
+    do i2 = 1, 3
+      do i1 = 1, 3
+        g_drdr(i1, i2) = f(dr(:,i1), dr(:,i2), alpha)
+      end do
     end do
 
     stress = 0.0_wp
@@ -263,7 +267,7 @@ Contains
        Error Stop "halo filler problem in forces"
     End If
 
-    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, f, stress ) &
+    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, force, stress ) &
     !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
     !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
     ! Loop over atoms
@@ -282,38 +286,38 @@ Contains
        f_point = Real( i_atom_centre, wp ) / n_grid
        ! And fractional to real
        Call l%to_direct( f_point, r_point )
-       ! Vector to the point of interest from the centre of the gaussin
+       ! Vector to the point of interest from the centre of the gaussian
        grid_vec = r_point - ri
 
+       r_0 = grid_vec - sum(range_gauss*dr, dim=2)
+
        ! Gaussian at that point
-       g_r = g(grid_vec, alpha)
+       g_r = g(r_0, alpha)
+       g_r0 = g_r
+
        do i1 = 1,3
-         f_rdr(i1) = f(grid_vec, dr(:,i), alpha)
+         f_rdr(i1) = f(r_0, dr(:, i1), alpha)
        end do
+       f_rdr0 = f_rdr
+       f_rdr00 = f_rdr
 
        !
        ei(    i ) = 0.0_wp
-       f ( :, i ) = 0.0_wp
+       force ( :, i ) = 0.0_wp
        Do i3 = - range_gauss, range_gauss
           Do i2 = - range_gauss, range_gauss
              Do i1 = - range_gauss, range_gauss
-                i_atom_grid = [ i1, i2, i3 ]
-                ! The indices of the point in space
-                i_point = i_atom_centre + i_atom_grid
-                ! Transform to fractional coordinates
-                f_point = Real( i_point, wp ) / n_grid
-                ! And fractional to real
-                Call l%to_direct( f_point, r_point )
-                ! Vector to the point of interest from the centre of the gaussin
-                grid_vec = r_point - ri
+                g_r = g_r * f_rdr(1) * g_dr(1)
+                f_rdr = f_rdr * g_drdr(:, 1)
+
                 ! Gaussian at that point times normalisation times the volume element
-                g_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+                g_val = qi_norm * g_r
                 i_grid = i_point
                 ! Include the potential term
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
                 ei(    i ) = ei(    i ) + 0.5_wp *                            g_val
-                f ( :, i ) = f ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
+                force ( :, i ) = force ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
                 ! Stress term - TOTALLY UNTESTED AND PROBABLY INCOMPLETE
                 ! Need short range term due to differentiation of coulomb operator,
                 ! and SIC term
@@ -323,9 +327,24 @@ Contains
 !!$                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s
 !!$                   End Do
 !!$                End Do
-             End Do
+              End Do
+
+              g_r = g_r0(2) * f_rdr0(2) * g_dr(2)
+              g_r0(2) = g_r
+
+              f_rdr = f_rdr0 * g_drdr(:, 2)
+              f_rdr0 = f_rdr
+
           End Do
-       End Do
+
+          g_r = g_r0(1) * f_rdr00(3) * g_dr(3)
+          g_r0 = g_r
+
+          f_rdr = f_rdr00 * g_drdr(:, 3)
+          f_rdr0 = f_rdr
+          f_rdr00 = f_rdr
+
+        End Do
     End Do
     !$omp end do
     !$omp end parallel
