@@ -267,9 +267,10 @@ Contains
        Error Stop "halo filler problem in forces"
     End If
 
-    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, dV, ei, force, stress ) &
-    !$omp                          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
-    !$omp                                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
+    !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, &
+    !$omp                  dV, ei, force, stress ) &
+    !$omp          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
+    !$omp                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
     ! Loop over atoms
     ! Stress small array, size invariant, so reduction won't stack smash
     !$omp do reduction( +:stress )
@@ -291,7 +292,7 @@ Contains
 
        r_0 = grid_vec - sum(range_gauss*dr, dim=2)
 
-       ! Gaussian at that point
+       ! Gaussian at zero point
        g_r = g(r_0, alpha)
        g_r0 = g_r
 
@@ -301,22 +302,47 @@ Contains
        f_rdr0 = f_rdr
        f_rdr00 = f_rdr
 
+       r_0 = grid_vec
+
        !
        ei(    i ) = 0.0_wp
        force ( :, i ) = 0.0_wp
        Do i3 = - range_gauss, range_gauss
           Do i2 = - range_gauss, range_gauss
              Do i1 = - range_gauss, range_gauss
-                g_r = g_r * f_rdr(1) * g_dr(1)
-                f_rdr = f_rdr * g_drdr(:, 1)
 
                 ! Gaussian at that point times normalisation times the volume element
                 g_val = qi_norm * g_r
-                i_grid = i_point
+
+                g_r = g_r * f_rdr(1) * g_dr(1)
+                f_rdr = f_rdr * g_drdr(:, 1)
+
+                i_grid = Modulo(i_atom_centre + [i1, i2, i3], n_grid)
+
+                grid_vec = r_0 + i1 * dr(:,1) + i2 * dr(:,2) + i3 * dr(:,3)
+
+                ! print*, "NEW", i1, i2, i3, i_grid, g_val, grid_vec
+
+                ! i_atom_grid = [ i1, i2, i3 ]
+                ! ! The indices of the point in space
+                ! i_point = i_atom_centre + i_atom_grid
+                ! ! Transform to fractional coordinates
+                ! f_point = Real( i_point, wp ) / n_grid
+                ! ! And fractional to real
+                ! Call l%to_direct( f_point, r_point )
+                ! ! Vector to the point of interest from the centre of the gaussin
+                ! grid_vec = r_point - ri
+                ! ! Gaussian at that point times normalisation times the volume element
+                ! g_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+                ! ! Reflect grid indices into reference Cell
+                ! i_grid = Modulo( i_point, n_grid )
+
+                ! print*, "OLD", i1, i2, i3, i_grid, g_val, grid_vec
+
                 ! Include the potential term
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
-                ei(    i ) = ei(    i ) + 0.5_wp *                            g_val
+                ei(    i ) = ei(    i ) + 0.5_wp *                                    g_val
                 force ( :, i ) = force ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
                 ! Stress term - TOTALLY UNTESTED AND PROBABLY INCOMPLETE
                 ! Need short range term due to differentiation of coulomb operator,
