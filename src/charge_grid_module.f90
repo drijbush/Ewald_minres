@@ -50,9 +50,15 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: r_point
     Real( wp ), Dimension( 1:3 ) :: grid_vec
 
+    Real( wp ), Dimension( 1:3 ) :: r_0
+    Real( wp ), Dimension( 1:3, 1:3 ) :: dr
+    Real( wp ) :: g_r
+    Real( wp ), Dimension(3) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
+    Real( wp ), Dimension(3,3) :: g_drdr
+
     Real( wp ) :: q_norm
     Real( wp ) :: qi_norm
-    Real( wp ) :: q_val
+    Real( wp ) :: q_val, p_val
     Real( wp ) :: q_tot, q_av
 
     Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
@@ -74,6 +80,19 @@ Contains
     domain_hi = domain_lo + n_domain - 1
 
     q_norm = ( ( ( alpha * alpha ) / pi ) ** 1.5_wp )
+
+    dr = l%get_direct_vectors()
+    Do i1 = 1, 3
+       dr( :, i1 ) = dr( :, i1 ) / n_grid( i1 )
+       g_dr(i1) = g(dr(:, i1), alpha)
+       f_drdr(i1) = f(dr(:, i1), dr(:, i1), alpha)
+    end do
+
+    do i2 = 1, 3
+      do i1 = 1, 3
+        g_drdr(i1, i2) = f(dr(:,i1), dr(:,i2), alpha)
+      end do
+    end do
 
     ! What follows is a complete HACK to avoid gfortran stupidly putting
     ! arrays it is reducing on the stack and hence seg faulting once the
@@ -129,26 +148,74 @@ Contains
        i_atom_centre = Nint( fi * n_grid )
        i_g_lo = Max( i_atom_centre - range_gauss, domain_lo )
        i_g_hi = Min( i_atom_centre + range_gauss, domain_hi )
+
+       ! Transform to fractional coordinates
+       f_point = Real( i_atom_centre, wp ) / n_grid
+       ! And fractional to real
+       Call l%to_direct( f_point, r_point )
+       ! Vector to the point of interest from the centre of the gaussian
+       grid_vec = r_point - ri
+       
+       
+!       r_0 = i_g_lo(1) * dr(:,1) + i_g_lo(2) * dr(:,2) + i_g_lo(3) * dr(:,3)
+       r_0 = matmul(dr, i_atom_centre - i_g_lo)
+       r_0 = grid_vec - r_0
+
+       ! Gaussian at zero point
+       g_r = g(r_0, alpha)
+       g_r0 = g_r
+
+       do i1 = 1,3
+         f_rdr(i1) = f(r_0, dr(:, i1), alpha)
+       end do
+       f_rdr0 = f_rdr
+       f_rdr00 = f_rdr
+
+       r_0 = grid_vec
+
        Do i3 = i_g_lo( 3 ), i_g_hi( 3 )
           Do i2 = i_g_lo( 2 ), i_g_hi( 2 )
              Do i1 = i_g_lo( 1 ), i_g_hi( 1 )
-                ! The indices of the point in space
+                ! ! The indices of the point in space
                 i_point = [ i1, i2, i3 ]
                 ! Transform to fractional coordinates
-                f_point = Real( i_point, wp ) / n_grid
-                ! And fractional to real
-                Call l%to_direct( f_point, r_point )
-                ! Calculate the contribution to the total charge at the point
-                ! R_POINT due to the charge distribution I
-                grid_vec = r_point - ri
-                q_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+                ! f_point = Real( i_point, wp ) / n_grid
+                ! ! And fractional to real
+                ! Call l%to_direct( f_point, r_point )
+                ! ! Calculate the contribution to the total charge at the point
+                ! ! R_POINT due to the charge distribution I
+                ! grid_vec = r_point - ri
+                ! q_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+                ! print*, "OLD", i_point, q_val
+
                 ! And add in
+                q_val = qi_norm * g_r
+                ! print*, "NEW", i_point, q_val
+                g_r = g_r * f_rdr(1) * g_dr(1)
+                f_rdr = f_rdr * g_drdr(:, 1)
+
                 i_grid = i_point
+
                 q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) = &
                      q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) + q_val
-             End Do
+              End Do
+
+              g_r = g_r0(2) * f_rdr0(2) * g_dr(2)
+              g_r0(2) = g_r
+
+              f_rdr = f_rdr0 * g_drdr(:, 2)
+              f_rdr0 = f_rdr
+
           End Do
-       End Do
+
+          g_r = g_r0(1) * f_rdr00(3) * g_dr(3)
+          g_r0 = g_r
+
+          f_rdr = f_rdr00 * g_drdr(:, 3)
+          f_rdr0 = f_rdr
+          f_rdr00 = f_rdr
+
+        End Do
     End Do
     !$omp end do
     ! Synced here so OK to add up
@@ -317,27 +384,9 @@ Contains
                 g_r = g_r * f_rdr(1) * g_dr(1)
                 f_rdr = f_rdr * g_drdr(:, 1)
 
-                i_grid = Modulo(i_atom_centre + [i1, i2, i3], n_grid)
+                i_grid = i_atom_centre + [i1, i2, i3]
 
                 grid_vec = r_0 + i1 * dr(:,1) + i2 * dr(:,2) + i3 * dr(:,3)
-
-                ! print*, "NEW", i1, i2, i3, i_grid, g_val, grid_vec
-
-                ! i_atom_grid = [ i1, i2, i3 ]
-                ! ! The indices of the point in space
-                ! i_point = i_atom_centre + i_atom_grid
-                ! ! Transform to fractional coordinates
-                ! f_point = Real( i_point, wp ) / n_grid
-                ! ! And fractional to real
-                ! Call l%to_direct( f_point, r_point )
-                ! ! Vector to the point of interest from the centre of the gaussin
-                ! grid_vec = r_point - ri
-                ! ! Gaussian at that point times normalisation times the volume element
-                ! g_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
-                ! ! Reflect grid indices into reference Cell
-                ! i_grid = Modulo( i_point, n_grid )
-
-                ! print*, "OLD", i1, i2, i3, i_grid, g_val, grid_vec
 
                 ! Include the potential term
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
