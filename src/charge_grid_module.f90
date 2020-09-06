@@ -287,13 +287,12 @@ Contains
     Real( wp ) :: q_norm
     Real( wp ) :: g_r
     Real( wp ) :: qi_norm
+    Real( wp ) :: fix, fiy, fiz
     Real( wp ) :: g_val
     Real( wp ) :: dV
     Real( wp ) :: s
 
     Integer, Dimension( 1:3 ) :: i_atom_centre
-    Integer, Dimension( 1:3 ) :: i_atom_grid
-    Integer, Dimension( 1:3 ) :: i_point
     Integer, Dimension( 1:3 ) :: i_grid
 
     Integer :: n
@@ -337,7 +336,7 @@ Contains
     !$omp parallel shared( n, l, alpha, r, q, q_norm, n_grid, pot_grid, range_gauss, &
     !$omp                  dV, ei, force, stress ) &
     !$omp          private( i, i1, i2, i3, qi_norm, ri, fi, i_atom_centre,   &
-    !$omp                   i_atom_grid, i_point, f_point, r_point, grid_vec, g_val, i_grid, s )
+    !$omp                   f_point, r_point, grid_vec, g_val, i_grid, s )
     ! Loop over atoms
     ! Stress small array, size invariant, so reduction won't stack smash
     !$omp do reduction( +:stress )
@@ -373,7 +372,10 @@ Contains
 
        !
        ei(    i ) = 0.0_wp
-       force ( :, i ) = 0.0_wp
+!!$       force ( :, i ) = 0.0_wp
+       fix = 0.0_wp
+       fiy = 0.0_wp
+       fiz = 0.0_wp
        Do i3 = - range_gauss, range_gauss
           Do i2 = - range_gauss, range_gauss
              Do i1 = - range_gauss, range_gauss
@@ -381,18 +383,21 @@ Contains
                 ! Gaussian at that point times normalisation times the volume element
                 g_val = qi_norm * g_r
 
-                g_r = g_r * f_rdr(1) * g_dr(1)
-                f_rdr = f_rdr * g_drdr(:, 1)
+                g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
+                f_rdr = f_rdr * g_drdr( :, 1 )
 
-                i_grid = i_atom_centre + [i1, i2, i3]
+                i_grid = i_atom_centre + [ i1, i2, i3 ]
 
-                grid_vec = r_0 + i1 * dr(:,1) + i2 * dr(:,2) + i3 * dr(:,3)
+                grid_vec = r_0 + i1 * dr( :, 1 ) + i2 * dr( :, 2 ) + i3 * dr( :, 3 )
 
                 ! Include the potential term
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
                 ei    (    i ) = ei    (    i ) +            g_val
-                force ( :, i ) = force ( :, i ) - grid_vec * g_val
+!!$                force ( :, i ) = force ( :, i ) - grid_vec * g_val
+                fix = fix - grid_vec( 1 ) * g_val
+                fiy = fiy - grid_vec( 2 ) * g_val
+                fiz = fiz - grid_vec( 3 ) * g_val
                 ! Stress term - TOTALLY UNTESTED AND PROBABLY INCOMPLETE
                 ! Need short range term due to differentiation of coulomb operator,
                 ! and SIC term
@@ -404,18 +409,18 @@ Contains
 !!$                End Do
              End Do
 
-             g_r = g_r0(2) * f_rdr0(2) * g_dr(2)
-             g_r0(2) = g_r
+             g_r = g_r0( 2 ) * f_rdr0( 2 ) * g_dr( 2 )
+             g_r0( 2 ) = g_r
 
-             f_rdr = f_rdr0 * g_drdr(:, 2)
+             f_rdr = f_rdr0 * g_drdr( :, 2 )
              f_rdr0 = f_rdr
 
           End Do
 
-          g_r = g_r0(1) * f_rdr00(3) * g_dr(3)
+          g_r = g_r0( 1 ) * f_rdr00( 3 ) * g_dr( 3 )
           g_r0 = g_r
 
-          f_rdr = f_rdr00 * g_drdr(:, 3)
+          f_rdr = f_rdr00 * g_drdr( :, 3 )
           f_rdr0 = f_rdr
           f_rdr00 = f_rdr
 
@@ -423,7 +428,8 @@ Contains
 
        ! Apply appropriate scalings to force and energy
        ei   (    i ) = ei   (    i ) * 0.5_wp
-       force( :, i ) = force( :, i ) * 2.0_wp * alpha * alpha
+!!$       force( :, i ) = force( :, i ) * 2.0_wp * alpha * alpha
+       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha
        
     End Do particle_loop
     !$omp end do
