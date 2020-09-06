@@ -314,9 +314,9 @@ Contains
     end do
 
     do i2 = 1, 3
-      do i1 = 1, 3
-        g_drdr(i1, i2) = f(dr(:,i1), dr(:,i2), alpha)
-      end do
+       do i1 = 1, 3
+          g_drdr(i1, i2) = f(dr(:,i1), dr(:,i2), alpha)
+       end do
     end do
 
     stress = 0.0_wp
@@ -341,7 +341,7 @@ Contains
     ! Loop over atoms
     ! Stress small array, size invariant, so reduction won't stack smash
     !$omp do reduction( +:stress )
-    Do i = 1, n
+    particle_loop: Do i = 1, n
        ! Loop over points associated with atoms
        ! Find point nearest to the atom, and call this the centre for the atom grid
        ! Assumes atom in fractional 0 < ri < 1
@@ -364,7 +364,7 @@ Contains
        g_r0 = g_r
 
        do i1 = 1,3
-         f_rdr(i1) = f(r_0, dr(:, i1), alpha)
+          f_rdr(i1) = f(r_0, dr(:, i1), alpha)
        end do
        f_rdr0 = f_rdr
        f_rdr00 = f_rdr
@@ -391,8 +391,8 @@ Contains
                 ! Include the potential term
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
-                ei(    i ) = ei(    i ) + 0.5_wp *                                    g_val
-                force ( :, i ) = force ( :, i ) - 2.0_wp * alpha * alpha * grid_vec * g_val
+                ei    (    i ) = ei    (    i ) +            g_val
+                force ( :, i ) = force ( :, i ) - grid_vec * g_val
                 ! Stress term - TOTALLY UNTESTED AND PROBABLY INCOMPLETE
                 ! Need short range term due to differentiation of coulomb operator,
                 ! and SIC term
@@ -402,13 +402,13 @@ Contains
 !!$                      stress( i_alpha, i_beta ) = stress( i_alpha, i_beta ) + s
 !!$                   End Do
 !!$                End Do
-              End Do
+             End Do
 
-              g_r = g_r0(2) * f_rdr0(2) * g_dr(2)
-              g_r0(2) = g_r
+             g_r = g_r0(2) * f_rdr0(2) * g_dr(2)
+             g_r0(2) = g_r
 
-              f_rdr = f_rdr0 * g_drdr(:, 2)
-              f_rdr0 = f_rdr
+             f_rdr = f_rdr0 * g_drdr(:, 2)
+             f_rdr0 = f_rdr
 
           End Do
 
@@ -419,8 +419,13 @@ Contains
           f_rdr0 = f_rdr
           f_rdr00 = f_rdr
 
-        End Do
-    End Do
+       End Do
+
+       ! Apply appropriate scalings to force and energy
+       ei   (    i ) = ei   (    i ) * 0.5_wp
+       force( :, i ) = force( :, i ) * 2.0_wp * alpha * alpha
+       
+    End Do particle_loop
     !$omp end do
     !$omp end parallel
 

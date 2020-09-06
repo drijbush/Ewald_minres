@@ -34,6 +34,7 @@ Module FD_Laplacian_3d_module
 
      Procedure, Public :: apply            ! Should have deferred versions of
      Procedure, Public :: jacobi_sweep     ! these two in the lower level template
+     Procedure, Public :: get_stencil
   End type FD_Laplacian_3d
 
   Private
@@ -41,6 +42,9 @@ Module FD_Laplacian_3d_module
 Contains
 
   Subroutine init( FD, order, vecs, n_cache, orthog_tol )
+
+    Implicit None
+
     !!----------------------------------------------------
     !! Initialise Laplacian differentiator and calculate
     !! optimal blocking in cache.
@@ -80,6 +84,8 @@ Contains
 
       ! Calculate some cache blocking parameters
 
+      Implicit None
+
       Integer, Dimension( 1:3 ) :: nb
 
       Integer, Intent( In ) :: n_cache
@@ -96,7 +102,7 @@ Contains
       nb( 1 ) = nb( 1 ) + 1
 
       ! Use a strictly greater than relationship juts to allow
-      ! a little more leeway - the estimate cahce usage is probably slightly low ...
+      ! a little more leeway - the estimate cache usage is probably slightly low ...
       If( usage( n_grids, n_fd, nb, accuracy ) > n_cache ) Then
          nb( 1 ) = nb( 1 ) - 1
 
@@ -113,9 +119,12 @@ Contains
   End Subroutine init
 
   Subroutine reset_vecs( FD, vecs )
+
+    Implicit None
+
     !!-----------------------------------------------------------
     !! Calculate weights due to grid offset for non-orthogonal grids
-    !! This is separated from the init as this is the onlt part that needs
+    !! This is separated from the init as this is the only part that needs
     !! to be called if the vectors describing the grid change - hence the name
     !! reset_vecs
     !!
@@ -155,12 +164,15 @@ Contains
   End Subroutine reset_vecs
 
   Subroutine apply( FD, grid_lb, lap_lb, start, final, grid, laplacian )
+
+    Implicit None
+
     !!-----------------------------------------------------------
     !! Calculate the resulting derivative by applying sequentially
     !! to the precalculated cache-blocks
     !!
     !! Written by I.J. Bush
-    !!-----------------------------------------------------------
+    !!-----------------------------------------------------------    
     Class( FD_Laplacian_3d )                                      , Intent( In    ) :: FD
     Integer, Dimension( 1:3 )                                     , Intent( In    ) :: grid_lb !! lower bounds grid
     Integer, Dimension( 1:3 )                                     , Intent( In    ) :: lap_lb  !! lower bounds laplacian
@@ -337,6 +349,9 @@ Contains
   End Subroutine apply_block
 
   Subroutine jacobi_sweep( FD, grid_lb, lap_lb, start, final, jac_weight, grid, soln_in, soln_out )
+
+    Implicit None
+
     !!-----------------------------------------------------------
     !! Use the finite difference approximation of the laplacian operator
     !! to perform a sweep of the (weighted) Jacobi method
@@ -384,13 +399,14 @@ Contains
   Subroutine jacobi_sweep_block( s, lg, ll, nb, f, order, diag_inv, w1, w2, deriv_weights, &
        need_XY, need_XZ, need_YZ, jac_weight, grid, soln_in, soln_out )
 
+    Implicit None
+
     !!-----------------------------------------------------------
     !! Apply the FD laplacian operator to perform a Jacobi sweep on part of the grid
     !! An effort has been made to make sure all the data fits in cache
     !!
     !! Written by I.J. Bush
     !!-----------------------------------------------------------
-
     Integer, Dimension( 1:3 )       ,                      Intent( In    ) :: s             !! Where to start
     Integer, Dimension( 1:3 )       ,                      Intent( In    ) :: lg            !! Lower bound of grid array
     Integer, Dimension( 1:3 )       ,                      Intent( In    ) :: ll            !! Lower bound of laplacian array
@@ -535,7 +551,96 @@ Contains
 
   End Subroutine jacobi_sweep_block
 
+  Subroutine get_stencil( FD, stencil ) 
+
+    Implicit None
+
+    !!-----------------------------------------------------------
+    !! Return the FD stencil being used on the grid
+    !!
+    !! Written by I.J. Bush
+    !!-----------------------------------------------------------
+    Class( FD_Laplacian_3d ),                                    Intent( In    ) :: FD
+    Real( wp )              , Dimension( :, :, : ), Allocatable, Intent(   Out ) :: stencil
+
+    Real( wp ), Dimension( : ), Allocatable :: w1, w2
+
+    Real( wp ) :: c
+    
+    Integer :: order
+    Integer :: it, it1, it2
+    
+    order = FD%get_order()
+
+    Allocate( w1( -order:order ) )
+    Allocate( w2( -order:order ) )
+
+    w1 = FD%get_weight( 1 )
+    w2 = FD%get_weight( 2 )
+
+    Allocate( stencil( -order:order, -order:order, -order:order ) )
+
+    stencil = 0.0_wp
+
+    ! Central point - only  x^2, y^2, z^2 contribute
+    stencil( 0, 0, 0 ) = w2( 0 ) * ( FD%deriv_weights( XX ) + FD%deriv_weights( YY ) + FD%deriv_weights( ZZ ) )
+
+    ! x^2, y^2, z^2
+    Do it = 1, order
+       stencil( +it,   0,   0 ) = w2( it ) * FD%deriv_weights( XX )
+       stencil( -it,   0,   0 ) = w2( it ) * FD%deriv_weights( XX )
+       stencil(   0, +it,   0 ) = w2( it ) * FD%deriv_weights( YY )
+       stencil(   0, -it,   0 ) = w2( it ) * FD%deriv_weights( YY )
+       stencil(   0,   0, +it ) = w2( it ) * FD%deriv_weights( ZZ )
+       stencil(   0,   0, -it ) = w2( it ) * FD%deriv_weights( ZZ )
+    End Do
+
+    ! xy - note off diag do not contribute to the central point as
+    ! first derivs have zero weight at the grid point for central differences
+    If( FD%need_XY ) Then
+       Do it2 = 1, order
+          Do it1 = 1, order
+             c =  w1( it1 ) * w1( it2 ) * FD%deriv_weights( XY )
+             stencil( +it1, +it2, 0 ) = +c + stencil( +it1, +it2, 0 )
+             stencil( -it1, +it2, 0 ) = -c + stencil( -it1, +it2, 0 )
+             stencil( +it1, -it2, 0 ) = -c + stencil( +it1, -it2, 0 )
+             stencil( -it1, -it2, 0 ) = +c + stencil( -it1, -it2, 0 )
+          End Do
+       End Do
+    End If
+    
+    ! xz - note off diag do not contribute to the central point as
+    ! first derivs have zero weight at the grid point for central differences
+    If( FD%need_XZ ) Then
+       Do it2 = 1, order
+          Do it1 = 1, order
+             c =  w1( it1 ) * w1( it2 ) * FD%deriv_weights( XZ )
+             stencil( +it1, 0, +it2 ) = +c + stencil( +it1, 0, +it2 )
+             stencil( -it1, 0, +it2 ) = -c + stencil( -it1, 0, +it2 )
+             stencil( +it1, 0, -it2 ) = -c + stencil( +it1, 0, -it2 )
+             stencil( -it1, 0, -it2 ) = +c + stencil( -it1, 0, -it2 )
+          End Do
+       End Do
+    End If
+    
+    If( FD%need_YZ ) Then
+       Do it2 = 1, order
+          Do it1 = 1, order
+             c =  w1( it1 ) * w1( it2 ) * FD%deriv_weights( YZ )
+             stencil( 0, +it1, +it2 ) = +c + stencil( 0, +it1, +it2 )
+             stencil( 0, -it1, +it2 ) = -c + stencil( 0, -it1, +it2 )
+             stencil( 0, +it1, -it2 ) = -c + stencil( 0, +it1, -it2 )
+             stencil( 0, -it1, -it2 ) = +c + stencil( 0, -it1, -it2 )
+          End Do
+       End Do
+    End If
+    
+  End Subroutine get_stencil
+  
   Pure Function usage( n_grids, n_fd, nc_block, accuracy ) Result( reals )
+
+    Implicit None
+
     !!-----------------------------------------------------------
     !! Estimate memory usage of an algorithm that needs N_GRIDS grids
     !! without halos and N_FD grids with halos
