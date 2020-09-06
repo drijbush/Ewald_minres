@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Project name
-project(Ewald_minres Fortran)
+project(Ewald_minres Fortran C)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${Ewald_minres_BINARY_DIR})
 find_package(MPI REQUIRED)
 
