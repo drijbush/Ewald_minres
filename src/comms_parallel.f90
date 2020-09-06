@@ -140,8 +140,9 @@ Contains
     Type( mpi_datatype ) :: datatype
 
     Integer :: data_size
+    Integer :: error
 
-    Call mpi_sizeof( data, data_size )
+    Call mpi_sizeof( data, data_size, error )
     Call mpi_type_match_size( mpi_typeclass_real, data_size, datatype )
 
     comm_f08%mpi_val = c%communicator

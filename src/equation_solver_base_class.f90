@@ -68,15 +68,18 @@ Contains
     End If
 
     If( Present( comms ) ) Then
-       method%comms = comms
+!!$       method%comms = comms
+       Allocate( method%comms, Source = comms )
     End If
 
     If( Present( FD_operator ) ) Then
-       method%FD_operator = FD_operator
+!!$       method%FD_operator = FD_operator
+       Allocate( method%FD_operator, Source = FD_operator )
     End If
 
     If( Present( halo_swapper ) ) Then
-       method%halo_swapper = halo_swapper
+!!$       method%halo_swapper = halo_swapper
+       Allocate( method%halo_swapper, Source = halo_swapper )
     End If
 
   End Subroutine base_init

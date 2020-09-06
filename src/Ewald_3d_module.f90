@@ -368,13 +368,19 @@ Contains
     recipe%range_gauss        = range_gauss
     recipe%gauss_tol          = gauss_tol
     recipe%residual_tol       = residual_tol
-    recipe%comms              = comms
-    recipe%FD                 = FD
-    recipe%FD_swapper         = FD_swapper
-    recipe%pot_swapper        = pot_swapper
-    recipe%solver             = solver
-    recipe%grid_integrator    = grid_integrator
-
+!!$    recipe%comms              = comms
+!!$    recipe%FD                 = FD
+!!$    recipe%FD_swapper         = FD_swapper
+!!$    recipe%pot_swapper        = pot_swapper
+!!$    recipe%solver             = solver
+!!$    recipe%grid_integrator    = grid_integrator
+    Allocate( recipe%comms          , Source = comms           )
+    Allocate( recipe%FD             , Source = FD              )
+    Allocate( recipe%FD_swapper     , Source = FD_swapper      )
+    Allocate( recipe%pot_swapper    , Source = pot_swapper     )
+    Allocate( recipe%solver         , Source = solver          )
+    Allocate( recipe%grid_integrator, Source = grid_integrator )
+    
     ! And all is well with the world
     error = EWALD_3D_SUCCESS
 
@@ -444,27 +450,33 @@ Contains
     End If
 
     If( Present( comms ) ) Then
-       comms = recipe%comms
+!!$       comms = recipe%comms
+       Allocate( comms, Source = recipe%comms )
     End If
 
     If( Present( FD ) ) Then
-       FD = recipe%FD
+!!$       FD = recipe%FD
+       Allocate( FD, Source = recipe%FD )
     End If
 
     If( Present( FD_swapper ) ) Then
-       FD_swapper = recipe%FD_swapper
+!!$       FD_swapper = recipe%FD_swapper
+       Allocate( FD_swapper, Source = recipe%FD_swapper )
     End If
 
     If( Present( pot_swapper ) ) Then
-       pot_swapper = recipe%pot_swapper
+!!$       pot_swapper = recipe%pot_swapper
+       Allocate( pot_swapper, Source = recipe%pot_swapper )
     End If
 
     If( Present( solver ) ) Then
-       solver = recipe%solver
+!!$       solver = recipe%solver
+       Allocate( solver, Source = recipe%solver )
     End If
 
     If( Present( grid_integrator ) ) Then
-       grid_integrator = recipe%grid_integrator
+!!$       grid_integrator = recipe%grid_integrator
+       Allocate( grid_integrator, Source = recipe%grid_integrator )
     End If
 
   End Subroutine Ewald_3d_get_ingredients
