@@ -272,6 +272,8 @@ Contains
     Real( wp ), Dimension( :, :, : ), Allocatable :: pot_with_halo
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: stress
+    Real( wp ), Dimension( 1:3, 1:3 ) :: dr
+    Real( wp ), Dimension( 1:3, 1:3 ) :: g_drdr
 
     Real( wp ), Dimension( 1:3 ) :: ri
     Real( wp ), Dimension( 1:3 ) :: fi
@@ -280,12 +282,10 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: grid_vec
 
     Real( wp ), Dimension( 1:3 ) :: r_0
-    Real( wp ), Dimension( 1:3, 1:3 ) :: dr
-    Real( wp ) :: g_r
-    Real( wp ), Dimension(3) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
-    Real( wp ), Dimension(3,3) :: g_drdr
+    Real( wp ), Dimension( 1:3 ) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
 
     Real( wp ) :: q_norm
+    Real( wp ) :: g_r
     Real( wp ) :: qi_norm
     Real( wp ) :: g_val
     Real( wp ) :: dV
