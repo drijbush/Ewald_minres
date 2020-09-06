@@ -308,13 +308,13 @@ Contains
     dr = l%get_direct_vectors()
     Do i1 = 1, 3
        dr( :, i1 ) = dr( :, i1 ) / n_grid( i1 )
-       g_dr(i1) = g(dr(:, i1), alpha)
-       f_drdr(i1) = f(dr(:, i1), dr(:, i1), alpha)
+       g_dr( i1 ) = g( dr( :, i1 ), alpha )
+       f_drdr( i1 ) = f( dr( :, i1 ), dr( :, i1 ), alpha )
     end do
 
     do i2 = 1, 3
        do i1 = 1, 3
-          g_drdr(i1, i2) = f(dr(:,i1), dr(:,i2), alpha)
+          g_drdr( i1, i2 ) = f( dr( :, i1 ), dr( :, i2 ), alpha )
        end do
     end do
 
@@ -356,14 +356,14 @@ Contains
        ! Vector to the point of interest from the centre of the gaussian
        grid_vec = r_point - ri
 
-       r_0 = grid_vec - sum(range_gauss*dr, dim=2)
+       r_0 = grid_vec - sum( range_gauss * dr, dim=2 )
 
        ! Gaussian at zero point
-       g_r = g(r_0, alpha)
+       g_r = g( r_0, alpha )
        g_r0 = g_r
 
        do i1 = 1,3
-          f_rdr(i1) = f(r_0, dr(:, i1), alpha)
+          f_rdr( i1 ) = f( r_0, dr( :, i1 ), alpha )
        end do
        f_rdr0 = f_rdr
        f_rdr00 = f_rdr
@@ -381,7 +381,8 @@ Contains
              Do i1 = - range_gauss, range_gauss
 
                 ! Gaussian at that point times normalisation times the volume element
-                g_val = qi_norm * g_r
+!!$                g_val = qi_norm * g_r
+                g_val = g_r
 
                 g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
                 f_rdr = f_rdr * g_drdr( :, 1 )
@@ -427,9 +428,9 @@ Contains
        End Do
 
        ! Apply appropriate scalings to force and energy
-       ei   (    i ) = ei   (    i ) * 0.5_wp
+       ei   (    i ) = ei   (    i ) * 0.5_wp * qi_norm
 !!$       force( :, i ) = force( :, i ) * 2.0_wp * alpha * alpha
-       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha
+       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha  * qi_norm
        
     End Do particle_loop
     !$omp end do
