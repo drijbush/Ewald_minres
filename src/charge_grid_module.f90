@@ -280,6 +280,7 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: f_point
     Real( wp ), Dimension( 1:3 ) :: r_point
     Real( wp ), Dimension( 1:3 ) :: grid_vec
+    Real( wp ), Dimension( 1:3 ) :: gvx, gvy, gvz
 
     Real( wp ), Dimension( 1:3 ) :: r_0
     Real( wp ), Dimension( 1:3 ) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
@@ -372,16 +373,16 @@ Contains
 
        !
        ei(    i ) = 0.0_wp
-!!$       force ( :, i ) = 0.0_wp
        fix = 0.0_wp
        fiy = 0.0_wp
        fiz = 0.0_wp
        Do i3 = - range_gauss, range_gauss
+          gvz = i3 * dr( :, 3 )
           Do i2 = - range_gauss, range_gauss
+             gvy = i2 * dr( :, 2 )
              Do i1 = - range_gauss, range_gauss
 
                 ! Gaussian at that point times normalisation times the volume element
-!!$                g_val = qi_norm * g_r
                 g_val = g_r
 
                 g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
@@ -389,13 +390,14 @@ Contains
 
                 i_grid = i_atom_centre + [ i1, i2, i3 ]
 
-                grid_vec = r_0 + i1 * dr( :, 1 ) + i2 * dr( :, 2 ) + i3 * dr( :, 3 )
+!!$                grid_vec = r_0 + i1 * dr( :, 1 ) + i2 * dr( :, 2 ) + i3 * dr( :, 3 )
+                gvx = i1 * dr( :, 1 )
+                grid_vec = r_0 + gvx + gvy + gvz
 
                 ! Include the potential term
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
                 ! Add into the per particle energy and the force
-                ei    (    i ) = ei    (    i ) +            g_val
-!!$                force ( :, i ) = force ( :, i ) - grid_vec * g_val
+                ei( i ) = ei( i ) + g_val
                 fix = fix - grid_vec( 1 ) * g_val
                 fiy = fiy - grid_vec( 2 ) * g_val
                 fiz = fiz - grid_vec( 3 ) * g_val
@@ -429,8 +431,7 @@ Contains
 
        ! Apply appropriate scalings to force and energy
        ei   (    i ) = ei   (    i ) * 0.5_wp * qi_norm
-!!$       force( :, i ) = force( :, i ) * 2.0_wp * alpha * alpha
-       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha  * qi_norm
+       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha * qi_norm
        
     End Do particle_loop
     !$omp end do
