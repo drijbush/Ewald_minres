@@ -84,15 +84,15 @@ Contains
     dr = l%get_direct_vectors()
     Do i1 = 1, 3
        dr( :, i1 ) = dr( :, i1 ) / n_grid( i1 )
-       g_dr(i1) = g(dr(:, i1), alpha)
-       f_drdr(i1) = f(dr(:, i1), dr(:, i1), alpha)
-    end do
+       g_dr( i1 ) = g( dr( :, i1 ), alpha )
+       f_drdr( i1 ) = f( dr( :, i1 ), dr( :, i1 ), alpha )
+    End Do
 
-    do i2 = 1, 3
-      do i1 = 1, 3
-        g_drdr(i1, i2) = f(dr(:,i1), dr(:,i2), alpha)
-      end do
-    end do
+    Do i2 = 1, 3
+      Do i1 = 1, 3
+        g_drdr( i1, i2 ) = f( dr( :, i1 ), dr( :, i2 ), alpha )
+      End Do
+    End Do
 
     ! What follows is a complete HACK to avoid gfortran stupidly putting
     ! arrays it is reducing on the stack and hence seg faulting once the
@@ -158,16 +158,16 @@ Contains
        
        
 !       r_0 = i_g_lo(1) * dr(:,1) + i_g_lo(2) * dr(:,2) + i_g_lo(3) * dr(:,3)
-       r_0 = matmul(dr, i_atom_centre - i_g_lo)
+       r_0 = Matmul( dr, i_atom_centre - i_g_lo )
        r_0 = grid_vec - r_0
 
        ! Gaussian at zero point
        g_r = g(r_0, alpha)
        g_r0 = g_r
 
-       do i1 = 1,3
+       Do i1 = 1,3
          f_rdr(i1) = f(r_0, dr(:, i1), alpha)
-       end do
+       End Do
        f_rdr0 = f_rdr
        f_rdr00 = f_rdr
 
@@ -190,9 +190,10 @@ Contains
 
                 ! And add in
                 q_val = qi_norm * g_r
-                ! print*, "NEW", i_point, q_val
-                g_r = g_r * f_rdr(1) * g_dr(1)
-                f_rdr = f_rdr * g_drdr(:, 1)
+
+                ! Update gaussian value via recurrence
+                g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
+                f_rdr = f_rdr * g_drdr( :, 1 )
 
                 i_grid = i_point
 
@@ -200,18 +201,18 @@ Contains
                      q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) + q_val
               End Do
 
-              g_r = g_r0(2) * f_rdr0(2) * g_dr(2)
-              g_r0(2) = g_r
+              g_r = g_r0( 2 ) * f_rdr0( 2 ) * g_dr( 2 )
+              g_r0( 2 ) = g_r
 
-              f_rdr = f_rdr0 * g_drdr(:, 2)
+              f_rdr = f_rdr0 * g_drdr( :, 2 )
               f_rdr0 = f_rdr
 
           End Do
 
-          g_r = g_r0(1) * f_rdr00(3) * g_dr(3)
+          g_r = g_r0( 1 ) * f_rdr00( 3 ) * g_dr( 3 )
           g_r0 = g_r
 
-          f_rdr = f_rdr00 * g_drdr(:, 3)
+          f_rdr = f_rdr00 * g_drdr( :, 3 )
           f_rdr0 = f_rdr
           f_rdr00 = f_rdr
 
@@ -254,7 +255,7 @@ Contains
     Use lattice_module,           Only : lattice
     Use halo_setter_base_module,  Only : halo_setter_base_class
 
-    Implicit none
+    Implicit None
 
     Type( lattice ),                     Intent( In    ) :: l
     Real( wp ),                          Intent( In    ) :: alpha
@@ -311,13 +312,13 @@ Contains
        dr( :, i1 ) = dr( :, i1 ) / n_grid( i1 )
        g_dr( i1 ) = g( dr( :, i1 ), alpha )
        f_drdr( i1 ) = f( dr( :, i1 ), dr( :, i1 ), alpha )
-    end do
+    End Do
 
-    do i2 = 1, 3
-       do i1 = 1, 3
+    Do i2 = 1, 3
+       Do i1 = 1, 3
           g_drdr( i1, i2 ) = f( dr( :, i1 ), dr( :, i2 ), alpha )
-       end do
-    end do
+       End Do
+    End Do
 
     stress = 0.0_wp
 
@@ -328,7 +329,7 @@ Contains
     !           the upper edge of the domain. But need to think this through. An alternative
     !           would be to use Floor instead of Nint in finding the centre grid point below,
     !           but this would be less accurate
-    Call pot_swapper%allocate( lb, ub, range_gauss + 1, pot_with_halo )
+    Call pot_swapper%Allocate( lb, ub, range_gauss + 1, pot_with_halo )
     Call pot_swapper%fill( range_gauss + 1, Lbound( pot_with_halo ), pot_grid, pot_with_halo, error )
     If( error /= 0 ) Then
        Error Stop "halo filler problem in forces"
@@ -357,15 +358,15 @@ Contains
        ! Vector to the point of interest from the centre of the gaussian
        grid_vec = r_point - ri
 
-       r_0 = grid_vec - sum( range_gauss * dr, dim=2 )
+       r_0 = grid_vec - Sum( range_gauss * dr, dim = 2 )
 
        ! Gaussian at zero point
        g_r = g( r_0, alpha )
        g_r0 = g_r
 
-       do i1 = 1,3
+       Do i1 = 1,3
           f_rdr( i1 ) = f( r_0, dr( :, i1 ), alpha )
-       end do
+       End Do
        f_rdr0 = f_rdr
        f_rdr00 = f_rdr
 
@@ -382,20 +383,21 @@ Contains
              gvy = i2 * dr( :, 2 )
              Do i1 = - range_gauss, range_gauss
 
-                ! Gaussian at that point times normalisation times the volume element
+                ! Gaussian at that point 
                 g_val = g_r
 
+                ! Update the guassian by recurrence relations
                 g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
                 f_rdr = f_rdr * g_drdr( :, 1 )
 
-                i_grid = i_atom_centre + [ i1, i2, i3 ]
-
-!!$                grid_vec = r_0 + i1 * dr( :, 1 ) + i2 * dr( :, 2 ) + i3 * dr( :, 3 )
+                ! Vector from centre to the grid point
                 gvx = i1 * dr( :, 1 )
                 grid_vec = r_0 + gvx + gvy + gvz
 
                 ! Include the potential term
+                i_grid = i_atom_centre + [ i1, i2, i3 ]
                 g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
+
                 ! Add into the per particle energy and the force
                 ei( i ) = ei( i ) + g_val
                 fix = fix - grid_vec( 1 ) * g_val
@@ -480,7 +482,7 @@ Contains
        range_gauss( i_dir ) = 1
        Do
           grid_vec = ( range_gauss( i_dir ) * G ) / ( n_grid( i_dir ) )
-          q_val = q_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
+          q_val = q_norm * Exp( - alpha * alpha * Dot_Product( grid_vec, grid_vec ) )
           If( q_val < 1e-15_wp ) Exit
           range_gauss( i_dir ) = range_gauss( i_dir ) + 1
        End Do
@@ -521,29 +523,29 @@ Contains
     dir_vecs = l%get_direct_vectors()
 
     Do i = 1, 3
-       Gsq = Dot_product( dir_vecs( :, i ), dir_vecs( :, i ) )
+       Gsq = Dot_Product( dir_vecs( :, i ), dir_vecs( :, i ) )
        n_grid( i ) = Ceiling( Sqrt( Gsq ) / dr( i ) )
     End Do
 
   End Subroutine charge_grid_get_n_grid
 
-  function g(r, alpha)
+  Function g(r, alpha)
     Real( wp ) :: g
     Real( wp ), Dimension(3), Intent( In    ) :: r
     Real( wp ), Intent( In    ) :: alpha
 
-    g = exp(-alpha**2 * dot_product(r, r))
+    g = Exp(-alpha**2 * dot_Product(r, r))
 
-  end function g
+  End Function g
 
-  function f(r, dr, alpha)
+  Function f(r, dr, alpha)
     Real( wp ) :: f
     Real( wp ), Dimension(3), Intent( In    ) :: r
     Real( wp ), Dimension(3), Intent( In    ) :: dr
     Real( wp ), Intent( In    ) :: alpha
 
-    f = exp(-2.0_wp * alpha**2 * dot_product(r, dr))
+    f = Exp(-2.0_wp * alpha**2 * dot_Product(r, dr))
 
-  end function f
+  End Function f
 
 End Module charge_grid_module
