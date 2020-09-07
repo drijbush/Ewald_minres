@@ -134,6 +134,8 @@ Program test_mpi
         which_solver = 2
      Case( 'WJAC' )
         which_solver = 3
+     Case( 'PFMG' )
+        which_solver = 4
      Case Default
         Error Stop 'Unrecongnized solver'
      End Select

@@ -167,6 +167,7 @@ Contains
     Use equation_solver_minres_module,             Only : equation_solver_minres
     Use equation_solver_conjugate_gradient_module, Only : equation_solver_conjugate_gradient
     Use equation_solver_weighted_jacobi_module,    Only : equation_solver_weighted_jacobi
+    Use equation_solver_hypre_pfmg_module,         Only : equation_solver_hypre_pfmg
 
     Use symetrically_screened_poisson_module, Only : ssp_long_range
 
@@ -348,6 +349,9 @@ Contains
     Case( "WJAC", "wjac" )
        max_iter = 80
        Allocate( equation_solver_weighted_jacobi :: solver )
+    Case( "PFMG", "pfmg" )
+       max_iter = 1000
+       Allocate( equation_solver_hypre_pfmg :: solver )       
     Case Default
        error = EWALD_3D_INIT_UNKNOWN_EQUATION_SOLVER
        Return
@@ -355,6 +359,13 @@ Contains
     call solver%init( max_iter = max_iter, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
 !!$    call solver%init( max_iter = max_iter, comms = comms, FD_operator = FD, halo_swapper = FD_swapper, precon = precon  )
 
+    ! HACK!!!!
+    Select Type( solver )
+    Class is ( equation_solver_hypre_pfmg )
+       Call solver%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD )
+    End Select
+       
+    
 
     ! Set up the quadrature method
     Allocate( quadrature_trapezium_rule :: grid_integrator )

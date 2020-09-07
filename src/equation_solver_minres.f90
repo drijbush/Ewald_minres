@@ -39,7 +39,7 @@ Module equation_solver_minres_module
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_minres
    Contains
      Procedure, Public :: solve => minres
-  End type equation_solver_minres
+  End Type equation_solver_minres
 
   Private
 
