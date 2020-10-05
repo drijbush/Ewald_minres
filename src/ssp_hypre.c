@@ -14,16 +14,26 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
   /* Set up the grid, stencil and matrix */
 
   struct ssp_hypre_struct *data_for_hypre_struct;
-
-  double *values;
   
+  int num_ghost[ 6 ];
   int ele[ 3 ];
 
-  int i;
-  int n_point;
-  int i_stencil, m;
-  int num_ghost[ 6 ] = { 6, 6, 6, 6, 6, 6 };
+  int max_stencil;
+  int i, j;
 
+  /* Find the halo size */
+  max_stencil = -1;
+  for( i = 0; i < n_stencil; i++ ) {
+    for( j = 0; j < 3; j++ ) {
+      if( abs( stencil_elements[ i ][ j ] ) > max_stencil ) {
+	max_stencil = abs( stencil_elements[ i ][ j ] );
+      }
+    }
+  }
+  for( i = 0; i < 6; i++ ) {
+    num_ghost[ i ] = max_stencil;
+  }
+  
   data_for_hypre_struct = malloc( sizeof( *data_for_hypre_struct ) );
 
   data_for_hypre_struct -> comm = MPI_Comm_f2c( comm );
