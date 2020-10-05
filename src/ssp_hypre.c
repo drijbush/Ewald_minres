@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "mpi.h"
 
@@ -14,9 +15,14 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
 
   struct ssp_hypre_struct *data_for_hypre_struct;
 
+  double *values;
+  
   int ele[ 3 ];
 
   int i;
+  int n_point;
+  int i_stencil, m;
+  int num_ghost[ 6 ] = { 6, 6, 6, 6, 6, 6 };
 
   data_for_hypre_struct = malloc( sizeof( *data_for_hypre_struct ) );
 
@@ -24,8 +30,10 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
 
   /* Note reverse order of dimensions to cope with C <-> Fortran mappings */
   for( i = 0; i < 3; i++ ) {
-    data_for_hypre_struct -> lb[ i ] = lb[ 2 - i ];
-    data_for_hypre_struct -> ub[ i ] = ub[ 2 - i ];
+    /*        data_for_hypre_struct -> lb[ i ] = lb[ 2 - i ];
+	      data_for_hypre_struct -> ub[ i ] = ub[ 2 - i ];  */
+    data_for_hypre_struct -> lb[ i ] = lb[ i ];
+    data_for_hypre_struct -> ub[ i ] = ub[ i ]; 
   }
 
   HYPRE_StructGridCreate( data_for_hypre_struct -> comm, 3,
@@ -33,23 +41,22 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
   HYPRE_StructGridSetPeriodic( data_for_hypre_struct -> grid, n );
   HYPRE_StructGridSetExtents( data_for_hypre_struct -> grid,
 			      data_for_hypre_struct -> lb, data_for_hypre_struct -> ub );
+  HYPRE_StructGridSetNumGhost( data_for_hypre_struct -> grid, num_ghost );
   HYPRE_StructGridAssemble( data_for_hypre_struct -> grid );
 
   /* The stencil */
   HYPRE_StructStencilCreate( 3, n_stencil, &( data_for_hypre_struct -> stencil ) );
   data_for_hypre_struct -> stencil_element_list =
-    malloc( n_stencil * sizeof( *( data_for_hypre_struct -> stencil_element_list ) ) );
+      malloc( n_stencil * sizeof( *( data_for_hypre_struct -> stencil_element_list ) ) );
   for( i = 0; i < n_stencil; i++ ) {
-    /* Note reverse order of dimensions to cope with C <-> Fortran mappings */
-    ele[ 0 ] = stencil_elements[ i ][ 2 ];
+    ele[ 0 ] = stencil_elements[ i ][ 0 ];
     ele[ 1 ] = stencil_elements[ i ][ 1 ];
-    ele[ 2 ] = stencil_elements[ i ][ 0 ];
-    printf( "%d %d %d %d %24.12f\n", i, ele[ 0 ], ele[ 1 ], ele[ 2 ], stencil_values[ i ] );
+    ele[ 2 ] = stencil_elements[ i ][ 2 ]; 
     data_for_hypre_struct -> stencil_element_list[ i ]= i;
     HYPRE_StructStencilSetElement( data_for_hypre_struct -> stencil, i, ele );
+    printf( "ele %d %d %d %d %20.12f\n", i, ele[ 0 ], ele[ 1 ], ele[ 2 ], stencil_values[ i ] );
   }
 
-  printf( "%24.12f %24.12f %24.12f\n", stencil_values[ 0 ], stencil_values[ 1 ], stencil_values[ 234 ] );
   /* The matrix */
   HYPRE_StructMatrixCreate( data_for_hypre_struct -> comm, data_for_hypre_struct -> grid, data_for_hypre_struct -> stencil,
 			    &( data_for_hypre_struct -> A ) );
@@ -58,8 +65,10 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
 
   /* Set the values for the matrix */
   /* The stencil is constant across the whole grid */
-  HYPRE_StructMatrixSetConstantEntries( data_for_hypre_struct -> A, n_stencil, data_for_hypre_struct -> stencil_element_list );
-  HYPRE_StructMatrixSetConstantValues ( data_for_hypre_struct -> A, n_stencil, data_for_hypre_struct -> stencil_element_list, stencil_values );
+  
+  HYPRE_StructMatrixSetConstantEntries( data_for_hypre_struct -> A, n_stencil, data_for_hypre_struct -> stencil_element_list ); 
+  HYPRE_StructMatrixSetConstantValues ( data_for_hypre_struct -> A, n_stencil, data_for_hypre_struct -> stencil_element_list, stencil_values ); 
+
 
   /* Assemble the matrix - blocking */
   HYPRE_StructMatrixAssemble( data_for_hypre_struct -> A );
@@ -76,6 +85,8 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructVector b;
   HYPRE_StructVector x;
   HYPRE_StructSolver solver;
+
+  int retval;
   
   /* Assume everything worked for the moment */
   *info = 0;
@@ -92,6 +103,7 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   /* Create the initial guess at solution */
   HYPRE_StructVectorCreate( data_for_hypre_struct -> comm, data_for_hypre_struct -> grid, &x );
   /* Put the initial guess from the Fortran array into the HYPRE object */
+  printf( "!!!%f\n", soln[ 0 ][ 0 ][ 0 ] );
   HYPRE_StructVectorInitialize( x );
   HYPRE_StructVectorSetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
   /* Assemble the initial guess */
@@ -99,23 +111,33 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructVectorPrint( "guess.dat", x, 1 );
 
   /* Create the solver */
-  HYPRE_StructPFMGCreate( data_for_hypre_struct -> comm, &solver );
+  HYPRE_StructGMRESCreate( data_for_hypre_struct -> comm, &solver );
 
   /* Set up the solver */
-  HYPRE_StructPFMGSetup( solver, data_for_hypre_struct -> A, b, x );
+  HYPRE_StructGMRESSetTol( solver, 5.0e-8 );
+  HYPRE_StructGMRESSetLogging( solver, 100 );
+  HYPRE_StructGMRESSetPrintLevel(solver, 20);
+  HYPRE_StructGMRESSetMaxIter( solver, 1000 );
+  /* HYPRE_StructGMRESSetRAPType( solver,  1 ); */
+   printf( "setup\n" );
+  retval = HYPRE_StructGMRESSetup( solver, data_for_hypre_struct -> A, b, x );
+  printf( "solve 1 %d\n", retval );
 
   /* Solve the equations */
-  HYPRE_StructPFMGSolve( solver, data_for_hypre_struct -> A, b, x );
+  retval = HYPRE_StructGMRESSolve( solver, data_for_hypre_struct -> A, b, x );
+  printf( "solve 2 %d\n", retval );
 
   /* Get the solution from the HYPRE object into the Fortran array */
-  HYPRE_StructVectorGetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
+  retval = HYPRE_StructVectorGetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
+  printf( "extract soln %d\n", retval );
 
   /* Get some interesting data */
-  HYPRE_StructPFMGGetNumIterations( solver, n_iter );
-  HYPRE_StructPFMGGetFinalRelativeResidualNorm( solver, residual );
+  HYPRE_StructGMRESGetNumIterations( solver, n_iter );
+  retval = HYPRE_StructGMRESGetFinalRelativeResidualNorm( solver, residual );
+  printf( "Residual %d %f\n", retval, *residual );
 
   /* Destroy the solver */
-  HYPRE_StructPFMGDestroy( solver );
+  HYPRE_StructGMRESDestroy( solver );
   
   /* Destroy the vectors */
   HYPRE_StructVectorDestroy( x );

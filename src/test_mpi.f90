@@ -449,7 +449,9 @@ Program test_mpi
      Close( 11 )
      Write( *, * ) 'Energy from summing per particle contributions ', ei_full
   End If
-
+  Call mpi_finalize( error )
+  Stop
+  
   ! See if we get the same answer with a restart
   recip_E_ssp   = 0.0_wp
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
