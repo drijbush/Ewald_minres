@@ -115,8 +115,8 @@ Contains
           End Do
        End Do
     End Do
-    Write( *, * ) stencil_values( 1:10 )
 
+    Write( *, * ) '!! ', n, lb, ub
     method%hypre_objects = ssp_hypre_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
 
   End Subroutine pfmg_init
@@ -145,7 +145,7 @@ Contains
 
     n = Ubound( b ) - Lbound( b ) + 1
 
-    x = 0.1_wp
+    x = 0.0_wp
     Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), b, x, itn, rnorm, istop )
 
     istop_message = "Who knows?"

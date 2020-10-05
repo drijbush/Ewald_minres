@@ -60,7 +60,7 @@ Module Ewald_3d_module
   Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver
 !!$  Character( Len = * ), Parameter :: default_solver       = "CG"
 !!$  Character( Len = * ), Parameter :: default_solver       = "wjac"
-  Real( wp ),           Parameter :: residual_tol_default = 1e-7_wp ! Tolerance on residual in equation solver
+  Real( wp ),           Parameter :: residual_tol_default = 1e-12_wp ! Tolerance on residual in equation solver
 
 Contains
 
