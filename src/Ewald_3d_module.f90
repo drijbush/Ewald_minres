@@ -56,7 +56,7 @@ Module Ewald_3d_module
   ! Default values for the methods parameters
   Real( wp ),           Parameter :: gauss_tol_default    = 1e-15_wp ! Value for cutting of the gaussian
   Integer,              Parameter :: range_gauss_default  = 12       ! Number of points to grid one side of a gaussian
-  Integer,              Parameter :: FD_order_default     = 12       ! Default order of the finite difference approximation
+  Integer,              Parameter :: FD_order_default     = 2        ! Default order of the finite difference approximation
   Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver
 !!$  Character( Len = * ), Parameter :: default_solver       = "CG"
 !!$  Character( Len = * ), Parameter :: default_solver       = "wjac"
@@ -188,6 +188,8 @@ Contains
     Class( comms_base_class                  ), Allocatable :: comms
     Class( FD_template                       ), Allocatable :: FD
     Class( halo_setter_base_class            ), Allocatable :: FD_swapper
+    Class( FD_template                       ), Allocatable :: FD_precon
+    Class( halo_setter_base_class            ), Allocatable :: FD_precon_swapper
     Class( halo_setter_base_class            ), Allocatable :: pot_swapper
     Class( equation_solver_precon_base_class ), Allocatable :: solver
     Class( equation_solver_precon_base_class ), Allocatable :: precon
@@ -331,9 +333,39 @@ Contains
     ! Set up the equation solver
     ! First decide on the accuracy
     residual_tol = residual_tol_default
+
     ! TESTING PRECONDITIONER
-    Allocate( equation_solver_weighted_jacobi :: precon )
-    Call precon%init( max_iter = 3, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
+!!$    Allocate( equation_solver_weighted_jacobi :: precon )
+!!$    Call precon%init( max_iter = 3, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
+    Allocate( FD_Laplacian_3D :: FD_precon )
+    ! Hack ... All init methods need a rethink
+    Select Type( FD_precon )
+    Class is ( FD_Laplacian_3D )
+       Call FD_precon%init( 2, dGrid_vecs )
+    End Select
+    If( Present( communicator ) ) Then
+       Allocate( halo_parallel_setter :: FD_precon_swapper )
+    Else
+       Allocate( halo_serial_setter :: FD_precon_swapper )
+    End If
+    Select Type( FD_precon_swapper )
+    Class is ( halo_parallel_setter )
+       Call FD_precon_swapper%init ( n_grid_domain, FD_precon%get_order(), loc_communicator, error )
+    Class is ( halo_serial_setter )
+       Call FD_precon_swapper%init( error )
+    End Select
+    Allocate( equation_solver_hypre_pfmg :: precon )
+    Call precon%init( comms = comms, FD_operator = FD_precon, halo_swapper = FD_precon_swapper  )
+    ! HACK!!!!
+    Select Type( precon )
+    Class is ( equation_solver_hypre_pfmg )
+       Call precon%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD_precon )
+    End Select
+
+
+
+
+
     If( Present( equation_solver ) ) Then
        loc_equation_solver = equation_solver
     Else
