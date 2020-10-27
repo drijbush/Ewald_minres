@@ -80,11 +80,11 @@ Contains
     ! And solve  Possion equation on the grid by FDs
     Call System_clock( start, rate )
     ! Solve on delta if the old grid is present
-!!$    If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
-!!$       rhs = - 4.0_wp * pi * ( q_grid - q_grid_old )
-!!$    Else
+    If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
+       rhs = - 4.0_wp * pi * ( q_grid - q_grid_old )
+    Else
        rhs = - 4.0_wp * pi * q_grid
-!!$    End If
+    End If
     Call solver%solve( Lbound( q_grid ), Ubound( q_grid ), rhs, rtol, pot_grid, istop, istop_message, itn, rnorm )
     ! If delta solve add back in old potential
     If( Present( q_grid_old ) .And. Present( pot_grid_old ) ) Then
