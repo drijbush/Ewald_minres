@@ -89,6 +89,40 @@ Module equation_solver_hypre_pfmg_module
        Type( c_ptr ), Intent( In ), Value :: hypre_objects
      End Subroutine ssp_hypre_semi_struct_free
      
+     Function ssp_hypre_ij_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values ) &
+          Result( hypre_objects ) Bind( C )
+       Use, Intrinsic :: iso_C_binding, Only : c_ptr, c_int, c_double
+       Implicit None
+       Type   ( c_ptr    )                                                     :: hypre_objects
+       Integer( c_int    )                               , Intent( In ), Value :: comm
+       Integer( c_int    ), Dimension( 1:3 )             , Intent( In )        :: n
+       Integer( c_int    ), Dimension( 1:3 )             , Intent( In )        :: lb
+       Integer( c_int    ), Dimension( 1:3 )             , Intent( In )        :: ub
+       Integer( c_int    )                               , Intent( In ), Value :: n_stencil
+       Integer( c_int    ), Dimension( 1:3, 1:n_stencil ), Intent( In )        :: stencil_elements
+       Real   ( c_double ), Dimension(      1:n_stencil ), Intent( In )        :: stencil_values
+     End Function ssp_hypre_ij_setup
+
+     Subroutine ssp_hypre_ij_solve( hypre_objects, n1, n2, n3, b, x, n_iter, residual, info ) Bind( C )
+       Use, Intrinsic :: iso_C_binding, Only : c_ptr, c_int, c_double
+       Implicit None
+       Type   ( c_ptr    )                               , Intent( In    ), Value :: hypre_objects
+       Integer( c_int    )                               , Intent( In    ), Value :: n1
+       Integer( c_int    )                               , Intent( In    ), Value :: n2
+       Integer( c_int    )                               , Intent( In    ), Value :: n3
+       Real   ( c_double ), Dimension( 1:n1, 1:n2, 1:n3 ), Intent( In    )        :: b
+       Real   ( c_double ), Dimension( 1:n1, 1:n2, 1:n3 ), Intent( InOut )        :: x
+       Integer( c_int    )                               , Intent(   Out )        :: n_iter
+       Real   ( c_double )                               , Intent(   Out )        :: residual
+       Integer( c_int    )                               , Intent(   Out )        :: info
+     End Subroutine ssp_hypre_ij_solve
+
+     Subroutine ssp_hypre_ij_free( hypre_objects ) Bind( C )
+       Use, Intrinsic :: iso_C_binding, Only : c_ptr
+       Implicit None
+       Type( c_ptr ), Intent( In ), Value :: hypre_objects
+     End Subroutine ssp_hypre_ij_free
+     
   End Interface
 
 Contains
@@ -153,6 +187,7 @@ Contains
     Write( *, * ) '!! ', n, lb, ub
 !!$    method%hypre_objects = ssp_hypre_semi_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
     method%hypre_objects = ssp_hypre_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
+!!$    method%hypre_objects = ssp_hypre_ij_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
 
   End Subroutine pfmg_init
 
@@ -183,6 +218,7 @@ Contains
     x = 0.0_wp
 !!$    Call ssp_hypre_semi_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), b, x, itn, rnorm, istop )
     Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), b, x, itn, rnorm, istop )
+!!$    Call ssp_hypre_ij_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), b, x, itn, rnorm, istop )
 
     istop_message = "Who knows?"
 
@@ -196,6 +232,7 @@ Contains
 
 !!$    Call  ssp_hypre_semi_struct_free( method%hypre_objects )
     Call  ssp_hypre_struct_free( method%hypre_objects )
+!!$    Call  ssp_hypre_ij_free( method%hypre_objects )
 
   End Subroutine pfmg_destroy
   

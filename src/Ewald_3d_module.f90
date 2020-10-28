@@ -337,30 +337,31 @@ Contains
     ! TESTING PRECONDITIONER
 !!$    Allocate( equation_solver_weighted_jacobi :: precon )
 !!$    Call precon%init( max_iter = 3, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
-    Allocate( FD_Laplacian_3D :: FD_precon )
-    ! Hack ... All init methods need a rethink
-    Select Type( FD_precon )
-    Class is ( FD_Laplacian_3D )
-       Call FD_precon%init( 2, dGrid_vecs )
-    End Select
-    If( Present( communicator ) ) Then
-       Allocate( halo_parallel_setter :: FD_precon_swapper )
-    Else
-       Allocate( halo_serial_setter :: FD_precon_swapper )
-    End If
-    Select Type( FD_precon_swapper )
-    Class is ( halo_parallel_setter )
-       Call FD_precon_swapper%init ( n_grid_domain, FD_precon%get_order(), loc_communicator, error )
-    Class is ( halo_serial_setter )
-       Call FD_precon_swapper%init( error )
-    End Select
-    Allocate( equation_solver_hypre_pfmg :: precon )
-    Call precon%init( comms = comms, FD_operator = FD_precon, halo_swapper = FD_precon_swapper  )
-    ! HACK!!!!
-    Select Type( precon )
-    Class is ( equation_solver_hypre_pfmg )
-       Call precon%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD_precon )
-    End Select
+    
+!!$    Allocate( FD_Laplacian_3D :: FD_precon )
+!!$    ! Hack ... All init methods need a rethink
+!!$    Select Type( FD_precon )
+!!$    Class is ( FD_Laplacian_3D )
+!!$       Call FD_precon%init( 2, dGrid_vecs )
+!!$    End Select
+!!$    If( Present( communicator ) ) Then
+!!$       Allocate( halo_parallel_setter :: FD_precon_swapper )
+!!$    Else
+!!$       Allocate( halo_serial_setter :: FD_precon_swapper )
+!!$    End If
+!!$    Select Type( FD_precon_swapper )
+!!$    Class is ( halo_parallel_setter )
+!!$       Call FD_precon_swapper%init ( n_grid_domain, FD_precon%get_order(), loc_communicator, error )
+!!$    Class is ( halo_serial_setter )
+!!$       Call FD_precon_swapper%init( error )
+!!$    End Select
+!!$    Allocate( equation_solver_hypre_pfmg :: precon )
+!!$    Call precon%init( comms = comms, FD_operator = FD_precon, halo_swapper = FD_precon_swapper  )
+!!$    ! HACK!!!!
+!!$    Select Type( precon )
+!!$    Class is ( equation_solver_hypre_pfmg )
+!!$       Call precon%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD_precon )
+!!$    End Select
 
 
 

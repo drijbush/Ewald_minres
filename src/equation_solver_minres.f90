@@ -391,7 +391,6 @@ Contains
       End If
       beta1 = method%contract( method%comms, b, y )
 
-         Write( *, * ) beta1, ' dsfsdfsf'
       If (beta1 < zero) Then     ! M must be indefinite.
          istop = 8
          Exit solver_block
@@ -561,7 +560,6 @@ Contains
             If (qrnorm <= epsr  .Or.  relArnorml <= epsr) istop = 1
          End If
 
-         WRite( *, * ) 'norm ', arnorml
          If (istop /= 0) Exit
 
       End Do iteration_loop
