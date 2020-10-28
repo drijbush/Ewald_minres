@@ -83,7 +83,7 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
 
   /* Assemble the matrix - blocking */
   HYPRE_StructMatrixAssemble( data_for_hypre_struct -> A );
-  /* HYPRE_StructMatrixPrint( "matrix.dat", data_for_hypre_struct -> A, 1 ); */
+  HYPRE_StructMatrixPrint( "matrix.dat", data_for_hypre_struct -> A, 1 );
 
   return data_for_hypre_struct;
   
@@ -109,7 +109,7 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructVectorSetBoxValues( b, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( rhs[ 0 ][ 0 ][ 0 ] ) );
   /* Assemble the RHS */
   HYPRE_StructVectorAssemble( b );
-  /* HYPRE_StructVectorPrint( "rhs.dat", b, 1 ); */
+  HYPRE_StructVectorPrint( "rhs.dat", b, 1 ); 
   
   /* Create the initial guess at solution */
   HYPRE_StructVectorCreate( data_for_hypre_struct -> comm, data_for_hypre_struct -> grid, &x );
@@ -119,7 +119,7 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructVectorSetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
   /* Assemble the initial guess */
   HYPRE_StructVectorAssemble( x );
-  /* HYPRE_StructVectorPrint( "guess.dat", x, 1 ); */
+  HYPRE_StructVectorPrint( "guess.dat", x, 1 );
 
   /* Create the solver */
   HYPRE_StructPFMGCreate( data_for_hypre_struct -> comm, &solver );
@@ -143,6 +143,7 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   /* Get the solution from the HYPRE object into the Fortran array */
   retval = HYPRE_StructVectorGetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
   printf( "extract soln %d\n", retval );
+  HYPRE_StructVectorPrint( "soln.dat", x, 1 );
 
   /* Get some interesting data */
   HYPRE_StructPFMGGetNumIterations( solver, n_iter );
@@ -443,4 +444,233 @@ void ssp_hypre_semi_struct_pfmg_solve( struct ssp_hypre_semi_struct *data_for_hy
   HYPRE_SStructVectorDestroy( x );
   HYPRE_SStructVectorDestroy( b );
   
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct ssp_hypre_ij *ssp_hypre_ij_setup( int comm, int n[ 3 ], int lb[ 3 ], int ub[ 3 ],
+					 int n_stencil, int stencil_elements[ n_stencil ][ 3 ], double stencil_values[ n_stencil ] ) {
+
+  /* Set up the grid, stencil and matrix */
+  struct ssp_hypre_ij *data_for_hypre_ij;
+
+  int n_loc[ 3 ];
+
+  int *row_sizes;
+  int *col_indices;
+  int *col_base_indices;
+
+  int n_tot;
+  int n_my_rows;
+  int n_init;
+  int my_first_row, my_last_row;
+  int row, col;
+  int i_stencil;
+
+  /* Order of matrix */
+  n_tot = n[ 0 ] * n[ 1 ] * n[ 2 ];
+
+  /* Local dimensions */
+  n_loc[ 0 ] = ub[ 0 ] - lb[ 0 ] + 1;
+  n_loc[ 1 ] = ub[ 1 ] - lb[ 1 ] + 1;
+  n_loc[ 2 ] = ub[ 2 ] - lb[ 2 ] + 1;
+  
+  data_for_hypre_ij = malloc( sizeof( *data_for_hypre_ij ) );
+
+  data_for_hypre_ij -> comm = MPI_Comm_f2c( comm );
+
+  /* Currently distribute the matrix by rows */
+  /* For this need to know what my first row is */
+  n_my_rows  = n_loc[ 0 ] * n_loc[ 1 ] * n_loc[ 2 ];
+  /* Use MPI_Scan to find the global index of my first row */
+  MPI_Scan( &n_my_rows, &my_first_row, 1, MPI_INT, MPI_SUM, data_for_hypre_ij -> comm );
+  /* Correct inclusive -> exclusive scan */
+  my_first_row = my_first_row - n_my_rows;
+  my_last_row  = my_first_row + n_my_rows - 1;
+  printf( "First last rows %d %d %d %d\n", my_first_row, my_last_row, n_tot, n_stencil );
+  
+  /* Create the matrix - Distribute currently by rows */
+  data_for_hypre_ij -> ilower = my_first_row;
+  data_for_hypre_ij -> iupper = my_last_row;
+  data_for_hypre_ij -> jlower = 0;
+  data_for_hypre_ij -> jupper = n_tot - 1;
+  HYPRE_IJMatrixCreate( data_for_hypre_ij -> comm,
+			data_for_hypre_ij -> ilower, data_for_hypre_ij -> iupper,
+			data_for_hypre_ij -> jlower, data_for_hypre_ij -> jupper,
+			&( data_for_hypre_ij -> A ) );
+  /* local # rows or global # rows? Doc not clear */
+  n_init = n_tot; /* CHECK THIS */
+  row_sizes = malloc( n_init * sizeof( *row_sizes ) );
+  for( row = 0; row < n_init; row ++ )
+    row_sizes[ row ] = n_stencil;
+  HYPRE_IJMatrixSetRowSizes  ( data_for_hypre_ij -> A, row_sizes );
+  free( row_sizes );
+
+  /* The object type */
+  HYPRE_IJMatrixSetObjectType( data_for_hypre_ij -> A, HYPRE_PARCSR );
+  printf( "!! Set type\n" );
+
+  /* Prepare matrix for setting */
+  HYPRE_IJMatrixInitialize( data_for_hypre_ij -> A );
+  printf( "!! Init\n" );
+
+  /* Set matrix a row at a time */
+  /* set up the base column indices */  
+  col_base_indices = malloc( n_stencil * sizeof( *col_base_indices ) );
+  for( i_stencil = 0; i_stencil < n_stencil; i_stencil++ )
+    col_base_indices[ i_stencil ] =
+      stencil_elements[ i_stencil ][ 2 ]                           +
+      stencil_elements[ i_stencil ][ 1 ] * n_loc[ 2 ]              +
+      stencil_elements[ i_stencil ][ 0 ] * n_loc[ 2 ] * n_loc[ 1 ];
+  printf( "!! Base index\n" );
+  
+  col_indices = malloc( n_stencil * sizeof( *col_indices ) );
+  for( row = my_first_row; row <= my_last_row; row++ ){
+    /* For this row work out what the actual indices are */
+    for( i_stencil = 0; i_stencil < n_stencil; i_stencil++ ){
+      /* Because C is a stupid language the % operator is not well defined for negative values
+	 Hence do it this way */
+      col = row + col_base_indices[ i_stencil ];
+      if( col > n_tot - 1 )
+	col = col - n_tot;
+      else if( col < 0 )
+	col = col + n_tot;
+      if( col < 0 || col > n_tot - 1 ) printf( "Wibble!!\n" );
+      /* And store the value */
+      col_indices[ i_stencil ] = col;
+    }
+    /* Set this row. Use AddTo to copy with case where stencil wraps around to add to an already
+       intialised location - as can happen for small grids compared to the stencil */
+    HYPRE_IJMatrixAddToValues( data_for_hypre_ij -> A, 1, &n_stencil, &row, col_indices, stencil_values );
+  }
+  free( col_indices );
+  free( col_base_indices );
+  printf( "!! Add loop\n" );
+
+  /* Assemble the matrix and get the ParCSR handle */
+  HYPRE_IJMatrixAssemble ( data_for_hypre_ij -> A );
+  printf( "!! assemble\n" );
+
+  HYPRE_IJMatrixPrint( data_for_hypre_ij -> A, "ij_matrix.dat" );
+
+  
+  HYPRE_IJMatrixGetObject( data_for_hypre_ij -> A, (void **) & (data_for_hypre_ij -> Acsr )  );
+
+  printf( "!! exit set up\n" );
+  
+  return data_for_hypre_ij;
+  
+}
+
+void ssp_hypre_ij_solve( struct ssp_hypre_ij *data_for_hypre_ij, int n1, int n2, int n3, double b[ n3 ][ n2 ][ n1 ],
+				  double x[ n3 ][ n2 ][ n1 ], int *n_iter, double *residual, int *info )
+{
+
+  HYPRE_IJVector  bij;
+  HYPRE_ParVector bij_csr;
+  HYPRE_IJVector  xij;
+  HYPRE_ParVector xij_csr;
+
+  HYPRE_Solver solver;
+  
+  int *indices;
+
+  int nvalues;
+  int i; 
+  
+  /* Assume everything worked for the moment */
+  *info = 0;      
+
+  /* Set up the indices list */
+  nvalues = data_for_hypre_ij -> iupper - data_for_hypre_ij -> ilower + 1;
+  indices = malloc( nvalues * sizeof( *indices ) );
+  for( i = 0; i < nvalues; i++ )
+    indices[ i ] = data_for_hypre_ij -> ilower + i; 
+    /*   indices[ i ] = i; */
+
+
+  /* Create the RHS */
+  HYPRE_IJVectorCreate( data_for_hypre_ij -> comm, data_for_hypre_ij -> ilower, data_for_hypre_ij -> iupper,
+			&bij );
+  HYPRE_IJVectorSetObjectType( bij, HYPRE_PARCSR);
+
+  /* Get ready to set up RHS vector */
+  HYPRE_IJVectorInitialize( bij );
+
+  /* Set the RHS */
+  HYPRE_IJVectorSetValues( bij, nvalues, indices, &( b[ 0 ][ 0 ][ 0 ] ) );
+
+  /* Assemble the RHS and get the object handle */
+  HYPRE_IJVectorAssemble ( bij );
+  HYPRE_IJVectorGetObject( bij, ( void **) & bij_csr );
+
+  HYPRE_IJVectorPrint( bij, "rhs_before.dat" );
+
+
+  /* Create the Solution */
+  HYPRE_IJVectorCreate( data_for_hypre_ij -> comm, data_for_hypre_ij -> ilower, data_for_hypre_ij -> iupper,
+			&xij );
+  HYPRE_IJVectorSetObjectType( xij, HYPRE_PARCSR);
+
+  /* Get ready to set up Solution vector */
+  HYPRE_IJVectorInitialize( xij );
+
+  /* Set the intial guess at the Solution */
+  HYPRE_IJVectorSetValues( xij, nvalues, indices, &( x[ 0 ][ 0 ][ 0 ] ) );
+
+  /* Assemble the initial guess and get the object handle */
+  HYPRE_IJVectorAssemble ( xij );
+  HYPRE_IJVectorGetObject( xij, ( void **) & xij_csr );
+
+  HYPRE_IJVectorPrint( xij, "soln_before.dat" );
+
+  /* Solve the equations */
+  HYPRE_BoomerAMGCreate( &solver );
+  HYPRE_BoomerAMGSetTol( solver, 1e-12 );
+  HYPRE_BoomerAMGSetup( solver, data_for_hypre_ij -> Acsr, bij_csr, xij_csr );
+  HYPRE_BoomerAMGSolve( solver, data_for_hypre_ij -> Acsr, bij_csr, xij_csr );
+  HYPRE_BoomerAMGGetFinalRelativeResidualNorm( solver, residual );
+  HYPRE_BoomerAMGGetNumIterations( solver, n_iter );
+  HYPRE_BoomerAMGDestroy( solver );
+
+  /* Get back the solution */
+  HYPRE_IJVectorGetValues( xij, nvalues, indices, &( x[ 0 ][ 0 ][ 0 ] ) );  
+
+  HYPRE_IJVectorPrint( xij, "soln_after.dat" );
+
+  /* Tidy up */
+  HYPRE_IJVectorDestroy( xij );
+  HYPRE_IJVectorDestroy( bij );
+  free( indices );
+  
+}
+
+void ssp_hypre_ij_free( struct ssp_hypre_ij *data_for_hypre_ij ){
+
+  /* Free up the memory used for the grid, stencil and matrix */
+
+  HYPRE_IJMatrixDestroy ( data_for_hypre_ij -> A );
+    
+  free( data_for_hypre_ij );
+  
+  return;
 }
