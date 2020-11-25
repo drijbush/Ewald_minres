@@ -50,7 +50,7 @@ Contains
     Implicit None
 
     Class( comms_parallel ), Intent( In    ) :: c
-    Integer,               Intent(   Out ) :: comm
+    Integer,                 Intent(   Out ) :: comm
 
     comm = c%communicator
     
@@ -61,7 +61,7 @@ Contains
     Use mpi_f08, Only : mpi_comm, mpi_comm_rank
 
     Class( comms_parallel ), Intent( In    ) :: c
-    Integer,               Intent(   Out ) :: data
+    Integer,                 Intent(   Out ) :: data
 
     Type( mpi_comm ) :: comm_f08
 

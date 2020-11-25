@@ -22,8 +22,6 @@ Contains
 
     Implicit None
 
-    Real( wp ), Dimension( :, :, : ), Allocatable :: rhs
-
     Type( lattice ),                     Intent( In    ) :: l
     Real( wp ), Dimension( 1:     ),     Intent( In    ) :: q
     Real( wp ), Dimension( 1:, 1: ),     Intent( In    ) :: r
@@ -57,6 +55,8 @@ Contains
     ! Not required, but useful for comparison of accuracy with Fourier methods.
     ! This should be set to .False. for production
     Logical, Parameter :: standardise = .True.
+
+    Real( wp ), Dimension( :, :, : ), Allocatable :: rhs
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
 

@@ -64,7 +64,6 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
     ele[ 2 ] = stencil_elements[ i ][ 2 ]; 
     data_for_hypre_struct -> stencil_element_list[ i ]= i;
     HYPRE_StructStencilSetElement( data_for_hypre_struct -> stencil, i, ele );
-    printf( "ele %d %d %d %d %20.12f\n", i, ele[ 0 ], ele[ 1 ], ele[ 2 ], stencil_values[ i ] );
   }
 
   /* The matrix */
@@ -83,13 +82,14 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
 
   /* Assemble the matrix - blocking */
   HYPRE_StructMatrixAssemble( data_for_hypre_struct -> A );
-  HYPRE_StructMatrixPrint( "matrix.dat", data_for_hypre_struct -> A, 1 );
+  /* HYPRE_StructMatrixPrint( "matrix.dat", data_for_hypre_struct -> A, 1 ); */
 
   return data_for_hypre_struct;
   
 }
 
-void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct, int n1, int n2, int n3, double rhs[ n3 ][ n2 ][ n1 ],
+void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct, int n1, int n2, int n3,
+				  double rtol, double rhs[ n3 ][ n2 ][ n1 ],
 				  double soln[ n3 ][ n2 ][ n1 ], int *n_iter, double *residual, int *info ) {
 
   /* Solve the equations using the PFMG solver */
@@ -97,8 +97,6 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructVector x;
   HYPRE_StructSolver solver;
 
-  int retval;
-  
   /* Assume everything worked for the moment */
   *info = 0;
 
@@ -109,46 +107,41 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructVectorSetBoxValues( b, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( rhs[ 0 ][ 0 ][ 0 ] ) );
   /* Assemble the RHS */
   HYPRE_StructVectorAssemble( b );
-  HYPRE_StructVectorPrint( "rhs.dat", b, 1 ); 
+  /* HYPRE_StructVectorPrint( "rhs.dat", b, 1 );  */
   
   /* Create the initial guess at solution */
   HYPRE_StructVectorCreate( data_for_hypre_struct -> comm, data_for_hypre_struct -> grid, &x );
   /* Put the initial guess from the Fortran array into the HYPRE object */
-  printf( "!!!%f\n", soln[ 0 ][ 0 ][ 0 ] );
   HYPRE_StructVectorInitialize( x );
-  HYPRE_StructVectorSetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
+  HYPRE_StructVectorSetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) ); 
   /* Assemble the initial guess */
-  HYPRE_StructVectorAssemble( x );
-  HYPRE_StructVectorPrint( "guess.dat", x, 1 );
+  HYPRE_StructVectorAssemble( x ); 
+  /* HYPRE_StructVectorPrint( "guess.dat", x, 1 ); */
 
   /* Create the solver */
   HYPRE_StructPFMGCreate( data_for_hypre_struct -> comm, &solver );
 
   /* Set up the solver */
-  /* HYPRE_StructPFMGSetTol( solver, 5.0e-8 ); */
-  HYPRE_StructPFMGSetLogging( solver, 100 );
-  HYPRE_StructPFMGSetPrintLevel(solver, 1 );
-  HYPRE_StructPFMGSetMaxIter( solver, 100 );
+  /* HYPRE_StructPFMGSetZeroGuess( solver ); */
+  HYPRE_StructPFMGSetTol( solver, rtol ); 
+  HYPRE_StructPFMGSetLogging( solver, 1 );
+  /* HYPRE_StructPFMGSetPrintLevel( solver, 1 ); */
+  /* HYPRE_StructPFMGSetMaxIter( solver, 100 ); */
   HYPRE_StructPFMGSetRAPType( solver,  1 );
   /* HYPRE_StructPFMGSetMaxLevels( solver,  9 ); */
   /* HYPRE_StructPFMGSetRelaxType( solver,  2 ); */
-  printf( "setup\n" );
-  retval = HYPRE_StructPFMGSetup( solver, data_for_hypre_struct -> A, b, x );
-  printf( "solve 1 %d\n", retval );
+  HYPRE_StructPFMGSetup( solver, data_for_hypre_struct -> A, b, x );
 
   /* Solve the equations */
-  retval = HYPRE_StructPFMGSolve( solver, data_for_hypre_struct -> A, b, x );
-  printf( "solve 2 %d\n", retval );
+  HYPRE_StructPFMGSolve( solver, data_for_hypre_struct -> A, b, x );
 
   /* Get the solution from the HYPRE object into the Fortran array */
-  retval = HYPRE_StructVectorGetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
-  printf( "extract soln %d\n", retval );
-  HYPRE_StructVectorPrint( "soln.dat", x, 1 );
+  HYPRE_StructVectorGetBoxValues( x, data_for_hypre_struct -> lb, data_for_hypre_struct -> ub, &( soln[ 0 ][ 0 ][ 0 ] ) );
+  /* HYPRE_StructVectorPrint( "soln.dat", x, 1 ); */
 
   /* Get some interesting data */
   HYPRE_StructPFMGGetNumIterations( solver, n_iter );
-  retval = HYPRE_StructPFMGGetFinalRelativeResidualNorm( solver, residual );
-  printf( "Residual %d %f\n", retval, *residual );
+  HYPRE_StructPFMGGetFinalRelativeResidualNorm( solver, residual );
 
   /* Destroy the solver */
   HYPRE_StructPFMGDestroy( solver );
