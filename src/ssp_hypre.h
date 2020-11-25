@@ -5,7 +5,7 @@
 #include "HYPRE_sstruct_mv.h"
 #include "HYPRE_sstruct_ls.h"
 
-/* Struct to hold hypre stuff so can return as a pointer to Fortran */
+/* Struct to hold hypre stuff so can return as a pointer to the Fortran driver code */
 struct ssp_hypre_struct{
   MPI_Comm            comm;
   int                 lb[ 3 ], ub[ 3 ];
@@ -39,7 +39,8 @@ struct ssp_hypre_ij{
 /* Struct interface */
 struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3 ], int ub[ 3 ],
 						 int n_stencil, int stencil_elements[ n_stencil ][ 3 ], double stencil_values[ n_stencil ] );
-void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct, int n1, int n2, int n3, double b[ n3 ][ n2 ][ n1 ],
+void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct, int n1, int n2, int n3,
+				  double rtol, double b[ n3 ][ n2 ][ n1 ],
 				  double x[ n3 ][ n2 ][ n1 ], int *n_iter, double *residual, int *info );
 void ssp_hypre_struct_free( struct ssp_hypre_struct *data_for_hypre_struct );
 

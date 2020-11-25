@@ -54,13 +54,13 @@ Module Ewald_3d_module
   Private
 
   ! Default values for the methods parameters
-  Real( wp ),           Parameter :: gauss_tol_default    = 1e-15_wp ! Value for cutting of the gaussian
+  Real( wp ),           Parameter :: gauss_tol_default    = 1e-12_wp ! Value for cutting of the gaussian
   Integer,              Parameter :: range_gauss_default  = 12       ! Number of points to grid one side of a gaussian
-  Integer,              Parameter :: FD_order_default     = 2        ! Default order of the finite difference approximation
+  Integer,              Parameter :: FD_order_default     = 12       ! Default order of the finite difference approximation
   Character( Len = * ), Parameter :: default_solver       = "minres" ! Default equation solver
 !!$  Character( Len = * ), Parameter :: default_solver       = "CG"
 !!$  Character( Len = * ), Parameter :: default_solver       = "wjac"
-  Real( wp ),           Parameter :: residual_tol_default = 1e-12_wp ! Tolerance on residual in equation solver
+  Real( wp ),           Parameter :: residual_tol_default = 1e-08_wp ! Tolerance on residual in equation solver
 
 Contains
 
@@ -143,7 +143,8 @@ Contains
 
   End Subroutine Ewald_3d
 
-  Subroutine Ewald_3d_init( recipe, l, alpha, error, communicator, equation_solver )
+  Subroutine Ewald_3d_init( recipe, l, alpha, error, communicator, equation_solver, range_gauss, gauss_tol, &
+       FD_order, residual_tol )
 
     Use lattice_module,                    Only : lattice
 
@@ -184,6 +185,10 @@ Contains
     Integer,                  Intent(   Out )           :: error
     Integer,                  Intent( In    ), Optional :: communicator
     Character( Len = * ),     Intent( In    ), Optional :: equation_solver
+    Integer,                  Intent( In    ), Optional :: range_gauss
+    Real( wp ),               Intent( In    ), Optional :: gauss_tol
+    Integer,                  Intent( In    ), Optional :: FD_order
+    Real( wp ),               Intent( In    ), Optional :: residual_tol
 
     Class( comms_base_class                  ), Allocatable :: comms
     Class( FD_template                       ), Allocatable :: FD
@@ -197,8 +202,8 @@ Contains
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: Grid_vecs, dGrid_vecs
 
-    Real( wp ) :: gauss_tol
-    Real( wp ) :: residual_tol
+    Real( wp ) :: gauss_tol_use
+    Real( wp ) :: residual_tol_use
 
     Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: n_proc_grid
@@ -207,11 +212,12 @@ Contains
     Integer, Dimension( 1:3 ) :: domain_base_coords
     Integer, Dimension( 1:3 ) :: domain_end_coords
 
-    Integer :: range_gauss
-    Integer :: FD_order
+    Integer :: range_gauss_use
+    Integer :: FD_order_use
     Integer :: max_swap
     Integer :: loc_communicator
     Integer :: max_iter
+    Integer :: n, n_fac
     Integer :: i
 
     Character( Len = : ), Allocatable :: loc_equation_solver
@@ -238,13 +244,25 @@ Contains
     ! Select the order for the finite difference approximation
     ! Select now as need now to set the grid size due to the hacks below involved in setting the grid size
     ! But can't init the FD operator itself yet as need to know the grid size for that.
-    FD_order = FD_order_default
+    If( Present( FD_order ) ) Then
+       FD_order_use = FD_order
+    Else
+       FD_order_use = FD_order_default
+    End If
 
     ! Set the size of the grid
     ! First find the minimum consistent with input alpha and the current gauss sizing parameters
-    range_gauss = range_gauss_default
-    gauss_tol   = gauss_tol_default
-    Call charge_grid_get_n_grid( l, alpha, range_gauss, gauss_tol, n_grid )
+    If( Present( range_gauss ) ) Then
+       range_gauss_use = range_gauss
+    Else
+       range_gauss_use = range_gauss_default
+    End If
+    If( Present( gauss_tol ) ) Then
+       gauss_tol_use = gauss_tol
+    Else
+       gauss_tol_use = gauss_tol_default
+    End If
+    Call charge_grid_get_n_grid( l, alpha, range_gauss_use, gauss_tol_use, n_grid )
 
     ! Due to the current domain mapping routines working on the grid and not the actual volumes of the
     ! domains make the grid consistent with the volumes. Simply making sure the grid size is a multiple
@@ -267,7 +285,7 @@ Contains
          Call domain_get_params( n_grid, n_proc_grid, me_proc_coords, n_grid_domain, domain_base_coords )
          ! Get the maximum size for halo swapping
          ! Note bug in FD%get_order returns half the order, which is actually the amount we need to swap
-         max_swap = Max( ( 2 * FD_order ) / 2, range_gauss + 1 )
+         max_swap = Max( ( 2 * FD_order_use ) / 2, range_gauss_use + 1 )
          ! Check max_swap is at most the size of the domain
          If( All( max_swap <= n_grid_domain ) ) Exit
          ! Domain size not big enough. Increase n_grid and try again. Keep n_grid a multiple of the
@@ -276,6 +294,26 @@ Contains
       End Do
     End Block Halo_hack
 
+    ! HACK for multigrid sizes - make small integer * power of 2
+    Multigrid_hack: Block
+      Dir_loop: Do i = 1, 3
+         n = n_grid( i )
+         If( n <= 10 ) Cycle
+         Search_loop: Do
+            n_fac = n
+            Do While( ( n_fac / 2 ) * 2 == n_fac )
+               n_fac = n_fac / 2
+            End Do
+            If( n_fac <= 10 ) Then
+               n_grid( i ) = n
+               Exit Search_loop
+            Else
+               n = n + 1
+            End If
+         End Do Search_loop
+      End Do Dir_loop
+    End Block Multigrid_hack
+    
     ! Now have size of grid get size of domain and where our domain starts
     Call domain_get_params( n_grid, n_proc_grid, me_proc_coords, n_grid_domain, domain_base_coords )
     domain_end_coords = domain_base_coords + n_grid_domain - 1
@@ -289,7 +327,7 @@ Contains
     ! Hack ... All init methods need a rethink
     Select Type( FD )
     Class is ( FD_Laplacian_3D )
-       Call FD%init( FD_order, dGrid_vecs )
+       Call FD%init( FD_order_use, dGrid_vecs )
     End Select
 
     ! Set up the halo swapper for the FD operator
@@ -321,7 +359,7 @@ Contains
     End If
     Select Type( pot_swapper )
     Class is ( halo_parallel_setter )
-       Call pot_swapper%init ( n_grid_domain, range_gauss + 1, loc_communicator, error )
+       Call pot_swapper%init ( n_grid_domain, range_gauss_use + 1, loc_communicator, error )
     Class is ( halo_serial_setter )
        Call pot_swapper%init( error )
     End Select
@@ -332,8 +370,12 @@ Contains
 
     ! Set up the equation solver
     ! First decide on the accuracy
-    residual_tol = residual_tol_default
-
+    If( Present( residual_tol ) ) Then
+       residual_tol_use = residual_tol
+    Else
+       residual_tol_use = residual_tol_default
+    End If
+    
     ! TESTING PRECONDITIONER
 !!$    Allocate( equation_solver_weighted_jacobi :: precon )
 !!$    Call precon%init( max_iter = 3, comms = comms, FD_operator = FD, halo_swapper = FD_swapper  )
@@ -409,9 +451,9 @@ Contains
     recipe%n_grid             = n_grid
     recipe%domain_base_coords = domain_base_coords
     recipe%domain_end_coords  = domain_end_coords
-    recipe%range_gauss        = range_gauss
-    recipe%gauss_tol          = gauss_tol
-    recipe%residual_tol       = residual_tol
+    recipe%range_gauss        = range_gauss_use
+    recipe%gauss_tol          = gauss_tol_use
+    recipe%residual_tol       = residual_tol_use
 !!$    recipe%comms              = comms
 !!$    recipe%FD                 = FD
 !!$    recipe%FD_swapper         = FD_swapper

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.1)
 project(Ewald_minres Fortran C)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${Ewald_minres_BINARY_DIR})
 find_package(MPI REQUIRED)
-
+find_package(LAPACK REQUIRED)
 
 # Add OMP
 #find_package(OpenMP)

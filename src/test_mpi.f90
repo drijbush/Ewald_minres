@@ -383,7 +383,8 @@ Program test_mpi
 
   ! Need to set these up earlier so use consistent sizes throughout calculation
   ! Set the recipe for the calculation
-  Call ewald_recipe%mix( l, alpha, error, communicator = cart_comm%mpi_val, equation_solver = what )
+  Call ewald_recipe%mix( l, alpha, error, communicator = cart_comm%mpi_val, equation_solver = what, &
+       residual_tol = rtol, FD_order = FD_order, range_gauss = range_gauss, gauss_tol = gauss_tol )
   ! May have changed some dimnsions due to constrains of parallel implementation
   ! Need these for checking potential grids etc.
   Call ewald_recipe%get_ingredients( n_grid = n_grid, range_gauss = range_gauss, &
