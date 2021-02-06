@@ -60,6 +60,9 @@ Contains
 
     Real( wp ), Dimension( :, : ), Allocatable :: r_full
 
+    Real( wp ) :: sic
+    Integer    :: rank
+
     Integer( li ) :: start, finish, rate
 
     Allocate( r_full( 1:3, 1:Size( q ) + Size( q_halo ) ) )
@@ -110,6 +113,15 @@ Contains
          pot_grid, ei, f )
     Call System_clock( finish, rate )
     t_forces = Real( finish - start, wp ) / rate
+
+    !HACK - report SIC for getting scale of things
+    sic = ssp_sic( q, alpha )
+    !HACK - SIC broken as needs golbal sum
+    Call solver%comms%reduce( sic )
+    Call solver%comms%get_rank( rank )
+    If( rank == 0 ) Then
+       Write( *, * ) 'SIC = ', sic
+    End If
 
   End Subroutine ssp_long_range
 

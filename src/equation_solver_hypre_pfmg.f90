@@ -10,7 +10,8 @@ Module equation_solver_hypre_pfmg_module
   Private
   
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_hypre_pfmg
-     Integer, Dimension( 1:3 ) :: n
+     Integer, Dimension( 1:3 ) :: n ! Number of grid point
+     Real( wp )                :: V ! volume
      Type( c_ptr )             :: hypre_objects
    Contains
      Procedure, Public :: solve => pfmg
@@ -129,7 +130,7 @@ Module equation_solver_hypre_pfmg_module
 
 Contains
 
-  Subroutine pfmg_init( method, comms, n, lb, ub, FD_operator )
+  Subroutine pfmg_init( method, comms, n, lb, ub, FD_operator, V )
 
     Use constants              , Only : wp
     Use comms_base_class_module, Only : comms_base_class
@@ -147,7 +148,8 @@ Contains
     Integer, Dimension( 1:3 )          , Intent( In    ) :: n
     Integer, Dimension( 1:3 )          , Intent( In    ) :: lb
     Integer, Dimension( 1:3 )          , Intent( In    ) :: ub
-    Class( FD_template ),                Intent( In    ) :: FD_operator
+    Class( FD_template )               , Intent( In    ) :: FD_operator
+    Real( wp )                         , Intent( In    ) :: V
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: stencil
 
@@ -163,6 +165,7 @@ Contains
     Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
 
     method%n = n
+    method%V = V
     
     Call comms%get_comm( comm )
     
@@ -209,7 +212,8 @@ Contains
   Subroutine pfmg( method, &
        lb, ub, b, rtol, &
        x, istop, istop_message, itn, rnorm )
-
+    
+    Use constants, Only : wp, pi
     Use halo_setter_base_module, Only : halo_setter_base_class
     Use FD_template_module,      Only : FD_template
 
@@ -232,6 +236,7 @@ Contains
 
     Real( wp ) :: r2, e2, x2, x2_old, dx2, dx_max
     Real( wp ) :: tol
+    Real( wp ) :: Energy, Energy_old, dE
     Real( wp ) :: lambda
 
     Integer, Dimension( 1:3 ) :: n
@@ -244,6 +249,7 @@ Contains
     n = Ubound( b ) - Lbound( b ) + 1
 
 
+    ! Use tol to think about varying tolerance at different stages
     tol = rtol
 !!$    tol = 1.0e-3_wp
     ! THIS SHOULD EVETUALLY HOLD AN INITAL GUESS - but as Intent( Out ) at the moment must init
@@ -261,10 +267,15 @@ Contains
 
 !!$    Call project_out_null( method%n, method%comms, x, lambda )
 
-    If( rank == 0 ) Then
-       Write( *, * ) 'order, iter, iterations rnorm r2, e2, x2, dx2, dx_max, lambda'
-    End If
+    Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
+    Energy_old = Energy
     x2_old = 0.0_wp
+    If( rank == 0 ) Then
+       Write( *, * ) 'Initial energy: ', Energy
+    End If
+    If( rank == 0 ) Then
+       Write( *, * ) 'order, iter, iterations rnorm r2, e2, x2, dx2, dx_max, Energy, dE'
+    End If
     iteration_loop: Do i = 1, max_iter
        Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
        Call method%FD_operator%apply( Lbound( x_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
@@ -288,13 +299,18 @@ Contains
        dx2 = Abs( x2 - x2_old )
        dx_max = Maxval( Abs( e ) )
        Call method%comms%max( dx_max )
+       Energy = - 0.5_wp * method%contract( method%comms, x, b / ( 4.0_wp * pi ) ) * method%V / Product( method%n )
+       dE = Abs( Energy - Energy_old )
        If( rank == 0 ) Then
-          Write( *, '( 3( i2, 1x ), 3( g12.6, 1x ), f0.8, 1x, 3( g12.6, 1x ) )' ) &
-               FD_order * 2, i, itn, rnorm, r2, e2, x2, dx2, dx_max, lambda
+          Write( *, '( 3( i2, 1x ), 3( g12.6, 1x ), f0.8, 1x, 2( g12.6, 1x ), 2( g16.10, 1x ) )' ) &
+               FD_order * 2, i, itn, rnorm, r2, e2, x2, dx2, dx_max, Energy, Abs( Energy - Energy_old )
        End If
-       If( e2 / Sqrt( Real( Product( method%n ), wp ) ) < 1.0e-6_wp ) Then
+       ! 1e-6 is a HACK at the moment
+!!$       If( e2 / Sqrt( Real( Product( method%n ), wp ) ) < 1.0e-6_wp ) Then
+       If( dE < 1.0e-6_wp ) Then
           Exit iteration_loop
        End If
+       Energy_old = Energy
        x2_old = x2
     End Do iteration_loop
     Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )

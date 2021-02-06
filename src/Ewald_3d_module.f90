@@ -437,7 +437,7 @@ Contains
     ! HACK!!!!
     Select Type( solver )
     Class is ( equation_solver_hypre_pfmg )
-       Call solver%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD )
+       Call solver%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD, l%get_volume() )
     End Select
        
     
