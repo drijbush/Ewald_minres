@@ -294,90 +294,6 @@ Program test_mpi
   Allocate( ei_ssp( 1:n_at_loc ) )
   Allocate( force_ssp( 1:3, 1:n_at_loc ) )
 
-!!$  Allocate( q_grid_ssp( domain_base_coords( 1 ):domain_end_coords( 1 ), &
-!!$       domain_base_coords( 2 ):domain_end_coords( 2 ), &
-!!$       domain_base_coords( 3 ):domain_end_coords( 3 ) ) )
-!!$  Allocate( pot_grid_ssp( domain_base_coords( 1 ):domain_end_coords( 1 ), &
-!!$       domain_base_coords( 2 ):domain_end_coords( 2 ), &
-!!$       domain_base_coords( 3 ):domain_end_coords( 3 ) ) )
-!!$  dGrid_vecs = l%get_direct_vectors()
-!!$  Do i = 1, 3
-!!$     dGrid_vecs( :, i ) = dGrid_vecs( :, i ) / n_grid( i )
-!!$  End Do
-!!$  ! Set up comms
-!!$  Call comms%set_comm( cart_comm%mpi_val, error )
-!!$  If( error /= 0 ) Then
-!!$     Error stop "Error in setting comms communicator"
-!!$  End If
-!!$  ! set up finite difference operator
-!!$  Call FD%init( FD_order, dGrid_vecs )
-!!$  ! Set up halo swapper for finit difference operator
-!!$  Call fd_swapper%init ( n_grid_domain, FD%get_order(), cart_comm, error )
-!!$  If( error /= 0 ) Then
-!!$     Error stop "Error in setting comms communicator"
-!!$  End If
-!!$  ! Set up potential halo swapper
-!!$  ! Need to track down +1 properly - it is to do with atoms near the edge of the grid where
-!!$  ! the nearest grid point to the centre of the gaussian actually lies in the next domain
-!!$  Call pot_swapper%init( n_grid_domain, range_gauss + 1, cart_comm, error )
-!!$  ! Solve for the long range using finiste difference
-!!$  Call ssp_long_range( l, q_domain, r_domain, alpha, FD, q_halo, r_halo, range_gauss, n_grid, Lbound( q_grid_ssp ), rtol, &
-!!$       recip_E_ssp, q_grid_ssp, pot_grid_ssp, solver, comms, fd_swapper, pot_swapper, grid_integrator, &
-!!$       ei_ssp, force_ssp, t_grid_ssp, t_pot_solve_ssp, t_forces_ssp, itn, istop, istop_message, rnorm, error )
-!!$  Do i = 1, 3
-!!$     f_ssp( i ) = Sum( force_ssp( i, : ) )
-!!$  End Do
-!!$  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
-!!$  If( me_cart == 0 ) Then
-!!$     Write( *, * )
-!!$     Write( *, * ) 'SSP Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
-!!$     Write( *, * ) 'iterations = ', itn
-!!$     Write( *, * ) 'terminated because ', Trim( Adjustl( istop_message ) )
-!!$     Write( *, * ) 'norm of error vector ', rnorm
-!!$     Write( *, '( "SSP grid   time: ", f7.3 )' ) t_grid_ssp
-!!$     Write( *, '( "SSP solve  time: ", f7.3 )' ) t_pot_solve_ssp
-!!$     Write( *, '( "SSP forces time: ", f7.3 )' ) t_forces_ssp
-!!$     Write( *, * ) 'Nett force: ', f_ssp
-!!$  End If
-!!$  ! Check charge grid
-!!$  Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-!!$  q_grid_full = 0.0_wp
-!!$  q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
-!!$       domain_base_coords( 2 ):domain_end_coords( 2 ), &
-!!$       domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
-!!$  Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
-!!$  If( me_cart == 0 ) Then
-!!$     Call grid_io_save( 11, 'q_grid_ssp_parallel.dat', l, q_grid_full )
-!!$  End If
-!!$  q_grid_full = 0.0_wp
-!!$  q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
-!!$       domain_base_coords( 2 ):domain_end_coords( 2 ), &
-!!$       domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
-!!$  Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
-!!$  If( me_cart == 0 ) Then
-!!$     Call grid_io_save( 11, 'pot_grid_ssp_parallel.dat', l, q_grid_full )
-!!$  End If
-!!$
-!!$  Allocate( force_full( 1:3, 1:n ) )
-!!$  force_full = 0.0_wp
-!!$  Do i = 1, Size( force_ssp, Dim = 2 )
-!!$     force_full( :, id_domain( i ) ) = force_ssp( :, i )
-!!$  End Do
-!!$  Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
-!!$  ei_full = Sum( ei_ssp )
-!!$  Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
-!!$  If( me_cart == 0 ) Then
-!!$     Open( 11, file = 'forces_ssp_parallel.dat' )
-!!$     Write( 11, * ) n, '     #number of particles'
-!!$     Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
-!!$     Do i = 1, n
-!!$        Write( 11, * ) i, force_full( :, i )
-!!$     End Do
-!!$     Close( 11 )
-!!$     Write( *, * ) 'Energy from summing per particle contributions ', ei_full
-!!$  End If
-!!$  Deallocate(  q_grid_full, force_full )
-
   ! START USE OF FULL INTERFACE !!!!!!!!!!!!!!
   ! ------------------------------------------
 
@@ -450,8 +366,6 @@ Program test_mpi
      Close( 11 )
      Write( *, * ) 'Energy from summing per particle contributions ', ei_full
   End If
-  Call mpi_finalize( error )
-  Stop
   
   ! See if we get the same answer with a restart
   recip_E_ssp   = 0.0_wp
@@ -474,6 +388,8 @@ Program test_mpi
      Write( *, * ) 'Nett force: ', f_ssp
   End If
 
+!!$  Call mpi_finalize( error )
+!!$  Stop
   ! Now move the atoms slightly ...
 
   Allocate( dr, mold = r )

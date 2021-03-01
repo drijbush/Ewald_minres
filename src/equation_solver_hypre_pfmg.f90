@@ -21,7 +21,8 @@ Module equation_solver_hypre_pfmg_module
 
   Real( wp ), Parameter :: mix = 1.0_wp
 
-  Logical :: report = .True.
+  Logical :: report              = .True.
+  Logical :: consistent_residual = .False.
   
   ! Interfaces for C functions which talk to hpyre
   
@@ -244,52 +245,54 @@ Contains
     
     n = Ubound( b ) - Lbound( b ) + 1
 
-    ! Use tol to think about varying tolerance at different stages
-    tol = rtol
-    ! THIS SHOULD EVETUALLY HOLD AN INITAL GUESS - but as Intent( Out ) at the moment must init
-    x = 0.0_wp
-    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
-
     Call method%comms%get_rank( rank )
     do_io = rank == 0 .And. report
     
+    ! Use tol to think about varying tolerance at different stages
+    tol = rtol
+
+    ! Get the initial Order 2 solution
+    x = 0.0_wp
+    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
+
+    ! Set up the data structures for the higher order solution
     Allocate( r, e, w, Mold = b )
-    FD_order  = method%FD_operator%get_order()
+    FD_order   = method%FD_operator%get_order()
     halo_width = FD_order
     Call method%halo_swapper%allocate( lb, ub, halo_width, x_with_halo )
 
-!!$    Call project_out_null( method%n, method%comms, x, lambda )
-
+    ! Initial Energy
     Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
     Energy_old = Energy
+
     If( do_io ) Then
        Write( *, * ) 'Initial energy: ', Energy
        Write( *, * ) 'Mix = ', mix
        Write( *, * ) 'order, iter, iterations rnorm r2, e2, x2, dx2, dx_max, Energy, dE'
        x2_old = 0.0_wp
     End If
+
     iteration_loop: Do i = 1, max_iter
+
+       ! Get the residual for the higher order operator
        Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
        Call method%FD_operator%apply( Lbound( x_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
             x_with_halo, w  )
        r = b - w
        ! The residual should not contain any null space component as b can not contain any, and the
-       ! Action of the matrix on the solution projects out the null space, by definition
-!!$       lambda = - method%contract( method%comms, r, null ) /  method%contract( method%comms, null, null  )
-!!$       r = r + lambda * null
-!!$       Call project_out_null( method%n, method%comms, r, lambda )
-       r2 = Sqrt( method%contract( method%comms, r, r  ) )
-       tol = rtol
+       ! action of the matrix on the solution projects out the null space, by definition
+       ! Hence we can just call the solver
        Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, itn, rnorm, istop )
-       ! Project null space out of e 
-       Call project_out_null( method%n, method%comms, e, lambda )
-       ! Mixing
+       ! Update the solution - written this way to allow mixing c.f. SCF solvers
        x = x + mix * e
+       ! New energy
        Energy = - 0.5_wp * method%contract( method%comms, x, b  )
        Energy = Energy * method%V / Product( method%n )
        Energy = Energy / ( 4.0_wp * pi )
        dE = Abs( Energy - Energy_old )
+       ! If reqd tell the world things
        If( report ) Then
+          r2 = Sqrt( method%contract( method%comms, r, r  ) )
           e2 = Sqrt( method%contract( method%comms, e, e  ) )
           x2 = Sqrt( method%contract( method%comms, x, x  ) )
           dx2 = Abs( x2 - x2_old )
@@ -305,16 +308,22 @@ Contains
        If( dE < 1.0e-6_wp ) Then
           Exit iteration_loop
        End If
+       ! After the solve e may now be contaminated with components of the Null space, so project null space out
+       ! so allowing us to go around again
+       Call project_out_null( method%n, method%comms, e, lambda )
+       ! And around we go
        Energy_old = Energy
     End Do iteration_loop
-    Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
-    Call method%FD_operator%apply( Lbound( x_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
-         x_with_halo, w  )
-    r = b - w
-    r2 = Sqrt( method%contract( method%comms, r, r  ) )
-    If( do_io ) Then
-       Write( *, * ) FD_order * 2, i, r2
+
+    If( consistent_residual ) Then
+       ! This is not strictly needed, but without it the reported residual is not consistent with the above calculation
+       ! However the solution is consistent
+       Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
+       Call method%FD_operator%apply( Lbound( x_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
+            x_with_halo, w  )
+       r = b - w
     End If
+    r2 = Sqrt( method%contract( method%comms, r, r  ) )
     rnorm = r2
     
     istop_message = "Who knows?"
