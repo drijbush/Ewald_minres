@@ -19,9 +19,9 @@ Module equation_solver_hypre_pfmg_module
 !!$     Final             :: pfmg_destroy
   End Type equation_solver_hypre_pfmg
 
-  Real( wp ), Parameter :: mix = 0.9_wp
+  Real( wp ), Parameter :: mix = 1.0_wp
 
-  Logical :: report = .False.
+  Logical :: report = .True.
   
   ! Interfaces for C functions which talk to hpyre
   
