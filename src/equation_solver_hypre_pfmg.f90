@@ -19,6 +19,10 @@ Module equation_solver_hypre_pfmg_module
 !!$     Final             :: pfmg_destroy
   End Type equation_solver_hypre_pfmg
 
+  Real( wp ), Parameter :: mix = 0.9_wp
+
+  Logical :: report = .False.
+  
   ! Interfaces for C functions which talk to hpyre
   
   Interface
@@ -245,21 +249,20 @@ Contains
     Integer :: rank
     Integer :: i
     Integer :: error
+
+    Logical :: do_io
     
     n = Ubound( b ) - Lbound( b ) + 1
 
-
     ! Use tol to think about varying tolerance at different stages
     tol = rtol
-!!$    tol = 1.0e-3_wp
     ! THIS SHOULD EVETUALLY HOLD AN INITAL GUESS - but as Intent( Out ) at the moment must init
     x = 0.0_wp
-!!$    Call ssp_hypre_semi_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), b, x, itn, rnorm, istop )
     Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
-!!$    Call ssp_hypre_ij_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), b, x, itn, rnorm, istop )
-    Write( *, * ) '0 ', itn, rnorm
 
     Call method%comms%get_rank( rank )
+    do_io = rank == 0 .And. report
+    
     Allocate( r, e, w, Mold = b )
     FD_order  = method%FD_operator%get_order()
     halo_width = FD_order
@@ -270,10 +273,9 @@ Contains
     Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
     Energy_old = Energy
     x2_old = 0.0_wp
-    If( rank == 0 ) Then
+    If( do_io ) Then
        Write( *, * ) 'Initial energy: ', Energy
-    End If
-    If( rank == 0 ) Then
+       Write( *, * ) 'Mix = ', mix
        Write( *, * ) 'order, iter, iterations rnorm r2, e2, x2, dx2, dx_max, Energy, dE'
     End If
     iteration_loop: Do i = 1, max_iter
@@ -288,12 +290,11 @@ Contains
 !!$       Call project_out_null( method%n, method%comms, r, lambda )
        r2 = Sqrt( method%contract( method%comms, r, r  ) )
        tol = rtol
-!!$       tol = Max( rtol, 1.0e-3_wp / ( i ** 10 ) )
        Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, itn, rnorm, istop )
        ! Project null space out of e 
        Call project_out_null( method%n, method%comms, e, lambda )
-       ! HACK at mixing - 0.9 on minimal testing looked good but as nothing to back up keep to unity for now
-       x = x + 1.00_wp * e
+       ! Mixing
+       x = x + mix * e
        e2 = Sqrt( method%contract( method%comms, e, e  ) )
        x2 = Sqrt( method%contract( method%comms, x, x  ) )
        dx2 = Abs( x2 - x2_old )
@@ -301,7 +302,7 @@ Contains
        Call method%comms%max( dx_max )
        Energy = - 0.5_wp * method%contract( method%comms, x, b / ( 4.0_wp * pi ) ) * method%V / Product( method%n )
        dE = Abs( Energy - Energy_old )
-       If( rank == 0 ) Then
+       If( do_io ) Then
           Write( *, '( 3( i2, 1x ), 3( g12.6, 1x ), f0.8, 1x, 2( g12.6, 1x ), 2( g16.10, 1x ) )' ) &
                FD_order * 2, i, itn, rnorm, r2, e2, x2, dx2, dx_max, Energy, Abs( Energy - Energy_old )
        End If
@@ -318,7 +319,7 @@ Contains
          x_with_halo, w  )
     r = b - w
     r2 = Sqrt( method%contract( method%comms, r, r  ) )
-    If( rank == 0 ) Then
+    If( do_io ) Then
        Write( *, * ) FD_order * 2, i, r2
     End If
     rnorm = r2
