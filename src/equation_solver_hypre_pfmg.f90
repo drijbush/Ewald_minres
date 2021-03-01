@@ -286,9 +286,10 @@ Contains
        ! Update the solution - written this way to allow mixing c.f. SCF solvers
        x = x + mix * e
        ! New energy
-       Energy = - 0.5_wp * method%contract( method%comms, x, b  )
-       Energy = Energy * method%V / Product( method%n )
-       Energy = Energy / ( 4.0_wp * pi )
+       ! Note we are essentially do the quadrature by hand as a little painful to interface to the quadrature type from here
+       Energy = method%contract( method%comms, x, b  ) * method%V / Product( method%n )
+       ! And scale with the appropriate constants
+       Energy = - 0.5_wp * Energy / ( 4.0_wp * pi )
        dE = Abs( Energy - Energy_old )
        ! If reqd tell the world things
        If( report ) Then
@@ -304,7 +305,7 @@ Contains
           End If
           x2_old = x2
        End If
-       ! 1e-6 is a HACK at the moment
+       ! 1e-6 is a HACK at the moment - should have some tolerance
        If( dE < 1.0e-6_wp ) Then
           Exit iteration_loop
        End If
