@@ -159,6 +159,8 @@ Contains
 
     Real( wp ), Dimension( : ), Allocatable :: stencil_values
     
+    Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
+
     Integer, Dimension( :, : ), Allocatable :: stencil_elements
 
     Integer :: comm
@@ -166,23 +168,13 @@ Contains
     Integer :: i1, i2, i3
 
     Type( FD_Laplacian_3d ) :: FD_order_2
-    Real( wp ), Dimension( 1:3, 1:3 ) :: dGrid_vecs
 
     method%n = n
     method%V = V
     
     Call comms%get_comm( comm )
-    
-!!$    ! HACK - should fix FD library
-!!$    Select Type( FD_operator )
-!!$    Class is ( FD_Laplacian_3d )
-!!$       Call FD_operator%get_stencil( stencil )
-!!$    Class Default
-!!$       Error Stop "Unknown class"
-!!$    End Select
 
-    ! Temp HACK to play
-    ! Only going to use PFMG with order 2
+    ! get higher accuracy by the iteration described by Matt and Phil - multigrid paper, need to look up ref
     dGrid_vecs( :, 1 ) = method%FD_operator%get_dir_vec( 1 )
     dGrid_vecs( :, 2 ) = method%FD_operator%get_dir_vec( 2 )
     dGrid_vecs( :, 3 ) = method%FD_operator%get_dir_vec( 3 )
@@ -207,9 +199,7 @@ Contains
        End Do
     End Do
 
-!!$    method%hypre_objects = ssp_hypre_semi_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
     method%hypre_objects = ssp_hypre_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
-!!$    method%hypre_objects = ssp_hypre_ij_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
 
   End Subroutine pfmg_init
 
@@ -272,11 +262,11 @@ Contains
 
     Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
     Energy_old = Energy
-    x2_old = 0.0_wp
     If( do_io ) Then
        Write( *, * ) 'Initial energy: ', Energy
        Write( *, * ) 'Mix = ', mix
        Write( *, * ) 'order, iter, iterations rnorm r2, e2, x2, dx2, dx_max, Energy, dE'
+       x2_old = 0.0_wp
     End If
     iteration_loop: Do i = 1, max_iter
        Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
@@ -295,24 +285,27 @@ Contains
        Call project_out_null( method%n, method%comms, e, lambda )
        ! Mixing
        x = x + mix * e
-       e2 = Sqrt( method%contract( method%comms, e, e  ) )
-       x2 = Sqrt( method%contract( method%comms, x, x  ) )
-       dx2 = Abs( x2 - x2_old )
-       dx_max = Maxval( Abs( e ) )
-       Call method%comms%max( dx_max )
-       Energy = - 0.5_wp * method%contract( method%comms, x, b / ( 4.0_wp * pi ) ) * method%V / Product( method%n )
+       Energy = - 0.5_wp * method%contract( method%comms, x, b  )
+       Energy = Energy * method%V / Product( method%n )
+       Energy = Energy / ( 4.0_wp * pi )
        dE = Abs( Energy - Energy_old )
-       If( do_io ) Then
-          Write( *, '( 3( i2, 1x ), 3( g12.6, 1x ), f0.8, 1x, 2( g12.6, 1x ), 2( g16.10, 1x ) )' ) &
-               FD_order * 2, i, itn, rnorm, r2, e2, x2, dx2, dx_max, Energy, Abs( Energy - Energy_old )
+       If( report ) Then
+          e2 = Sqrt( method%contract( method%comms, e, e  ) )
+          x2 = Sqrt( method%contract( method%comms, x, x  ) )
+          dx2 = Abs( x2 - x2_old )
+          dx_max = Maxval( Abs( e ) )
+          Call method%comms%max( dx_max )
+          If( do_io ) Then
+             Write( *, '( 3( i2, 1x ), 3( g12.6, 1x ), f0.8, 1x, 2( g12.6, 1x ), 2( g16.10, 1x ) )' ) &
+                  FD_order * 2, i, itn, rnorm, r2, e2, x2, dx2, dx_max, Energy, Abs( Energy - Energy_old )
+          End If
+          x2_old = x2
        End If
        ! 1e-6 is a HACK at the moment
-!!$       If( e2 / Sqrt( Real( Product( method%n ), wp ) ) < 1.0e-6_wp ) Then
        If( dE < 1.0e-6_wp ) Then
           Exit iteration_loop
        End If
        Energy_old = Energy
-       x2_old = x2
     End Do iteration_loop
     Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
     Call method%FD_operator%apply( Lbound( x_with_halo ), Lbound( w ), Lbound( w ), Ubound( w ), &
@@ -350,7 +343,6 @@ Contains
       Real( wp ) :: v_dot_n, n_dot_n
 
       ! Calculate v.n
-!!$      v_dot_n = Sum( v )
       v_dot_n = kahan_Sum( v )
       Call comms%reduce( v_dot_n )
 
@@ -408,9 +400,7 @@ Contains
 
     Type( equation_solver_hypre_pfmg ), Intent( InOut ) :: method
 
-!!$    Call  ssp_hypre_semi_struct_free( method%hypre_objects )
     Call  ssp_hypre_struct_free( method%hypre_objects )
-!!$    Call  ssp_hypre_ij_free( method%hypre_objects )
 
   End Subroutine pfmg_destroy
   
