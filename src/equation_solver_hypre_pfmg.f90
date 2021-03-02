@@ -282,6 +282,7 @@ Contains
        ! The residual should not contain any null space component as b can not contain any, and the
        ! action of the matrix on the solution projects out the null space, by definition
        ! Hence we can just call the solver
+       e = 0.0_wp
        Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, itn, rnorm, istop )
        ! Update the solution - written this way to allow mixing c.f. SCF solvers
        x = x + mix * e
