@@ -21,9 +21,15 @@ Module equation_solver_hypre_pfmg_module
 !!$     Final             :: pfmg_destroy
   End Type equation_solver_hypre_pfmg
 
+  ! Experiment partial mixing in "SCF" procedure
   Real( wp ), Parameter :: mix = 1.0_wp
 
+  ! Set to true to get report during iteration. Otherwise no printing
   Logical :: report              = .True.
+
+  ! If true the returned residual is consistent with the whole calculation.
+  ! However calculation of the residual requies significant extra calculation
+  ! which is not actually needed in most situations. Thus set to false to avoid this overhead.
   Logical :: consistent_residual = .False.
   
   ! Interfaces for C functions which talk to hpyre
