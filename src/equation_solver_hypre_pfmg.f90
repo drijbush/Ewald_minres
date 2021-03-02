@@ -10,12 +10,14 @@ Module equation_solver_hypre_pfmg_module
   Private
   
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_hypre_pfmg
-     Integer, Dimension( 1:3 ) :: n ! Number of grid point
-     Real( wp )                :: V ! volume
+     Integer, Dimension( 1:3 ) :: n                    ! Number of grid point
+     Real( wp )                :: V                    ! Volume
+     Real( wp )                :: iter_tol = 1.0e-6_wp ! Tolerance for iterations around order 2 solver
      Type( c_ptr )             :: hypre_objects
    Contains
      Procedure, Public :: solve => pfmg
      Procedure, Public :: pfmg_init
+     Procedure, Public :: set_iter_tol
 !!$     Final             :: pfmg_destroy
   End Type equation_solver_hypre_pfmg
 
@@ -262,7 +264,10 @@ Contains
     Call method%halo_swapper%allocate( lb, ub, halo_width, x_with_halo )
 
     ! Initial Energy
-    Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
+!!$    Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
+    Energy = method%contract( method%comms, x, b  ) * method%V / Product( method%n )
+    ! And scale with the appropriate constants
+    Energy = - 0.5_wp * Energy / ( 4.0_wp * pi )
     Energy_old = Energy
 
     If( do_io ) Then
@@ -307,7 +312,8 @@ Contains
           x2_old = x2
        End If
        ! 1e-6 is a HACK at the moment - should have some tolerance
-       If( dE < 1.0e-6_wp ) Then
+!!$       If( dE < 1.0e-6_wp ) Then
+       If( dE < method%iter_tol ) Then
           Exit iteration_loop
        End If
        ! After the solve e may now be contaminated with components of the Null space, so project null space out
@@ -414,5 +420,16 @@ Contains
     Call  ssp_hypre_struct_free( method%hypre_objects )
 
   End Subroutine pfmg_destroy
+  
+  Subroutine set_iter_tol( method, tol )
+
+    Implicit None
+
+    Class( equation_solver_hypre_pfmg ), Intent( InOut ) :: method
+    Real( wp )                         , Intent( In    ) :: tol
+
+    method%iter_tol = tol
+
+  End Subroutine set_iter_tol
   
 End Module equation_solver_hypre_pfmg_module

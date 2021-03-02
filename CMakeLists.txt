@@ -14,6 +14,7 @@ if (OpenMP_Fortran_FOUND)
 endif()
 find_library(fftw3 REQUIRED)
 find_library(HYPRE REQUIRED)
+link_directories(/system/software/linux-x86_64/fftw/3.3.8/lib /home/ijb/work/Ewald_minres/hypre/src/hypre/lib)
 
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_Fortran_FLAGS_DEBUG "-O -g -std=f2008 -Wall -Wextra -Wimplicit-interface -Wuse-without-only -fcheck=all -finit-real=snan" CACHE STRING "Flags used in debug compiles" FORCE)
