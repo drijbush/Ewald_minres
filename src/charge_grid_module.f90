@@ -139,31 +139,41 @@ Contains
     !$omp do
     particle_loop: Do i = 1, Size( q )
        ! Loop over points associated with this atom which are in this domain
+
        ! Find point nearest to the atom, and call this the centre for the atom grid
        ! Assumes atom in fractional 0 < ri < 1
        ri = r( :, i )
        qi_norm = q_norm * q( i )
        Call l%to_fractional( ri, fi )
+
+       ! Get where the nearest point on the grid is to the atom
+       ! Simple from the fractionals
        i_atom_centre = Nint( fi * n_grid )
+
+       ! Get the extent of grid associated with this atom in the
+       ! domain associated with this process
        i_g_lo = Max( i_atom_centre - range_gauss, domain_lo )
        i_g_hi = Min( i_atom_centre + range_gauss, domain_hi )
 
-       ! Transform to fractional coordinates
+       ! Get the fractional coordinates of the grid point closest to the atom centre 
        f_point = Real( i_atom_centre, wp ) / n_grid
-       ! And fractional to real
+
+       ! And From that get the real space coordinates of that point
        Call l%to_direct( f_point, r_point )
-       ! Vector to the point of interest from the centre of the gaussian
+       
+       ! And hence the vector to the nearest grid point from the centre of the gaussian
        grid_vec = r_point - ri
 
-       !       r_0 = i_g_lo(1) * dr(:,1) + i_g_lo(2) * dr(:,2) + i_g_lo(3) * dr(:,3)
+       ! Work out the start point of the bit of the grid associated with the atom
+       ! This is where we will start the recurrence to calculate the gaussian
        r_0 = Matmul( dr, i_atom_centre - i_g_lo )
        r_0 = grid_vec - r_0
 
-       ! Gaussian at zero point
+       ! Gaussian at the start point
        g_r = g(r_0, alpha)
        g_r0 = g_r
 
-       ! UFactors for updates in gaussian recurrence
+       ! Factors for updates in gaussian recurrence
        Do i1 = 1,3
           f_rdr( i1 ) = f( r_0, dr( :, i1 ), alpha )
        End Do
