@@ -280,6 +280,7 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: f_point
     Real( wp ), Dimension( 1:3 ) :: r_point
     Real( wp ), Dimension( 1:3 ) :: grid_vec
+    Real( wp ), Dimension( 1:3 ) :: grid_vec_z, grid_vec_zy
     Real( wp ), Dimension( 1:3 ) :: gvx, gvy, gvz
 
     Real( wp ), Dimension( 1:3 ) :: r_0
@@ -298,6 +299,7 @@ Contains
 
     Integer :: n
     Integer :: i1, i2, i3
+    Integer :: ig2, ig3
     Integer :: i
     Integer :: error
 
@@ -372,14 +374,20 @@ Contains
        r_0 = grid_vec
 
        !
-       ei(    i ) = 0.0_wp
+       ei( i ) = 0.0_wp
        fix = 0.0_wp
        fiy = 0.0_wp
        fiz = 0.0_wp
        Do i3 = - range_gauss, range_gauss
           gvz = i3 * dr( :, 3 )
+          grid_vec_z = r_0 + gvz
+!!$          i_grid( 3 ) = i3 + i_atom_centre( 3 )
+          ig3 = i3 + i_atom_centre( 3 )
           Do i2 = - range_gauss, range_gauss
              gvy = i2 * dr( :, 2 )
+             grid_vec_zy = grid_vec_z + gvy
+!!$             i_grid( 2 ) = i2 + i_atom_centre( 2 )
+             ig2 = i2 + i_atom_centre( 2 )
              Do i1 = - range_gauss, range_gauss
 
                 ! Gaussian at that point 
@@ -387,15 +395,15 @@ Contains
 
                 ! Update the guassian by recurrence relations
                 g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
-                f_rdr = f_rdr * g_drdr( :, 1 )
+                f_rdr( 1 ) = f_rdr( 1 ) * g_drdr( 1, 1 )
 
                 ! Vector from centre to the grid point
                 gvx = i1 * dr( :, 1 )
-                grid_vec = r_0 + gvx + gvy + gvz
-
+                grid_vec = grid_vec_zy + gvx
+                
                 ! Include the potential term
-                i_grid = i_atom_centre + [ i1, i2, i3 ]
-                g_val = g_val * pot_with_halo( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ) )
+!!$                i_grid( 1 ) = i_atom_centre( 1 ) + i1
+                g_val = g_val * pot_with_halo( i_atom_centre( 1 ) + i1, ig2, ig3 )
 
                 ! Add into the per particle energy and the force
                 ei( i ) = ei( i ) + g_val
@@ -416,7 +424,7 @@ Contains
              g_r = g_r0( 2 ) * f_rdr0( 2 ) * g_dr( 2 )
              g_r0( 2 ) = g_r
 
-             f_rdr = f_rdr0 * g_drdr( :, 2 )
+             f_rdr( 1:2 ) = f_rdr0( 1:2 ) * g_drdr( 1:2, 2 )
              f_rdr0 = f_rdr
 
           End Do
