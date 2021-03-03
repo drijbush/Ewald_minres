@@ -50,22 +50,21 @@ Contains
     Real( wp ), Dimension( 1:3 ) :: r_point
     Real( wp ), Dimension( 1:3 ) :: grid_vec
 
-    Real( wp ), Dimension( 1:3 ) :: r_0
     Real( wp ), Dimension( 1:3, 1:3 ) :: dr
-    Real( wp ) :: g_r
-    Real( wp ), Dimension(3) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
-    Real( wp ), Dimension(3,3) :: g_drdr
+    Real( wp ), Dimension( 1:3, 1:3 ) :: g_drdr
+
+    Real( wp ), Dimension( 1:3 ) :: r_0
+    Real( wp ), Dimension( 1:3 ) :: g_r0, g_dr, f_rdr, f_rdr0, f_rdr00, f_drdr
 
     Real( wp ) :: q_norm
     Real( wp ) :: qi_norm
-    Real( wp ) :: q_val, p_val
+    Real( wp ) :: q_val
     Real( wp ) :: q_tot, q_av
+    Real( wp ) :: g_r
 
     Integer, Dimension( 1:3 ) :: domain_lo, n_domain, domain_hi
 
     Integer, Dimension( 1:3 ) :: i_atom_centre
-    Integer, Dimension( 1:3 ) :: i_point
-    Integer, Dimension( 1:3 ) :: i_grid
     Integer, Dimension( 1:3 ) :: i_g_lo, i_g_hi
 
     Integer :: n_th, iam
@@ -89,9 +88,9 @@ Contains
     End Do
 
     Do i2 = 1, 3
-      Do i1 = 1, 3
-        g_drdr( i1, i2 ) = f( dr( :, i1 ), dr( :, i2 ), alpha )
-      End Do
+       Do i1 = 1, 3
+          g_drdr( i1, i2 ) = f( dr( :, i1 ), dr( :, i2 ), alpha )
+       End Do
     End Do
 
     ! What follows is a complete HACK to avoid gfortran stupidly putting
@@ -138,7 +137,7 @@ Contains
     ! bit we have just initalised
     ! Loop over atoms
     !$omp do
-    Do i = 1, Size( q )
+    particle_loop: Do i = 1, Size( q )
        ! Loop over points associated with this atom which are in this domain
        ! Find point nearest to the atom, and call this the centre for the atom grid
        ! Assumes atom in fractional 0 < ri < 1
@@ -155,9 +154,8 @@ Contains
        Call l%to_direct( f_point, r_point )
        ! Vector to the point of interest from the centre of the gaussian
        grid_vec = r_point - ri
-       
-       
-!       r_0 = i_g_lo(1) * dr(:,1) + i_g_lo(2) * dr(:,2) + i_g_lo(3) * dr(:,3)
+
+       !       r_0 = i_g_lo(1) * dr(:,1) + i_g_lo(2) * dr(:,2) + i_g_lo(3) * dr(:,3)
        r_0 = Matmul( dr, i_atom_centre - i_g_lo )
        r_0 = grid_vec - r_0
 
@@ -165,47 +163,36 @@ Contains
        g_r = g(r_0, alpha)
        g_r0 = g_r
 
+       ! UFactors for updates in gaussian recurrence
        Do i1 = 1,3
-         f_rdr(i1) = f(r_0, dr(:, i1), alpha)
+          f_rdr( i1 ) = f( r_0, dr( :, i1 ), alpha )
        End Do
-       f_rdr0 = f_rdr
+       f_rdr0  = f_rdr
        f_rdr00 = f_rdr
 
-       r_0 = grid_vec
-
-       Do i3 = i_g_lo( 3 ), i_g_hi( 3 )
+       ! Loop over bit of grid associated with an atom
+       atom_grid: Do i3 = i_g_lo( 3 ), i_g_hi( 3 )
           Do i2 = i_g_lo( 2 ), i_g_hi( 2 )
              Do i1 = i_g_lo( 1 ), i_g_hi( 1 )
-                ! ! The indices of the point in space
-                i_point = [ i1, i2, i3 ]
-                ! Transform to fractional coordinates
-                ! f_point = Real( i_point, wp ) / n_grid
-                ! ! And fractional to real
-                ! Call l%to_direct( f_point, r_point )
-                ! ! Calculate the contribution to the total charge at the point
-                ! ! R_POINT due to the charge distribution I
-                ! grid_vec = r_point - ri
-                ! q_val = qi_norm * Exp( - alpha * alpha * Dot_product( grid_vec, grid_vec ) )
-                ! print*, "OLD", i_point, q_val
 
-                ! And add in
+                ! Contribution at this point
                 q_val = qi_norm * g_r
+
+                ! Add in contribution
+                q_grid_red_hack( i1, i2, i3, iam ) = &
+                     q_grid_red_hack( i1, i2, i3, iam ) + q_val
 
                 ! Update gaussian value via recurrence
                 g_r = g_r * f_rdr( 1 ) * g_dr( 1 )
-                f_rdr = f_rdr * g_drdr( :, 1 )
+                f_rdr( 1 ) = f_rdr( 1 ) * g_drdr( 1, 1 )
 
-                i_grid = i_point
+             End Do
 
-                q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) = &
-                     q_grid_red_hack( i_grid( 1 ), i_grid( 2 ), i_grid( 3 ), iam ) + q_val
-              End Do
+             g_r = g_r0( 2 ) * f_rdr0( 2 ) * g_dr( 2 )
+             g_r0( 2 ) = g_r
 
-              g_r = g_r0( 2 ) * f_rdr0( 2 ) * g_dr( 2 )
-              g_r0( 2 ) = g_r
-
-              f_rdr = f_rdr0 * g_drdr( :, 2 )
-              f_rdr0 = f_rdr
+             f_rdr( 1:2 ) = f_rdr0( 1:2 ) * g_drdr( 1:2, 2 )
+             f_rdr0 = f_rdr
 
           End Do
 
@@ -216,9 +203,11 @@ Contains
           f_rdr0 = f_rdr
           f_rdr00 = f_rdr
 
-        End Do
-    End Do
+       End Do atom_grid
+       
+    End Do particle_loop
     !$omp end do
+    
     ! Synced here so OK to add up
     ! Now do the reduction manually - not needed once hacky way is fixed
     Do i_th = 0, n_th - 1
@@ -292,7 +281,7 @@ Contains
     Real( wp ) :: fix, fiy, fiz
     Real( wp ) :: g_val
     Real( wp ) :: dV
-    Real( wp ) :: s
+!!$    Real( wp ) :: s
 
     Integer, Dimension( 1:3 ) :: i_atom_centre
     Integer, Dimension( 1:3 ) :: i_grid
@@ -530,6 +519,9 @@ Contains
   End Subroutine charge_grid_get_n_grid
 
   Function g(r, alpha)
+
+    ! Gaussian function
+
     Real( wp ) :: g
     Real( wp ), Dimension(3), Intent( In    ) :: r
     Real( wp ), Intent( In    ) :: alpha
@@ -539,6 +531,9 @@ Contains
   End Function g
 
   Function f(r, dr, alpha)
+
+    ! Function used in recurrence to update gaussians
+    
     Real( wp ) :: f
     Real( wp ), Dimension(3), Intent( In    ) :: r
     Real( wp ), Dimension(3), Intent( In    ) :: dr
