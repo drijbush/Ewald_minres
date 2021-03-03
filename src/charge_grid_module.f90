@@ -170,7 +170,8 @@ Contains
        r_0 = grid_vec - r_0
 
        ! Gaussian at the start point
-       g_r = g(r_0, alpha)
+!!$       g_r = g(r_0, alpha)
+       g_r = g( r_0, alpha ) * qi_norm
        g_r0 = g_r
 
        ! Factors for updates in gaussian recurrence
@@ -186,7 +187,8 @@ Contains
              Do i1 = i_g_lo( 1 ), i_g_hi( 1 )
 
                 ! Contribution at this point
-                q_val = qi_norm * g_r
+!!$                q_val = qi_norm * g_r
+                q_val = g_r
 
                 ! Add in contribution
                 q_grid_red_hack( i1, i2, i3, iam ) = &
@@ -362,7 +364,8 @@ Contains
        r_0 = grid_vec - Sum( range_gauss * dr, dim = 2 )
 
        ! Gaussian at zero point
-       g_r = g( r_0, alpha )
+!!$       g_r = g( r_0, alpha )
+       g_r = g( r_0, alpha ) * qi_norm
        g_r0 = g_r
 
        Do i1 = 1,3
@@ -439,8 +442,8 @@ Contains
        End Do
 
        ! Apply appropriate scalings to force and energy
-       ei   (    i ) = ei   (    i ) * 0.5_wp * qi_norm
-       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha * qi_norm
+       ei   (    i ) = ei   (    i ) * 0.5_wp
+       force( :, i ) = [ fix, fiy, fiz ] * 2.0_wp * alpha * alpha
        
     End Do particle_loop
     !$omp end do
