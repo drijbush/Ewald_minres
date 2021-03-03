@@ -361,9 +361,9 @@ Contains
        ! Vector to the point of interest from the centre of the gaussian
        grid_vec = r_point - ri
 
-!!$       r_0 = grid_vec - Sum( range_gauss * dr, dim = 2 )
-       r_0 = Matmul( dr, i_atom_centre - range_gauss )
-       r_0 = grid_vec - r_0
+       r_0 = grid_vec - Sum( range_gauss * dr, dim = 2 )
+!!$       r_0 = Matmul( dr, i_atom_centre - range_gauss )
+!!$       r_0 = grid_vec - r_0
 
        ! Gaussian at zero point
 !!$       g_r = g( r_0, alpha )
