@@ -247,6 +247,8 @@ Contains
     Integer :: FD_order, halo_width
     Integer :: rank
     Integer :: i
+    Integer :: lb1, lb2, lb3
+    Integer :: ub1, ub2, ub3
     Integer :: error
 
     Logical :: do_io
@@ -264,7 +266,18 @@ Contains
     Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
 
     ! Set up the data structures for the higher order solution
-    Allocate( r, e, w, Mold = b )
+    ! gfortran 9 has a bug with Mold that doesn't propagate the bounds of the arrays
+    ! properly, sigh ... So do it "manually"
+!!$    Allocate( r, e, w, Mold = b )
+    lb1 = Lbound( b, Dim = 1 )
+    lb2 = Lbound( b, Dim = 2 )
+    lb3 = Lbound( b, Dim = 3 )
+    ub1 = Ubound( b, Dim = 1 )
+    ub2 = Ubound( b, Dim = 2 )
+    ub3 = Ubound( b, Dim = 3 )
+    Allocate( r( lb1:ub1, lb2:ub2, lb3:ub3 ) )
+    Allocate( e( lb1:ub1, lb2:ub2, lb3:ub3 ) )
+    Allocate( w( lb1:ub1, lb2:ub2, lb3:ub3 ) )
     FD_order   = method%FD_operator%get_order()
     halo_width = FD_order
     Call method%halo_swapper%allocate( lb, ub, halo_width, x_with_halo )
