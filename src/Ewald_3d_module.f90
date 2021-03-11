@@ -277,22 +277,22 @@ Contains
     ! Due to the halo swapping routines only coping with halos of maximum size one domain
     ! make the grid size consistent with this. An issue for small grids compared to proc count
     ! WANT TO FIX THIS SO THE NEXT BLOCK GOES AWAY
-    Halo_hack: Block
-      Do
-         ! Find the minimum size of the domain with the current parameters
-         ! We know all the domains are the same size due to the previous hack - NOTE DEPENDENCY -
-         ! so don't need comms to find the minimum number of grdi points asscoiated with each proc
-         Call domain_get_params( n_grid, n_proc_grid, me_proc_coords, n_grid_domain, domain_base_coords )
-         ! Get the maximum size for halo swapping
-         ! Note bug in FD%get_order returns half the order, which is actually the amount we need to swap
-         max_swap = Max( ( 2 * FD_order_use ) / 2, range_gauss_use + 1 )
-         ! Check max_swap is at most the size of the domain
-         If( All( max_swap <= n_grid_domain ) ) Exit
-         ! Domain size not big enough. Increase n_grid and try again. Keep n_grid a multiple of the
-         ! proc grid size
-         n_grid = n_grid + n_proc_grid
-      End Do
-    End Block Halo_hack
+!!$    Halo_hack: Block
+!!$      Do
+!!$         ! Find the minimum size of the domain with the current parameters
+!!$         ! We know all the domains are the same size due to the previous hack - NOTE DEPENDENCY -
+!!$         ! so don't need comms to find the minimum number of grdi points asscoiated with each proc
+!!$         Call domain_get_params( n_grid, n_proc_grid, me_proc_coords, n_grid_domain, domain_base_coords )
+!!$         ! Get the maximum size for halo swapping
+!!$         ! Note bug in FD%get_order returns half the order, which is actually the amount we need to swap
+!!$         max_swap = Max( ( 2 * FD_order_use ) / 2, range_gauss_use + 1 )
+!!$         ! Check max_swap is at most the size of the domain
+!!$         If( All( max_swap <= n_grid_domain ) ) Exit
+!!$         ! Domain size not big enough. Increase n_grid and try again. Keep n_grid a multiple of the
+!!$         ! proc grid size
+!!$         n_grid = n_grid + n_proc_grid
+!!$      End Do
+!!$    End Block Halo_hack
 
     ! HACK for multigrid sizes - make small integer * power of 2
     Multigrid_hack: Block
