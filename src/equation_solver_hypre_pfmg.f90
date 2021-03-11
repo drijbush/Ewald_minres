@@ -13,6 +13,7 @@ Module equation_solver_hypre_pfmg_module
      Integer, Dimension( 1:3 ) :: n                    ! Number of grid point
      Real( wp )                :: V                    ! Volume
      Real( wp )                :: iter_tol = 1.0e-6_wp ! Tolerance for iterations around order 2 solver
+     Logical                   :: orthog_stencil       ! If the stencil only has elements along the axes can save some message passing
      Type( c_ptr )             :: hypre_objects
    Contains
      Procedure, Public :: solve => pfmg
@@ -175,6 +176,7 @@ Contains
     Integer :: comm
     Integer :: n_stencil
     Integer :: i1, i2, i3
+    Integer :: i
 
     Type( FD_Laplacian_3d ) :: FD_order_2
 
@@ -206,6 +208,14 @@ Contains
              End If
           End Do
        End Do
+    End Do
+
+    ! Work out if we have an orthogonal stencil
+    method%orthog_stencil = .True.
+    Do i = 1, n_stencil
+       method%orthog_stencil = method%orthog_stencil .And. ( Count( stencil_elements( :, i ) /= 0 ) == 1 )
+!!$       Write( *, * ) i1, '!! ', stencil_elements( :, i1 ), stencil_values( i1 )
+       If( .Not. method%orthog_stencil ) Exit
     End Do
 
     method%hypre_objects = ssp_hypre_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
@@ -252,6 +262,7 @@ Contains
     Integer :: error
 
     Logical :: do_io
+    Logical :: do_corners
     
     n = Ubound( b ) - Lbound( b ) + 1
 
@@ -296,6 +307,12 @@ Contains
        x2_old = 0.0_wp
     End If
 
+    ! If orthog stencil can save some message passing
+    If( method%orthog_stencil ) Then
+       do_corners = method%halo_swapper%do_corners()
+       Call method%halo_swapper%set_corners( .False. )
+    End If
+    
     iteration_loop: Do i = 1, max_iter
 
        ! Get the residual for the higher order operator
@@ -352,7 +369,12 @@ Contains
     End If
     r2 = Sqrt( method%contract( method%comms, r, r  ) )
     rnorm = r2
-    
+
+    ! Reset the method as we found it
+    If( method%orthog_stencil ) Then
+       Call method%halo_swapper%set_corners( do_corners )
+    End If
+
     istop_message = "Who knows?"
 
   Contains
