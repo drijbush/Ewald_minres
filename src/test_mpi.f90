@@ -42,6 +42,8 @@ Program test_mpi
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_full
 
   Real( wp ), Dimension( :, : ), Allocatable :: r
+  Real( wp ), Dimension( :, : ), Allocatable :: velocity
+  Real( wp ), Dimension( :, : ), Allocatable :: dlp_force
   Real( wp ), Dimension( :, : ), Allocatable :: r_domain
   Real( wp ), Dimension( :, : ), Allocatable :: r_halo
   Real( wp ), Dimension( :, : ), Allocatable :: force_ffp
@@ -54,6 +56,7 @@ Program test_mpi
   Real( wp ), Dimension( 1:3, 1:3 ) :: stress
 
   Real( wp ), Dimension( : ), Allocatable :: q
+  Real( wp ), Dimension( : ), Allocatable :: mass
   Real( wp ), Dimension( : ), Allocatable :: q_domain
   Real( wp ), Dimension( : ), Allocatable :: q_halo
   Real( wp ), Dimension( : ), Allocatable :: ei_ffp
@@ -71,7 +74,8 @@ Program test_mpi
   Real( wp ) :: t_grid_ffp, t_pot_solve_ffp
   Real( wp ) :: recip_E_ssp
   Real( wp ) :: ei_full
-!  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
+  !  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
+  Real( wp ) :: dt = 0.001_wp
 
   Integer, Dimension( : ), Allocatable :: id, id_domain
 
@@ -166,12 +170,16 @@ Program test_mpi
 
   Call l%initialise( 3, a, alpha )
 
-  Allocate( q( 1:n ) )
-  Allocate( r( 1:3, 1:n ) )
+  Allocate( q   ( 1:n ) )
+  Allocate( mass( 1:n ) )
+  
+  Allocate( r        ( 1:3, 1:n ) )
+  Allocate( velocity ( 1:3, 1:n ) )
+  Allocate( dlp_force( 1:3, 1:n ) )
 
   Read_CONFIG_on_proc_0: If( me == 0 ) Then
 
-     Call read_config( level, config_unit, q, r )
+     Call read_config( level, config_unit, q, r, mass, velocity, dlp_force )
      Close( config_unit )
 
      ! Shift and move into reference cell
@@ -185,8 +193,11 @@ Program test_mpi
 
   End If Read_CONFIG_on_proc_0
 
-  Call mpi_bcast( q, Size( q ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( r, Size( r ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( q        , Size( q         ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( mass     , Size( mass      ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( r        , Size( r         ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( velocity , Size( velocity  ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( dlp_force, Size( dlp_force ), mpi_double_precision, 0, mpi_comm_world )
 
   Allocate( id( 1:n ) )
   id = [ ( i, i = 1, n ) ]
@@ -368,6 +379,11 @@ Program test_mpi
   End If
   
   ! See if we get the same answer with a restart
+  If( me == 0 ) Then
+     Write( *, * )
+     Write( *, * ) 'Restart without moving the particles'
+     Write( *, * )
+  End If
   recip_E_ssp   = 0.0_wp
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error, &
@@ -388,22 +404,74 @@ Program test_mpi
      Write( *, * ) 'Nett force: ', f_ssp
   End If
 
-!!$  Call mpi_finalize( error )
-!!$  Stop
   ! Now move the atoms slightly ...
-
+  ! Can use the velocities and forces in the DLP CONFIG file to
+  ! approximate a time step
+  If( me == 0 ) Then
+     Write( *, * )
+     Write( *, * )
+     Write( *, * ) 'Moving the particles! Using previous result as initial guess'
+     Write( *, * )
+  End If
+  
   Allocate( dr, mold = r )
-  Call Random_number( dr )
-  dr = dr - 0.5_wp
-  dr = dr / 100.0_wp
+  ! Approximate time step
+  dr = dt * velocity
+  Do  i = 1, n
+     dr( :, i ) = dr( :, i ) + dt * dt * dlp_force( :, i ) / ( 2.0_wp * mass( i ) )
+  End Do
   r = r + dr
-!!$!!!!$  dr = r
+
+  ! PBC's
   Do i = 1, n
      t = r( :, i )
      Call l%to_reference( t, r( :, i ) )
   End Do
-!!$!!!!$  Write( *, * ) Maxval( dr - r )
-!!$!!!!$  r( :, 1 ) = r( :, 1 ) + 0.00001_wp
+
+  ! Generate a new refernece energy for comparison
+  Moved_serial: If( me == 0 ) Then
+     ! Build the arrays of particles in the domain and halo
+     np_grid_serial = [ 1, 1, 1 ]
+     Call domain_build( l, q, r, n_grid, np_grid_serial, [ 0, 0, 0 ], q_domain, r_domain )
+     Call domain_halo_build( l, q, r, n_grid, np_grid_serial, [ 0, 0, 0 ], [ range_gauss, range_gauss, range_gauss ], &
+          q_halo, r_halo )
+
+     ! Calculate the long range term by fourier space methods
+     Allocate( q_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+     Allocate( pot_grid_ffp( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+     Allocate( ei_ffp( 1:n ) )
+     Allocate( force_ffp( 1:3, 1:n ) )
+     Call ffp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, &
+          recip_E_ffp, q_grid_ffp, pot_grid_ffp, ei_ffp, force_ffp, t_grid_ffp, t_pot_solve_ffp, error )
+     ! Report the energy
+     Write( *, '( "Serial FFP reciprocal energy: ", g24.14 )' ) recip_E_ffp
+     ! Save the charge grid
+     Call grid_io_save( 11, 'q_grid_FFP_serial_moved.dat', l, q_grid_ffp )
+     ! Save the FFP potential
+     Call grid_io_save( 11, 'pot_grid_FFP_serial_moved.dat', l, pot_grid_ffp )
+     ! Save the forces
+     Open( 11, file = 'forces_ffp_serial_moved.dat' )
+     Write( 11, * ) n, '     #number of particles'
+     Write( 11, * ) Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) ), '     #Nett force'
+     Do i = 1, n
+        Write( 11, * ) i, force_ffp( :, i )
+     End Do
+     Close( 11 )
+     ! Report some potential  data on some potential problems
+     Write( *, '( "FFP: Sum of charge over grid: ", g24.14 )' ) Sum( q_grid_ffp )
+     Write( *, '( "FFP: Sum over pot grid      : ", g24.14 )' ) Sum( pot_grid_ffp )
+     Write( *, '( "FFP: Nett force: ", 3( g20.14, 1x ) )' ) &
+          Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) )
+     ! timing data
+     Write( *, '( "FFP grid  time: ", f7.3 )' ) t_grid_ffp
+     Write( *, '( "FFP solve time: ", f7.3 )' ) t_pot_solve_ffp
+     ! Tidy up
+     Deallocate( force_ffp )
+     Deallocate( ei_ffp )
+     Deallocate( pot_grid_ffp )
+     Deallocate( q_grid_ffp )
+  End If Moved_serial
+
   ! Build the domain and halo
   Call domain_build( l, q, r, n_grid, np_grid, p_coords, q_domain, r_domain, id, id_domain )
   Call domain_halo_build( l, q, r, n_grid, np_grid, p_coords, [ range_gauss, range_gauss, range_gauss ], &
@@ -417,9 +485,6 @@ Program test_mpi
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error, &
        q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
-!!$  Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
-!!$       recip_E_ssp, force_ssp, stress, error, &
-!!$       ei = ei_ssp, status = status )
   Do i = 1, 3
      f_ssp( i ) = Sum( force_ssp( i, : ) )
   End Do
@@ -455,36 +520,46 @@ Contains
 
   End Subroutine read_header
 
-  Subroutine read_config( level, unit, q, r )
+  Subroutine read_config( level, unit, q, r, mass, velocity, force )
 
+    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_signaling_nan
+    
     Integer,                       Intent( In    ) :: level
     Integer,                       Intent( In    ) :: unit
     Real( wp ), Dimension( :    ), Intent(   Out ) :: q
     Real( wp ), Dimension( :, : ), Intent(   Out ) :: r
+    Real( wp ), Dimension(    : ), Intent(   Out ) :: mass
+    Real( wp ), Dimension( :, : ), Intent(   Out ) :: velocity
+    Real( wp ), Dimension( :, : ), Intent(   Out ) :: force
 
     Integer :: n
     Integer :: i
 
     Character( Len = 3 ) :: what
 
+    velocity = ieee_value( velocity, ieee_signaling_nan )
+    force    = ieee_value( force   , ieee_signaling_nan )
+    
     n = Size( q )
 
     Do i = 1, n
        Read( unit, * ) what
        If( what == 'Na+' ) Then
-          q( i ) = +1.0_wp
+          q( i )    = +1.0_wp
+          mass( i ) = 22.9898_wp 
        Else If( what == 'Cl-' ) Then
-          q( i ) = -1.0_wp
+          q( i )    = -1.0_wp
+          mass( i ) = 35.4530_wp
        Else
           Write( *, * ) 'what is a ', what, ' ?'
           Stop 'Error in CONFIG reading'
        End If
        Read( unit, * ) r( :, i )
        If( level >= 1 ) Then
-          Read( unit, * )
+          Read( unit, * ) velocity( :, i )
        End If
        If( level >= 2 ) Then
-          Read( unit, * )
+          Read( unit, * ) force( :, i )
        End If
     End Do
 
