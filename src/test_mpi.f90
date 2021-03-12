@@ -244,11 +244,11 @@ Program test_mpi
      ! Report the energy
      Write( *, '( "Serial FFP reciprocal energy: ", g24.14 )' ) recip_E_ffp
      ! Save the charge grid
-     Call grid_io_save( 11, 'q_grid_FFP_serial.dat', l, q_grid_ffp )
+     Call grid_io_save( 11, 'q_grid_FFP_serial_orig.dat', l, q_grid_ffp )
      ! Save the FFP potential
-     Call grid_io_save( 11, 'pot_grid_FFP_serial.dat', l, pot_grid_ffp )
+     Call grid_io_save( 11, 'pot_grid_FFP_serial_orig.dat', l, pot_grid_ffp )
      ! Save the forces
-     Open( 11, file = 'forces_ffp_serial.dat' )
+     Open( 11, file = 'forces_ffp_serial_orig.dat' )
      Write( 11, * ) n, '     #number of particles'
      Write( 11, * ) Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) ), '     #Nett force'
      Do i = 1, n
@@ -339,44 +339,49 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
-     Write( *, * ) 'Nett force: ', f_ssp
-  End If
-  Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
-  q_grid_full = 0.0_wp
-  q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
-       domain_base_coords( 2 ):domain_end_coords( 2 ), &
-       domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
-  Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
-  If( me_cart == 0 ) Then
-     Call grid_io_save( 11, 'q_grid_ssp_parallel_new.dat', l, q_grid_full )
-  End If
-  q_grid_full = 0.0_wp
-  q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
-       domain_base_coords( 2 ):domain_end_coords( 2 ), &
-       domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
-  Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
-  If( me_cart == 0 ) Then
-     Call grid_io_save( 11, 'pot_grid_ssp_parallel_new.dat', l, q_grid_full )
+     Write( *, '( "SSP: Nett force: ", 3( g20.14, 1x ) )' ) f_ssp
   End If
 
-  Allocate( force_full( 1:3, 1:n ) )
-  force_full = 0.0_wp
-  Do i = 1, Size( force_ssp, Dim = 2 )
-     force_full( :, id_domain( i ) ) = force_ssp( :, i )
-  End Do
-  Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
-  ei_full = Sum( ei_ssp )
-  Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
-  If( me_cart == 0 ) Then
-     Open( 11, file = 'forces_ssp_parallel_new.dat' )
-     Write( 11, * ) n, '     #number of particles'
-     Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
-     Do i = 1, n
-        Write( 11, * ) i, force_full( :, i )
-     End Do
-     Close( 11 )
-     Write( *, * ) 'Energy from summing per particle contributions ', ei_full
-  End If
+  Save_distributed_orig: Block
+    Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+    q_grid_full = 0.0_wp
+    q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
+         domain_base_coords( 2 ):domain_end_coords( 2 ), &
+         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    If( me_cart == 0 ) Then
+       Call grid_io_save( 11, 'q_grid_ssp_parallel_orig.dat', l, q_grid_full )
+    End If
+    q_grid_full = 0.0_wp
+    q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
+         domain_base_coords( 2 ):domain_end_coords( 2 ), &
+         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    If( me_cart == 0 ) Then
+       Call grid_io_save( 11, 'pot_grid_ssp_parallel_orig.dat', l, q_grid_full )
+    End If
+    Deallocate( q_grid_full )
+    
+    Allocate( force_full( 1:3, 1:n ) )
+    force_full = 0.0_wp
+    Do i = 1, Size( force_ssp, Dim = 2 )
+       force_full( :, id_domain( i ) ) = force_ssp( :, i )
+    End Do
+    Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
+    ei_full = Sum( ei_ssp )
+    Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
+    If( me_cart == 0 ) Then
+       Open( 11, file = 'forces_ssp_parallel_orig.dat' )
+       Write( 11, * ) n, '     #number of particles'
+       Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
+       Do i = 1, n
+          Write( 11, * ) i, force_full( :, i )
+       End Do
+       Close( 11 )
+       Write( *, * ) 'Energy from summing per particle contributions ', ei_full
+    End If
+    Deallocate( force_full )
+  End Block Save_distributed_orig
   
   ! See if we get the same answer with a restart
   If( me == 0 ) Then
@@ -401,7 +406,7 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
-     Write( *, * ) 'Nett force: ', f_ssp
+     Write( *, '( "SSP: Nett force: ", 3( g20.14, 1x ) )' ) f_ssp
   End If
 
   ! Now move the atoms slightly ...
@@ -411,6 +416,8 @@ Program test_mpi
      Write( *, * )
      Write( *, * )
      Write( *, * ) 'Moving the particles! Using previous result as initial guess'
+     Write( *, '( a, g10.4 )' ) 'dt = ', dt
+     Write( *, * ) 'WARNING: DT BURNT INTO CODE!!'
      Write( *, * )
   End If
   
@@ -498,8 +505,49 @@ Program test_mpi
      Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
      Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
      Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
-     Write( *, * ) 'Nett force: ', f_ssp
+     Write( *, '( "SSP: Nett force: ", 3( g20.14, 1x ) )' ) f_ssp
   End If
+
+  Save_distributed_moved: Block
+    Allocate( q_grid_full( 0:n_grid( 1 ) - 1, 0:n_grid( 2 ) - 1, 0:n_grid( 3 ) - 1 ) )
+    q_grid_full = 0.0_wp
+    q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
+         domain_base_coords( 2 ):domain_end_coords( 2 ), &
+         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    If( me_cart == 0 ) Then
+       Call grid_io_save( 11, 'q_grid_ssp_parallel_moved.dat', l, q_grid_full )
+    End If
+    q_grid_full = 0.0_wp
+    q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
+         domain_base_coords( 2 ):domain_end_coords( 2 ), &
+         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    If( me_cart == 0 ) Then
+       Call grid_io_save( 11, 'pot_grid_ssp_parallel_moved.dat', l, q_grid_full )
+    End If
+    Deallocate( q_grid_full )
+    
+    Allocate( force_full( 1:3, 1:n ) )
+    force_full = 0.0_wp
+    Do i = 1, Size( force_ssp, Dim = 2 )
+       force_full( :, id_domain( i ) ) = force_ssp( :, i )
+    End Do
+    Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
+    ei_full = Sum( ei_ssp )
+    Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
+    If( me_cart == 0 ) Then
+       Open( 11, file = 'forces_ssp_parallel_moved.dat' )
+       Write( 11, * ) n, '     #number of particles'
+       Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
+       Do i = 1, n
+          Write( 11, * ) i, force_full( :, i )
+       End Do
+       Close( 11 )
+       Write( *, * ) 'Energy from summing per particle contributions ', ei_full
+    End If
+    Deallocate( force_full )
+  End Block Save_distributed_moved
 
   Call mpi_finalize( error )
 
