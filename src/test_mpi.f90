@@ -70,11 +70,10 @@ Program test_mpi
   Real( wp ) :: gauss_tol
   Real( wp ) :: xshift
   Real( wp ) :: recip_E_ffp
-!  Real( wp ) :: rnorm
   Real( wp ) :: t_grid_ffp, t_pot_solve_ffp
   Real( wp ) :: recip_E_ssp
   Real( wp ) :: ei_full
-  !  Real( wp ) :: t_grid_ssp, t_pot_solve_ssp, t_forces_ssp
+  Real( wp ) :: t_tot
   Real( wp ) :: dt = 0.001_wp
 
   Integer, Dimension( : ), Allocatable :: id, id_domain
@@ -250,7 +249,7 @@ Program test_mpi
      ! Save the forces
      Open( 11, file = 'forces_ffp_serial_orig.dat' )
      Write( 11, * ) n, '     #number of particles'
-     Write( 11, * ) Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) ), '     #Nett force'
+     Write( 11, '( a, 3( 1x, g12.6 ) )' ) 'Nett force: ', Sum( force_ffp, Dim = 2 )
      Do i = 1, n
         Write( 11, * ) i, force_ffp( :, i )
      End Do
@@ -258,11 +257,13 @@ Program test_mpi
      ! Report some potential  data on some potential problems
      Write( *, '( "FFP: Sum of charge over grid: ", g24.14 )' ) Sum( q_grid_ffp )
      Write( *, '( "FFP: Sum over pot grid      : ", g24.14 )' ) Sum( pot_grid_ffp )
-     Write( *, '( "FFP: Nett force: ", 3( g20.14, 1x ) )' ) &
-          Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) )
+     Write( *, '( "FFP: Nett force: ", 3( g12.6, 1x ) )' ) &
+          Sum( force_ffp, Dim = 2 )
      ! timing data
-     Write( *, '( "FFP grid  time: ", f7.3 )' ) t_grid_ffp
-     Write( *, '( "FFP solve time: ", f7.3 )' ) t_pot_solve_ffp
+     t_tot = t_grid_ffp + t_pot_solve_ffp
+     Write( *, '( "FFP grid  time: ", f9.5 )' ) t_grid_ffp
+     Write( *, '( "FFP solve time: ", f9.5 )' ) t_pot_solve_ffp
+     Write( *, '( "FFP toal  time: ", f9.5 )' ) t_tot
      ! Tidy up
      Deallocate( force_ffp )
      Deallocate( ei_ffp )
@@ -331,15 +332,17 @@ Program test_mpi
   End Do
   Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
+     t_tot = status%t_grid + status%t_pot_solve + status%t_forces
      Write( *, * )
      Write( *, * ) 'NEW Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
      Write( *, * ) 'iterations = ', status%solver_iterations
      Write( *, * ) 'terminated because ', Trim( Adjustl( status%solver_stop_message ) )
      Write( *, * ) 'norm of error vector ', status%solver_residual_norm
-     Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
-     Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
-     Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
-     Write( *, '( "SSP: Nett force: ", 3( g20.14, 1x ) )' ) f_ssp
+     Write( *, '( "SSP grid   time: ", f9.5 )' ) status%t_grid
+     Write( *, '( "SSP solve  time: ", f9.5 )' ) status%t_pot_solve
+     Write( *, '( "SSP forces time: ", f9.5 )' ) status%t_forces
+     Write( *, '( "SSP total  time: ", f9.5 )' ) t_tot
+     Write( *, '( "SSP: Nett force: ", 3( g12.6, 1x ) )' ) f_ssp
   End If
 
   Save_distributed_orig: Block
@@ -373,7 +376,7 @@ Program test_mpi
     If( me_cart == 0 ) Then
        Open( 11, file = 'forces_ssp_parallel_orig.dat' )
        Write( 11, * ) n, '     #number of particles'
-       Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
+       Write( 11, '( a, 3( 1x, g12.6 ) )' ) 'Nett force: ', Sum( force_full, Dim = 2 )
        Do i = 1, n
           Write( 11, * ) i, force_full( :, i )
        End Do
@@ -398,15 +401,17 @@ Program test_mpi
   End Do
   Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
+     t_tot = status%t_grid + status%t_pot_solve + status%t_forces
      Write( *, * )
      Write( *, * ) 'OLD Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
      Write( *, * ) 'iterations = ', status%solver_iterations
      Write( *, * ) 'terminated because ', Trim( Adjustl( status%solver_stop_message ) )
      Write( *, * ) 'norm of error vector ', status%solver_residual_norm
-     Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
-     Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
-     Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
-     Write( *, '( "SSP: Nett force: ", 3( g20.14, 1x ) )' ) f_ssp
+     Write( *, '( "SSP grid   time: ", f9.5 )' ) status%t_grid
+     Write( *, '( "SSP solve  time: ", f9.5 )' ) status%t_pot_solve
+     Write( *, '( "SSP forces time: ", f9.5 )' ) status%t_forces
+     Write( *, '( "SSP total  time: ", f9.5 )' ) t_tot
+     Write( *, '( "SSP: Nett force: ", 3( g12.6, 1x ) )' ) f_ssp
   End If
 
   ! Now move the atoms slightly ...
@@ -459,7 +464,7 @@ Program test_mpi
      ! Save the forces
      Open( 11, file = 'forces_ffp_serial_moved.dat' )
      Write( 11, * ) n, '     #number of particles'
-     Write( 11, * ) Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) ), '     #Nett force'
+     Write( 11, '( a, 3( 1x, g12.6 ) )' ) 'Nett force: ', Sum( force_ffp, Dim = 2 )
      Do i = 1, n
         Write( 11, * ) i, force_ffp( :, i )
      End Do
@@ -467,11 +472,13 @@ Program test_mpi
      ! Report some potential  data on some potential problems
      Write( *, '( "FFP: Sum of charge over grid: ", g24.14 )' ) Sum( q_grid_ffp )
      Write( *, '( "FFP: Sum over pot grid      : ", g24.14 )' ) Sum( pot_grid_ffp )
-     Write( *, '( "FFP: Nett force: ", 3( g20.14, 1x ) )' ) &
+     Write( *, '( "FFP: Nett force: ", 3( g12.6, 1x ) )' ) &
           Sum( force_ffp( 1, : ) ), Sum( force_ffp( 2, : ) ), Sum( force_ffp( 3, : ) )
      ! timing data
-     Write( *, '( "FFP grid  time: ", f7.3 )' ) t_grid_ffp
-     Write( *, '( "FFP solve time: ", f7.3 )' ) t_pot_solve_ffp
+     t_tot = t_grid_ffp + t_pot_solve_ffp
+     Write( *, '( "FFP grid  time: ", f9.5 )' ) t_grid_ffp
+     Write( *, '( "FFP solve time: ", f9.5 )' ) t_pot_solve_ffp
+     Write( *, '( "FFP total time: ", f9.5 )' ) t_tot
      ! Tidy up
      Deallocate( force_ffp )
      Deallocate( ei_ffp )
@@ -497,15 +504,17 @@ Program test_mpi
   End Do
   Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
   If( me_cart == 0 ) Then
+     t_tot = status%t_grid + status%t_pot_solve + status%t_forces
      Write( *, * )
      Write( *, * ) 'SHIFTED Energy: ', recip_E_ssp, recip_E_ssp - recip_E_ffp
      Write( *, * ) 'iterations = ', status%solver_iterations
      Write( *, * ) 'terminated because ', Trim( Adjustl( status%solver_stop_message ) )
      Write( *, * ) 'norm of error vector ', status%solver_residual_norm
-     Write( *, '( "SSP grid   time: ", f7.3 )' ) status%t_grid
-     Write( *, '( "SSP solve  time: ", f7.3 )' ) status%t_pot_solve
-     Write( *, '( "SSP forces time: ", f7.3 )' ) status%t_forces
-     Write( *, '( "SSP: Nett force: ", 3( g20.14, 1x ) )' ) f_ssp
+     Write( *, '( "SSP grid   time: ", f9.5 )' ) status%t_grid
+     Write( *, '( "SSP solve  time: ", f9.5 )' ) status%t_pot_solve
+     Write( *, '( "SSP forces time: ", f9.5 )' ) status%t_forces
+     Write( *, '( "SSP total  time: ", f9.5 )' ) t_tot
+     Write( *, '( "SSP: Nett force: ", 3( g12.6, 1x ) )' ) f_ssp
   End If
 
   Save_distributed_moved: Block
@@ -539,7 +548,7 @@ Program test_mpi
     If( me_cart == 0 ) Then
        Open( 11, file = 'forces_ssp_parallel_moved.dat' )
        Write( 11, * ) n, '     #number of particles'
-       Write( 11, * ) Sum( force_full( 1, : ) ), Sum( force_full( 2, : ) ), Sum( force_full( 3, : ) ), '     #Nett force'
+       Write( 11, '( a, 3( 1x, g12.6 ) )' ) 'Nett force: ', Sum( force_full, Dim = 2 )
        Do i = 1, n
           Write( 11, * ) i, force_full( :, i )
        End Do
