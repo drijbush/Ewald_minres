@@ -265,7 +265,7 @@ Program test_mpi
      Write( *, '( "FFP solve time: ", f9.5 )' ) t_pot_solve_ffp
      Write( *, '( "FFP toal  time: ", f9.5 )' ) t_tot
      ! Tidy up
-     Deallocate( force_ffp )
+!!$     Deallocate( force_ffp )
      Deallocate( ei_ffp )
      Deallocate( pot_grid_ffp )
      Deallocate( q_grid_ffp )
@@ -374,6 +374,10 @@ Program test_mpi
     ei_full = Sum( ei_ssp )
     Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
     If( me_cart == 0 ) Then
+       Write( *, '( "SSP: Err  force: ", 3( 1x, g12.6 ) )' ) &
+            Maxval( Abs( force_ffp - force_full ) ), Sum(  Abs( force_ffp - force_full ) ) / Size( force_full ), &
+            Sum(  Abs( force_ffp - force_full ) ) / Sum( Abs( force_full ) )
+       Deallocate( force_ffp )
        Open( 11, file = 'forces_ssp_parallel_orig.dat' )
        Write( 11, * ) n, '     #number of particles'
        Write( 11, '( a, 3( 1x, g12.6 ) )' ) 'Nett force: ', Sum( force_full, Dim = 2 )
@@ -480,7 +484,7 @@ Program test_mpi
      Write( *, '( "FFP solve time: ", f9.5 )' ) t_pot_solve_ffp
      Write( *, '( "FFP total time: ", f9.5 )' ) t_tot
      ! Tidy up
-     Deallocate( force_ffp )
+!!$     Deallocate( force_ffp )
      Deallocate( ei_ffp )
      Deallocate( pot_grid_ffp )
      Deallocate( q_grid_ffp )
@@ -546,6 +550,10 @@ Program test_mpi
     ei_full = Sum( ei_ssp )
     Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
     If( me_cart == 0 ) Then
+       Write( *, '( "SSP: Err  force: ", 3( 1x, g12.6 ) )' ) &
+            Maxval( Abs( force_ffp - force_full ) ), Sum(  Abs( force_ffp - force_full ) ) / Size( force_full ), &
+            Sum(  Abs( force_ffp - force_full ) ) / Sum( Abs( force_full ) )
+       Deallocate( force_ffp )
        Open( 11, file = 'forces_ssp_parallel_moved.dat' )
        Write( 11, * ) n, '     #number of particles'
        Write( 11, '( a, 3( 1x, g12.6 ) )' ) 'Nett force: ', Sum( force_full, Dim = 2 )

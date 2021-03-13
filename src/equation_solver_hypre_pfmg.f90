@@ -275,6 +275,7 @@ Contains
     do_io = rank == 0 .And. report
     
     ! Use tol to think about varying tolerance at different stages
+    ! HACK - need to separate these tolerances
     tol = rtol
 
     ! Get the initial Order 2 solution
