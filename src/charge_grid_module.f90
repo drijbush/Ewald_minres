@@ -294,10 +294,8 @@ Contains
     Real( wp ) :: fix, fiy, fiz
     Real( wp ) :: g_val
     Real( wp ) :: dV
-!!$    Real( wp ) :: s
 
     Integer, Dimension( 1:3 ) :: i_atom_centre
-    Integer, Dimension( 1:3 ) :: i_grid
 
     Integer :: n
     Integer :: i1, i2, i3

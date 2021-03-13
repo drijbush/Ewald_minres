@@ -193,11 +193,11 @@ Contains
     Class( comms_base_class                  ), Allocatable :: comms
     Class( FD_template                       ), Allocatable :: FD
     Class( halo_setter_base_class            ), Allocatable :: FD_swapper
-    Class( FD_template                       ), Allocatable :: FD_precon
-    Class( halo_setter_base_class            ), Allocatable :: FD_precon_swapper
+!!$    Class( FD_template                       ), Allocatable :: FD_precon
+!!$    Class( halo_setter_base_class            ), Allocatable :: FD_precon_swapper
     Class( halo_setter_base_class            ), Allocatable :: pot_swapper
     Class( equation_solver_precon_base_class ), Allocatable :: solver
-    Class( equation_solver_precon_base_class ), Allocatable :: precon
+!!$    Class( equation_solver_precon_base_class ), Allocatable :: precon
     Class( quadrature_base_class             ), Allocatable :: grid_integrator
 
     Real( wp ), Dimension( 1:3, 1:3 ) :: Grid_vecs, dGrid_vecs
@@ -214,7 +214,7 @@ Contains
 
     Integer :: range_gauss_use
     Integer :: FD_order_use
-    Integer :: max_swap
+!!$    Integer :: max_swap
     Integer :: loc_communicator
     Integer :: max_iter
     Integer :: n, n_fac

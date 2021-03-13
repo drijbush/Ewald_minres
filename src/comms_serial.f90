@@ -17,6 +17,10 @@ Module comms_serial_module
      Procedure, Public  :: get_proc_grid   => get_proc_grid
   End type comms_serial
 
+  ! Dummy to silence compiler warnings about unused args, which are ultimately
+  ! because the concept of a communicator is absent in serial
+  Integer :: last_comm
+
 Contains
 
   Subroutine set_comm( c, comm, error )
@@ -49,6 +53,8 @@ Contains
     Class( comms_serial ), Intent( In    ) :: c
     Integer,               Intent(   Out ) :: data
 
+    last_comm = c%communicator
+    
     data = 0
 
   End Subroutine get_rank
@@ -58,6 +64,8 @@ Contains
     Class( comms_serial ), Intent( In    ) :: c
     Integer,               Intent(   Out ) :: data
 
+    last_comm = c%communicator
+    
     data = 1
 
   End Subroutine get_size
@@ -67,6 +75,8 @@ Contains
     Class( comms_serial ),   Intent( In    ) :: c
     Integer, Dimension( : ), Intent(   Out ) :: data
 
+    last_comm = c%communicator
+    
     data = 0
 
   End Subroutine get_proc_coords
@@ -76,6 +86,8 @@ Contains
     Class( comms_serial ),   Intent( In    ) :: c
     Integer, Dimension( : ), Intent(   Out ) :: data
 
+    last_comm = c%communicator
+    
     data = 1
 
   End Subroutine get_proc_grid
@@ -85,6 +97,8 @@ Contains
     Class( comms_serial ), Intent( In    ) :: c
     Real( wp ),            Intent( InOut ) :: data
 
+    last_comm = c%communicator
+    
     data = data
 
   End Subroutine reduce_real

@@ -4,6 +4,7 @@ Module equation_solver_hypre_pfmg_module
 
   Use constants, Only : wp
   Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
+  Use FD_template_module, Only : FD_template
 
   Implicit None
 
@@ -26,7 +27,7 @@ Module equation_solver_hypre_pfmg_module
   Real( wp ), Parameter :: mix = 1.0_wp
 
   ! Set to true to get report during iteration. Otherwise no printing
-  Logical :: report              = .True.
+  Logical :: report = .True.
 
   ! If true the returned residual is consistent with the whole calculation.
   ! However calculation of the residual requies significant extra calculation
@@ -142,6 +143,9 @@ Module equation_solver_hypre_pfmg_module
      
   End Interface
 
+  ! HACK to get rid of compiler warnings about unused arguments
+  Class( FD_template ), Allocatable :: last_operator
+  
 Contains
 
   Subroutine pfmg_init( method, comms, n, lb, ub, FD_operator, V )
@@ -150,7 +154,6 @@ Contains
     Use comms_base_class_module, Only : comms_base_class
     Use FD_template_module     , Only : FD_template
 
-    ! HACK
     Use FD_Laplacian_3d_module, Only : FD_Laplacian_3d
     
     Implicit None
@@ -179,6 +182,9 @@ Contains
     Integer :: i
 
     Type( FD_Laplacian_3d ) :: FD_order_2
+
+    !HACK to get rid of silly compiler warnings
+    last_operator = FD_operator
 
     method%n = n
     method%V = V
@@ -214,7 +220,6 @@ Contains
     method%orthog_stencil = .True.
     Do i = 1, n_stencil
        method%orthog_stencil = method%orthog_stencil .And. ( Count( stencil_elements( :, i ) /= 0 ) == 1 )
-!!$       Write( *, * ) i1, '!! ', stencil_elements( :, i1 ), stencil_values( i1 )
        If( .Not. method%orthog_stencil ) Exit
     End Do
 
@@ -452,15 +457,15 @@ Contains
 
   End Subroutine pfmg
 
-  Subroutine pfmg_destroy( method )
-
-    Implicit None
-
-    Type( equation_solver_hypre_pfmg ), Intent( InOut ) :: method
-
-    Call  ssp_hypre_struct_free( method%hypre_objects )
-
-  End Subroutine pfmg_destroy
+!!$  Subroutine pfmg_destroy( method )
+!!$
+!!$    Implicit None
+!!$
+!!$    Type( equation_solver_hypre_pfmg ), Intent( InOut ) :: method
+!!$
+!!$    Call  ssp_hypre_struct_free( method%hypre_objects )
+!!$
+!!$  End Subroutine pfmg_destroy
   
   Subroutine set_iter_tol( method, tol )
 

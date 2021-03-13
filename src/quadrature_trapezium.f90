@@ -8,19 +8,21 @@ Module quadrature_trapezium_rule_module
   Type, Public, Extends( quadrature_base_class ) :: quadrature_trapezium_rule
      Private
    Contains
-     Procedure, Public :: integrate => trapezium_rule
+!!$     Procedure, Public :: integrate => trapezium_rule
+     Procedure, Public, NoPass :: integrate => trapezium_rule
   End type quadrature_trapezium_rule
 
 Contains
 
-  Function trapezium_rule( q, comms, l, n_grid, grid ) Result( r )
+!!$  Function trapezium_rule( q, comms, l, n_grid, grid ) Result( r )
+  Function trapezium_rule( comms, l, n_grid, grid ) Result( r )
 
     Use comms_base_class_module, Only : comms_base_class
     Use lattice_module,          Only : lattice
 
     Real( wp ) :: r
 
-    Class( quadrature_trapezium_rule   ), Intent( In ) :: q
+!!$    Class( quadrature_trapezium_rule   ), Intent( In ) :: q
     Class( comms_base_class            ), Intent( In ) :: comms
     Type( lattice ),                      Intent( In ) :: l
     Integer,    Dimension( :       ),     Intent( In ) :: n_grid

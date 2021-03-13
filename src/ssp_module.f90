@@ -138,21 +138,21 @@ Contains
 
   End Function ssp_sic
 
-  Subroutine dummy_msolve( lb, ub, x, y )                   ! Solve M*y = x
-
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-
-    Integer,                                                Intent( In    ) :: lb( 1:3 )
-    Integer,                                                Intent( In    ) :: ub( 1:3 )
-    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
-    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
-
-    ! Shut up compiler
-    if (lb(1) /= 0) continue
-    if (ub(1) /= 0) continue
-
-    y = x
-
-  End Subroutine dummy_msolve
+!!$  Subroutine dummy_msolve( lb, ub, x, y )                   ! Solve M*y = x
+!!$
+!!$    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+!!$
+!!$    Integer,                                                Intent( In    ) :: lb( 1:3 )
+!!$    Integer,                                                Intent( In    ) :: ub( 1:3 )
+!!$    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent( In    ) :: x
+!!$    Real( wp ),  Dimension( lb( 1 ):, lb( 2 ):, lb( 3 ): ), Intent(   Out ) :: y
+!!$
+!!$    ! Shut up compiler
+!!$    if (lb(1) /= 0) continue
+!!$    if (ub(1) /= 0) continue
+!!$
+!!$    y = x
+!!$
+!!$  End Subroutine dummy_msolve
 
 End Module symetrically_screened_poisson_module

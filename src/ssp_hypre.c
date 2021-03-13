@@ -370,8 +370,8 @@ void ssp_hypre_semi_struct_pfmg_solve( struct ssp_hypre_semi_struct *data_for_hy
   /* Solve the equations using the SYSPFMG solver */
   HYPRE_SStructVector b;
   HYPRE_SStructVector x;
-  HYPRE_ParVector bij;
-  HYPRE_ParVector xij;
+  // HYPRE_ParVector bij;
+  // HYPRE_ParVector xij;
   HYPRE_SStructSolver solver;
 
   int retval;

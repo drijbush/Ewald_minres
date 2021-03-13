@@ -1315,7 +1315,7 @@ Contains
 
     Class( halo_dim_plan_type ), Intent( InOut ) :: plan
 
-    Integer :: error
+!!$    Integer :: error
 
     ! The f90 real type is predefined, so wrong to free
 !!$    Call mpi_type_free( plan%left%real_handle, error )
@@ -1325,13 +1325,13 @@ Contains
     
   End Subroutine halo_dim_plan_free
   
-  Impure Elemental Subroutine halo_dim_plan_final( plan )
-
-    Type( halo_dim_plan_type ), Intent( InOut ) :: plan
-
-    Call plan%free()
-
-  End Subroutine halo_dim_plan_final
+!!$  Impure Elemental Subroutine halo_dim_plan_final( plan )
+!!$
+!!$    Type( halo_dim_plan_type ), Intent( InOut ) :: plan
+!!$
+!!$    Call plan%free()
+!!$
+!!$  End Subroutine halo_dim_plan_final
 
   Subroutine report_plan( plan, unit )
 

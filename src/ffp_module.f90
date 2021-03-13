@@ -9,6 +9,9 @@ Module fast_fourier_poisson_module
 
   Private
 
+  ! HACK to get rid of silly compiler warnings about unused args - FD_order has no morning here
+  Integer :: last_order
+
 Contains
 
   Subroutine ffp_long_range( l, q, r, alpha, FD_order, q_halo, r_halo, recip_E, q_grid, pot_grid, ei, f, t_grid, t_recip, error )
@@ -62,6 +65,9 @@ Contains
     Integer :: iG1, iG2, iG3
 
     Integer( li ) :: start, finish, rate
+
+    ! HACK to get rid of silly compiler warnings about unused args - FD_order has no morning here
+    last_order = FD_order
 
     Allocate( r_full( 1:3, 1:Size( q ) + Size( q_halo ) ) )
     r_full( :, 1:Size( q )    ) = r
