@@ -69,14 +69,14 @@ Contains
     error = 0
 
     ! Check it is a caretesian comunicator
-    Call mpi_topo_test( comm, comm_type )
+    Call mpi_topo_test( comm, comm_type, error )
     If( comm_type /= mpi_cart ) Then
        error = 1
        Return
     End If
 
     ! Check is has 3 dimensions
-    Call mpi_cartdim_get( comm, ndims )
+    Call mpi_cartdim_get( comm, ndims, error )
     If( ndims /= 3 ) Then
        error = 2
        Return
@@ -84,7 +84,7 @@ Contains
 
     ! Check it is periodic all in directions, and get other useful data,
     ! size of proc grid and where I am in the proc grid
-    Call mpi_cart_get( comm, ndims, H%n_procs, H%is_periodic, H%my_coords )
+    Call mpi_cart_get( comm, ndims, H%n_procs, H%is_periodic, H%my_coords, error )
     If( .Not. All ( H%is_periodic ) ) Then
        error = 3
        Return
@@ -99,10 +99,10 @@ Contains
        ! Take the plane orthogonal to it
        is_this_orthog_plane = .Not. is_this_axis
        ! Create a communicator containg this process in that plane
-       Call mpi_cart_sub( comm, is_this_orthog_plane, plane_comm )
+       Call mpi_cart_sub( comm, is_this_orthog_plane, plane_comm, error )
        ! Find the maximum and minimum value of the local size in that plane
-       Call mpi_allreduce( local_size( i ), n_loc_max, 1, mpi_integer, mpi_max, plane_comm )
-       Call mpi_allreduce( local_size( i ), n_loc_min, 1, mpi_integer, mpi_min, plane_comm )
+       Call mpi_allreduce( local_size( i ), n_loc_max, 1, mpi_integer, mpi_max, plane_comm, error )
+       Call mpi_allreduce( local_size( i ), n_loc_min, 1, mpi_integer, mpi_min, plane_comm, error )
        ! If the max size is not the same as the min size that means not all procs
        ! in the plane have the same size
        Call mpi_comm_free( plane_comm, error )
@@ -111,7 +111,7 @@ Contains
        End If
     End Do
     ! Check if an error occured
-    Call mpi_allreduce( mpi_in_place, error, 1, mpi_integer, mpi_max, comm )
+    Call mpi_allreduce( mpi_in_place, error, 1, mpi_integer, mpi_max, comm, error )
     If( error /= 0 ) Then
        Return
     End If
@@ -125,7 +125,7 @@ Contains
        ! Create a comunicator for the direction in question
        is_this_axis = .False.
        is_this_axis( i ) = .True.
-       Call mpi_cart_sub( comm, is_this_axis, axis_comm )
+       Call mpi_cart_sub( comm, is_this_axis, axis_comm, error )
        ! Now get the plans
        Call H%dim_plans( i )%init( local_size( i ), halo_width, axis_comm, error )
        ! And inquire of the plans some useful data

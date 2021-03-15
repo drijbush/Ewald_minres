@@ -35,7 +35,7 @@ Contains
     error = 0
 
     comm_f08%mpi_val = comm
-    Call mpi_topo_test( comm_f08, comm_type )
+    Call mpi_topo_test( comm_f08, comm_type, error )
 
     If( comm_type == mpi_cart ) Then
        c%communicator = comm
@@ -65,8 +65,10 @@ Contains
 
     Type( mpi_comm ) :: comm_f08
 
+    Integer :: error
+
     comm_f08%mpi_val = c%communicator
-    Call mpi_comm_rank( comm_f08, data )
+    Call mpi_comm_rank( comm_f08, data, error )
     
   End Subroutine get_rank
 
@@ -99,8 +101,10 @@ Contains
 
     Logical, Dimension( 1:3 ) :: periods
 
+    Integer :: error
+
     comm_f08%mpi_val = c%communicator
-    Call mpi_cart_get( comm_f08, Size( dims ), dims, periods, coords )
+    Call mpi_cart_get( comm_f08, Size( dims ), dims, periods, coords, error )
 
     data = coords
 
@@ -119,8 +123,10 @@ Contains
 
     Logical, Dimension( 1:3 ) :: periods
 
+    Integer :: error
+
     comm_f08%mpi_val = c%communicator
-    Call mpi_cart_get( comm_f08, Size( dims ), dims, periods, coords )
+    Call mpi_cart_get( comm_f08, Size( dims ), dims, periods, coords, error )
 
     data = dims
 
@@ -143,10 +149,10 @@ Contains
     Integer :: error
 
     Call mpi_sizeof( data, data_size, error )
-    Call mpi_type_match_size( mpi_typeclass_real, data_size, datatype )
+    Call mpi_type_match_size( mpi_typeclass_real, data_size, datatype, error )
 
     comm_f08%mpi_val = c%communicator
-    Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_sum, comm_f08 )
+    Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_sum, comm_f08, error )
     
   End Subroutine reduce_real
   
@@ -164,12 +170,13 @@ Contains
     Type( mpi_datatype ) :: datatype
 
     Integer :: data_size
+    Integer :: error
 
-    Call mpi_sizeof( data, data_size )
-    Call mpi_type_match_size( mpi_typeclass_real, data_size, datatype )
+    Call mpi_sizeof( data, data_size, error )
+    Call mpi_type_match_size( mpi_typeclass_real, data_size, datatype, error )
 
     comm_f08%mpi_val = c%communicator
-    Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_max, comm_f08 )
+    Call mpi_allreduce( mpi_in_place, data, 1, datatype, mpi_max, comm_f08, error )
     
   End Subroutine max_real
   

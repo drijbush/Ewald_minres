@@ -102,8 +102,8 @@ Program test_mpi
   Character( Len = 132 ) :: what
 
   Call mpi_init( error )
-  Call mpi_comm_size( mpi_comm_world, nproc )
-  Call mpi_comm_rank( mpi_comm_world, me    )
+  Call mpi_comm_size( mpi_comm_world, nproc, error )
+  Call mpi_comm_rank( mpi_comm_world, me, error    )
   Write( *, * ) 'Hello from ', me, ' of ', nproc
 
   Read_params_on_proc_0: If( me == 0 ) Then
@@ -149,16 +149,16 @@ Program test_mpi
 
   End If Read_params_on_proc_0
 
-  Call mpi_bcast( alpha,                 1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( range_gauss,           1, mpi_integer,          0, mpi_comm_world )
-  Call mpi_bcast( gauss_tol,             1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( rtol,                  1, mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( FD_order,              1, mpi_integer,          0, mpi_comm_world )
-  Call mpi_bcast( n,                     1, mpi_integer,          0, mpi_comm_world )
-  Call mpi_bcast( a,             Size( a ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( which_solver,          1, mpi_integer,          0, mpi_comm_world )
+  Call mpi_bcast( alpha,                 1, mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( range_gauss,           1, mpi_integer,          0, mpi_comm_world, error )
+  Call mpi_bcast( gauss_tol,             1, mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( rtol,                  1, mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( FD_order,              1, mpi_integer,          0, mpi_comm_world, error )
+  Call mpi_bcast( n,                     1, mpi_integer,          0, mpi_comm_world, error )
+  Call mpi_bcast( a,             Size( a ), mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( which_solver,          1, mpi_integer,          0, mpi_comm_world, error )
 
-  Call mpi_bcast( what, Len( what ), mpi_character, 0, mpi_comm_world )
+  Call mpi_bcast( what, Len( what ), mpi_character, 0, mpi_comm_world, error )
 
 !!$  Select Case( which_solver )
 !!$  Case( 1 )
@@ -192,11 +192,11 @@ Program test_mpi
 
   End If Read_CONFIG_on_proc_0
 
-  Call mpi_bcast( q        , Size( q         ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( mass     , Size( mass      ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( r        , Size( r         ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( velocity , Size( velocity  ), mpi_double_precision, 0, mpi_comm_world )
-  Call mpi_bcast( dlp_force, Size( dlp_force ), mpi_double_precision, 0, mpi_comm_world )
+  Call mpi_bcast( q        , Size( q         ), mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( mass     , Size( mass      ), mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( r        , Size( r         ), mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( velocity , Size( velocity  ), mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( dlp_force, Size( dlp_force ), mpi_double_precision, 0, mpi_comm_world, error )
 
   Allocate( id( 1:n ) )
   id = [ ( i, i = 1, n ) ]
@@ -212,7 +212,7 @@ Program test_mpi
   ! Now make the charge/pot grid commensurate with the process grid
   ! First factor the procs into a grid
   np_grid = 0
-  Call mpi_dims_create( nproc, 3, np_grid )
+  Call mpi_dims_create( nproc, 3, np_grid, error )
   ! Now increase the size of the grid where it is not a multiple of the number of procs
   Where( Mod( n_grid, np_grid ) /= 0 )
      n_grid = ( n_grid / np_grid + 1 ) * np_grid
@@ -274,11 +274,11 @@ Program test_mpi
   ! Now try and do it in parallel
   ! Factor the procs into a grid
   np_grid = 0
-  Call mpi_dims_create( nproc, 3, np_grid )
+  Call mpi_dims_create( nproc, 3, np_grid, error )
 
   ! Create a cartesian communicator
   Call mpi_cart_create( mpi_comm_world, 3, np_grid, [ .True., .True., .True. ], .True., &
-       cart_comm )
+       cart_comm, error )
   Call mpi_comm_size( cart_comm, nproc_cart, error )
   Call mpi_comm_rank( cart_comm, me_cart,    error )
   If( me_cart == 0 ) Then
@@ -286,7 +286,7 @@ Program test_mpi
   End If
 
   ! Get the coordinates for this processor in the process grid
-  Call mpi_cart_coords( cart_comm, me_cart, 3, p_coords )
+  Call mpi_cart_coords( cart_comm, me_cart, 3, p_coords, error )
 
   ! Get which bit of the grid I own
   Call domain_get_params( n_grid, np_grid, p_coords, n_grid_domain, domain_base_coords )
@@ -298,7 +298,7 @@ Program test_mpi
        q_halo, r_halo )
   ! Check total number of atoms is conserved
   n_at_loc = Size( q_domain )
-  Call mpi_allreduce( n_at_loc, n_at, 1, mpi_integer, mpi_sum, cart_comm )
+  Call mpi_allreduce( n_at_loc, n_at, 1, mpi_integer, mpi_sum, cart_comm, error )
   If( me_cart == 0 ) Then
      Write( *, * ) 'n at = ', n_at
   End If
@@ -330,7 +330,7 @@ Program test_mpi
   Do i = 1, 3
      f_ssp( i ) = Sum( force_ssp( i, : ) )
   End Do
-  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm, error )
   If( me_cart == 0 ) Then
      t_tot = status%t_grid + status%t_pot_solve + status%t_forces
      Write( *, * )
@@ -351,7 +351,7 @@ Program test_mpi
     q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
          domain_base_coords( 2 ):domain_end_coords( 2 ), &
          domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
-    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Call grid_io_save( 11, 'q_grid_ssp_parallel_orig.dat', l, q_grid_full )
     End If
@@ -359,7 +359,7 @@ Program test_mpi
     q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
          domain_base_coords( 2 ):domain_end_coords( 2 ), &
          domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
-    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Call grid_io_save( 11, 'pot_grid_ssp_parallel_orig.dat', l, q_grid_full )
     End If
@@ -370,9 +370,9 @@ Program test_mpi
     Do i = 1, Size( force_ssp, Dim = 2 )
        force_full( :, id_domain( i ) ) = force_ssp( :, i )
     End Do
-    Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     ei_full = Sum( ei_ssp )
-    Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Write( *, '( "SSP: Err  force: ", 3( 1x, g12.6 ) )' ) &
             Maxval( Abs( force_ffp - force_full ) ), Sum(  Abs( force_ffp - force_full ) ) / Size( force_full ), &
@@ -403,7 +403,7 @@ Program test_mpi
   Do i = 1, 3
      f_ssp( i ) = Sum( force_ssp( i, : ) )
   End Do
-  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm, error )
   If( me_cart == 0 ) Then
      t_tot = status%t_grid + status%t_pot_solve + status%t_forces
      Write( *, * )
@@ -506,7 +506,7 @@ Program test_mpi
   Do i = 1, 3
      f_ssp( i ) = Sum( force_ssp( i, : ) )
   End Do
-  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm )
+  Call mpi_allreduce( mpi_in_place, f_ssp, Size( f_ssp ), mpi_double_precision, mpi_sum, cart_comm, error )
   If( me_cart == 0 ) Then
      t_tot = status%t_grid + status%t_pot_solve + status%t_forces
      Write( *, * )
@@ -527,7 +527,7 @@ Program test_mpi
     q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
          domain_base_coords( 2 ):domain_end_coords( 2 ), &
          domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
-    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Call grid_io_save( 11, 'q_grid_ssp_parallel_moved.dat', l, q_grid_full )
     End If
@@ -535,7 +535,7 @@ Program test_mpi
     q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
          domain_base_coords( 2 ):domain_end_coords( 2 ), &
          domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
-    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Call grid_io_save( 11, 'pot_grid_ssp_parallel_moved.dat', l, q_grid_full )
     End If
@@ -546,9 +546,9 @@ Program test_mpi
     Do i = 1, Size( force_ssp, Dim = 2 )
        force_full( :, id_domain( i ) ) = force_ssp( :, i )
     End Do
-    Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, force_full, Size( force_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     ei_full = Sum( ei_ssp )
-    Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm )
+    Call mpi_allreduce( mpi_in_place, ei_full, 1, mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Write( *, '( "SSP: Err  force: ", 3( 1x, g12.6 ) )' ) &
             Maxval( Abs( force_ffp - force_full ) ), Sum(  Abs( force_ffp - force_full ) ) / Size( force_full ), &
