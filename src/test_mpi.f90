@@ -39,6 +39,8 @@ Program test_mpi
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ffp
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_ssp
   Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ssp
+  Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_ssp_new
+  Real( wp ), Dimension( :, :, : ), Allocatable :: pot_grid_ssp_new
   Real( wp ), Dimension( :, :, : ), Allocatable :: q_grid_full
 
   Real( wp ), Dimension( :, : ), Allocatable :: r
@@ -502,6 +504,7 @@ Program test_mpi
   recip_E_ssp   = 0.0_wp
   Call ewald_recipe%consume(  q_domain, r_domain, q_halo, r_halo,  &
        recip_E_ssp, force_ssp, stress, error, &
+       q_grid = q_grid_ssp_new, pot_grid = pot_grid_ssp_new, &
        q_grid_old = q_grid_ssp, pot_grid_old = pot_grid_ssp, ei = ei_ssp, status = status )
   Do i = 1, 3
      f_ssp( i ) = Sum( force_ssp( i, : ) )
@@ -526,7 +529,7 @@ Program test_mpi
     q_grid_full = 0.0_wp
     q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
          domain_base_coords( 2 ):domain_end_coords( 2 ), &
-         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp
+         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = q_grid_ssp_new
     Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Call grid_io_save( 11, 'q_grid_ssp_parallel_moved.dat', l, q_grid_full )
@@ -534,7 +537,7 @@ Program test_mpi
     q_grid_full = 0.0_wp
     q_grid_full( domain_base_coords( 1 ):domain_end_coords( 1 ), &
          domain_base_coords( 2 ):domain_end_coords( 2 ), &
-         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp
+         domain_base_coords( 3 ):domain_end_coords( 3 ) ) = pot_grid_ssp_new
     Call mpi_allreduce( mpi_in_place, q_grid_full, Size( q_grid_full ), mpi_double_precision, mpi_sum, cart_comm, error )
     If( me_cart == 0 ) Then
        Call grid_io_save( 11, 'pot_grid_ssp_parallel_moved.dat', l, q_grid_full )
