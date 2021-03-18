@@ -11,11 +11,13 @@ Module equation_solver_hypre_pfmg_module
   Private
   
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_hypre_pfmg
-     Integer, Dimension( 1:3 ) :: n                    ! Number of grid point
-     Real( wp )                :: V                    ! Volume
-     Real( wp )                :: iter_tol = 1.0e-6_wp ! Tolerance for iterations around order 2 solver
-     Logical                   :: orthog_stencil       ! If the stencil only has elements along the axes can save some message passing
-     Type( c_ptr )             :: hypre_objects
+     Integer, Dimension( 1:3 )                     :: n                    ! Number of grid point
+     Real( wp )                                    :: V                    ! Volume
+     Real( wp )                                    :: iter_tol = 1.0e-6_wp ! Tolerance for iterations around order 2 solver
+     Logical                                       :: orthog_stencil       ! If the stencil only has elements along the axes can save some message passing
+     Real( wp ), Dimension( :, :, : ), Allocatable :: stencil_2
+     Real( wp )                                    :: stencil_diag_2
+     Type( c_ptr )                                 :: hypre_objects
    Contains
      Procedure, Public :: solve => pfmg
      Procedure, Public :: pfmg_init
@@ -197,6 +199,8 @@ Contains
     dGrid_vecs( :, 3 ) = method%FD_operator%get_dir_vec( 3 )
     Call FD_order_2%init( 2, dGrid_vecs )
     Call FD_order_2%get_stencil( stencil )
+    method%stencil_2      = stencil
+    method%stencil_diag_2 = stencil( 0, 0, 0 )
     
     ! Build up stencil list
     Allocate( stencil_values( 1:0 ) )
@@ -275,12 +279,13 @@ Contains
     do_io = rank == 0 .And. report
     
     ! Use tol to think about varying tolerance at different stages
-    ! HACK - need to separate these tolerances
     tol = rtol
 
     ! Get the initial Order 2 solution
-    x = 0.0_wp
+!!$    x = 0.0_wp
+    x = b / method%stencil_diag_2
     Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
+!!$    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), 1e-2_wp, b, x, itn, rnorm, istop )
 
     ! Set up the data structures for the higher order solution
     ! gfortran 9 has a bug with Mold that doesn't propagate the bounds of the arrays
@@ -329,8 +334,10 @@ Contains
        ! The residual should not contain any null space component as b can not contain any, and the
        ! action of the matrix on the solution projects out the null space, by definition
        ! Hence we can just call the solver
-       e = 0.0_wp
+!!$       e = 0.0_wp
+       e = r / method%stencil_diag_2
        Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, itn, rnorm, istop )
+!!$       Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), 1e-2_wp, r, e, itn, rnorm, istop )
        ! Update the solution - written this way to allow mixing c.f. SCF solvers
        x = x + mix * e
        ! New energy
@@ -353,8 +360,6 @@ Contains
           End If
           x2_old = x2
        End If
-       ! 1e-6 is a HACK at the moment - should have some tolerance
-!!$       If( dE < 1.0e-6_wp ) Then
        If( dE < method%iter_tol ) Then
           Exit iteration_loop
        End If
