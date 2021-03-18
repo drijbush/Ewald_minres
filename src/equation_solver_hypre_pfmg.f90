@@ -29,7 +29,7 @@ Module equation_solver_hypre_pfmg_module
   Real( wp ), Parameter :: mix = 1.0_wp
 
   ! Set to true to get report during iteration. Otherwise no printing
-  Logical :: report = .True.
+  Logical :: report = .False.
 
   ! If true the returned residual is consistent with the whole calculation.
   ! However calculation of the residual requies significant extra calculation
@@ -411,11 +411,12 @@ Contains
       Real( wp ) :: lambda
       Real( wp ) :: v_dot_n, n_dot_n
 
-      ! Calculate v.n
+      ! Calculate v.n - the dot product of the vector with the null space
       v_dot_n = kahan_Sum( v )
       Call comms%reduce( v_dot_n )
 
-      ! Calculate n.n
+      ! Calculate n.n - the dot product of the null space with itself,
+      ! which is simply the total size of the grid
       n_dot_n = Product( n_tot )
 
       ! Project out the null space
