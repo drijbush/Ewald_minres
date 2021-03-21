@@ -283,7 +283,8 @@ Contains
 
     ! Get the initial Order 2 solution
 !!$    x = 0.0_wp
-    x = b / method%stencil_diag_2
+!!$    x = b / method%stencil_diag_2
+    x = b * ( 1.0_wp /  method%stencil_diag_2 )
     Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
 !!$    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), 1e-2_wp, b, x, itn, rnorm, istop )
 
@@ -335,7 +336,7 @@ Contains
        ! action of the matrix on the solution projects out the null space, by definition
        ! Hence we can just call the solver
 !!$       e = 0.0_wp
-       e = r / method%stencil_diag_2
+       e = r * ( 1.0_wp /  method%stencil_diag_2 ) 
        Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, itn, rnorm, istop )
 !!$       Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), 1e-2_wp, r, e, itn, rnorm, istop )
        ! Update the solution - written this way to allow mixing c.f. SCF solvers
