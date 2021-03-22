@@ -127,7 +127,7 @@ void ssp_hypre_struct_pfmg_solve( struct ssp_hypre_struct *data_for_hypre_struct
   HYPRE_StructPFMGSetLogging( solver, 1 );
   /* HYPRE_StructPFMGSetPrintLevel( solver, 1 ); */
   /* HYPRE_StructPFMGSetMaxIter( solver, 100 ); */
-  HYPRE_StructPFMGSetRAPType( solver,  1 );
+  /* HYPRE_StructPFMGSetRAPType( solver,  1 ); */
   /* HYPRE_StructPFMGSetMaxLevels( solver,  9 ); */
   /* HYPRE_StructPFMGSetRelaxType( solver,  2 ); */
   HYPRE_StructPFMGSetup( solver, data_for_hypre_struct -> A, b, x );
