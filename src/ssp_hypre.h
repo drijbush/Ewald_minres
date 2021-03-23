@@ -5,6 +5,14 @@
 #include "HYPRE_sstruct_mv.h"
 #include "HYPRE_sstruct_ls.h"
 
+#define PFMG     1
+#define JACOBI   2
+#define GMRES    3
+#define HYBRID   4
+#define BICGSTAB 5
+
+#define SOLVER PFMG
+
 /* Struct to hold hypre stuff so can return as a pointer to the Fortran driver code */
 struct ssp_hypre_struct{
   MPI_Comm            comm;

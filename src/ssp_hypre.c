@@ -8,14 +8,6 @@
 
 #include "ssp_hypre.h"
 
-#define PFMG     1
-#define JACOBI   2
-#define GMRES    3
-#define HYBRID   4
-#define BICGSTAB 5
-
-#define SOLVER PFMG
-
 struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3 ], int ub[ 3 ],
 				   int n_stencil, int stencil_elements[ n_stencil ][ 3 ], double stencil_values[ n_stencil ] ) {
 
