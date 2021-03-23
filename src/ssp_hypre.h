@@ -16,6 +16,10 @@ struct ssp_hypre_struct{
   HYPRE_StructVector  b;
   HYPRE_StructVector  x;
   HYPRE_StructSolver  solver;
+  HYPRE_Int           ( *SetTol ) ( HYPRE_StructSolver solver, HYPRE_Real tol );
+  HYPRE_Int           ( *Solve  ) ( HYPRE_StructSolver solver, HYPRE_StructMatrix A, HYPRE_StructVector b, HYPRE_StructVector x );
+  HYPRE_Int           ( *GetNumIterations ) ( HYPRE_StructSolver solver, HYPRE_Int  *num_iterations );
+  HYPRE_Int           ( *GetResidual      ) ( HYPRE_StructSolver solver, HYPRE_Real *norm );
 };
 
 struct ssp_hypre_semi_struct{
