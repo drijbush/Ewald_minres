@@ -15,6 +15,7 @@ struct ssp_hypre_struct{
   HYPRE_StructMatrix  A;
   HYPRE_StructVector  b;
   HYPRE_StructVector  x;
+  HYPRE_StructSolver  solver;
 };
 
 struct ssp_hypre_semi_struct{
