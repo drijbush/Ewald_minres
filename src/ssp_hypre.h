@@ -5,11 +5,13 @@
 #include "HYPRE_sstruct_mv.h"
 #include "HYPRE_sstruct_ls.h"
 
-#define PFMG     1
-#define JACOBI   2
-#define GMRES    3
-#define HYBRID   4
-#define BICGSTAB 5
+#define PFMG     0
+#define JACOBI   1
+#define GMRES    2
+#define HYBRID   3
+#define BICGSTAB 4
+
+const char *solver_names[] = { "PFMG", "Jacobi", "GMRES", "HYBRID", "BICGSTAB" };
 
 #define SOLVER PFMG
 
