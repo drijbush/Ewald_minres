@@ -8,6 +8,14 @@
 
 #include "ssp_hypre.h"
 
+#define PFMG     1
+#define JACOBI   2
+#define GMRES    3
+#define HYBRID   4
+#define BICGSTAB 5
+
+#define SOLVER PFMG
+
 struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3 ], int ub[ 3 ],
 				   int n_stencil, int stencil_elements[ n_stencil ][ 3 ], double stencil_values[ n_stencil ] ) {
 
@@ -92,16 +100,66 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
   HYPRE_StructVectorInitialize( data_for_hypre_struct -> x );
 
   /* All the solver specific parts shold be below here */
+  data_for_hypre_struct -> solver_type = SOLVER;
+  
+  switch( SOLVER ) {
 
-  /* Set up the Solver */
-  HYPRE_StructPFMGCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
-  HYPRE_StructPFMGSetup( data_for_hypre_struct ->  solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
+  case PFMG :
+    /* PFMG Solver */
+    HYPRE_StructPFMGCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
+    HYPRE_StructPFMGSetup ( data_for_hypre_struct -> solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
+    data_for_hypre_struct -> SetTol            = HYPRE_StructPFMGSetTol;
+    data_for_hypre_struct -> Solve             = HYPRE_StructPFMGSolve;
+    data_for_hypre_struct -> GetNumIterations  = HYPRE_StructPFMGGetNumIterations;
+    data_for_hypre_struct -> GetResidual       = HYPRE_StructPFMGGetFinalRelativeResidualNorm;
+    break;
 
-  /* Set the routines to be used in the solver - do it this way so just use one routine for all struct solvers */
-  data_for_hypre_struct -> SetTol            = HYPRE_StructPFMGSetTol;
-  data_for_hypre_struct -> Solve             = HYPRE_StructPFMGSolve;
-  data_for_hypre_struct -> GetNumIterations  = HYPRE_StructPFMGGetNumIterations;
-  data_for_hypre_struct -> GetResidual       = HYPRE_StructPFMGGetFinalRelativeResidualNorm;
+  case JACOBI :
+    /* Jacobi Solver */
+    HYPRE_StructJacobiCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
+    HYPRE_StructJacobiSetup ( data_for_hypre_struct -> solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
+    data_for_hypre_struct -> SetTol            = HYPRE_StructJacobiSetTol;
+    data_for_hypre_struct -> Solve             = HYPRE_StructJacobiSolve;
+    data_for_hypre_struct -> GetNumIterations  = HYPRE_StructJacobiGetNumIterations;
+    data_for_hypre_struct -> GetResidual       = HYPRE_StructJacobiGetFinalRelativeResidualNorm;
+    break;
+
+  case GMRES :
+    /* GMRES Solver */
+    HYPRE_StructGMRESCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
+    HYPRE_StructGMRESSetup ( data_for_hypre_struct -> solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
+    data_for_hypre_struct -> SetTol            = HYPRE_StructGMRESSetTol;
+    data_for_hypre_struct -> Solve             = HYPRE_StructGMRESSolve;
+    data_for_hypre_struct -> GetNumIterations  = HYPRE_StructGMRESGetNumIterations;
+    data_for_hypre_struct -> GetResidual       = HYPRE_StructGMRESGetFinalRelativeResidualNorm;
+    break;
+
+  case HYBRID :
+    /* Hybrid Solver */
+    HYPRE_StructHybridCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
+    HYPRE_StructHybridSetup ( data_for_hypre_struct -> solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
+    data_for_hypre_struct -> SetTol            = HYPRE_StructHybridSetTol;
+    data_for_hypre_struct -> Solve             = HYPRE_StructHybridSolve;
+    data_for_hypre_struct -> GetNumIterations  = HYPRE_StructHybridGetNumIterations;
+    data_for_hypre_struct -> GetResidual       = HYPRE_StructHybridGetFinalRelativeResidualNorm;
+    break;
+
+  case BICGSTAB :
+    /* BiCGSTAB Solver */
+    HYPRE_StructBiCGSTABCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
+    HYPRE_StructBiCGSTABSetup ( data_for_hypre_struct -> solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
+    data_for_hypre_struct -> SetTol            = HYPRE_StructBiCGSTABSetTol;
+    data_for_hypre_struct -> Solve             = HYPRE_StructBiCGSTABSolve;
+    data_for_hypre_struct -> GetNumIterations  = HYPRE_StructBiCGSTABGetNumIterations;
+    data_for_hypre_struct -> GetResidual       = HYPRE_StructBiCGSTABGetFinalRelativeResidualNorm;
+    break;
+
+  default:
+    printf( "Unknown solver in ssp_hypre_struct_setup\n" );
+    MPI_Abort( MPI_COMM_WORLD, EXIT_FAILURE );
+    break;
+
+  }
   
   return data_for_hypre_struct;
   

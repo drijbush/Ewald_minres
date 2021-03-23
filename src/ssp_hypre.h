@@ -15,6 +15,7 @@ struct ssp_hypre_struct{
   HYPRE_StructMatrix  A;
   HYPRE_StructVector  b;
   HYPRE_StructVector  x;
+  int                 solver_type;
   HYPRE_StructSolver  solver;
   HYPRE_Int           ( *SetTol ) ( HYPRE_StructSolver solver, HYPRE_Real tol );
   HYPRE_Int           ( *Solve  ) ( HYPRE_StructSolver solver, HYPRE_StructMatrix A, HYPRE_StructVector b, HYPRE_StructVector x );
