@@ -152,6 +152,10 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
     break;
 
   }
+
+#ifdef DEBUG
+  printf( "DEBUG: Using solver %s\n", solver_names[ SOLVER ] );
+#endif
   
   return data_for_hypre_struct;
   

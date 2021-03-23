@@ -15,6 +15,10 @@ const char *solver_names[] = { "PFMG", "Jacobi", "GMRES", "HYBRID", "BICGSTAB" }
 
 #define SOLVER PFMG
 
+/* For debugging */
+#define DEBUG
+#undef  DEBUG
+
 /* Struct to hold hypre stuff so can return as a pointer to the Fortran driver code */
 struct ssp_hypre_struct{
   MPI_Comm            comm;
