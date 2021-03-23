@@ -29,7 +29,7 @@ Module equation_solver_hypre_pfmg_module
   Real( wp ), Parameter :: mix = 1.0_wp
 
   ! Set to true to get report during iteration. Otherwise no printing
-  Logical :: report = .False.
+  Logical :: report = .True.
 
   ! If true the returned residual is consistent with the whole calculation.
   ! However calculation of the residual requies significant extra calculation

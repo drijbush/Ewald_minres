@@ -13,6 +13,8 @@ struct ssp_hypre_struct{
   HYPRE_StructGrid    grid;
   HYPRE_StructStencil stencil;
   HYPRE_StructMatrix  A;
+  HYPRE_StructVector  b;
+  HYPRE_StructVector  x;
 };
 
 struct ssp_hypre_semi_struct{
