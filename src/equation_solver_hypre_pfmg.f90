@@ -2,19 +2,19 @@ Module equation_solver_hypre_pfmg_module
 
   Use, Intrinsic :: iso_C_binding, Only : c_ptr
 
-  Use constants, Only : wp
+  Use constants                               , Only : wp
   Use equation_solver_precon_base_class_module, Only : equation_solver_precon_base_class
-  Use FD_template_module, Only : FD_template
+  Use FD_template_module                      , Only : FD_template
 
   Implicit None
 
   Private
   
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_hypre_pfmg
-     Integer, Dimension( 1:3 )                     :: n                    ! Number of grid point
-     Real( wp )                                    :: V                    ! Volume
-     Real( wp )                                    :: iter_tol = 1.0e-6_wp ! Tolerance for iterations around order 2 solver
-     Logical                                       :: orthog_stencil       ! If the stencil only has elements along the axes can save some message passing
+     Integer, Dimension( 1:3 )                     :: n                     ! Number of grid point
+     Real( wp )                                    :: V                     ! Volume
+     Real( wp )                                    :: iter_tol = 1.0e-06_wp ! Tolerance for iterations around order 2 solver
+     Logical                                       :: orthog_stencil        ! If the stencil only has elements along the axes can save some message passing
      Real( wp ), Dimension( :, :, : ), Allocatable :: stencil_2
      Real( wp )                                    :: stencil_diag_2
      Type( c_ptr )                                 :: hypre_objects
@@ -256,7 +256,7 @@ Contains
     
     Real( wp ), Dimension( :, :, : ), Allocatable :: x_with_halo, r, e, w
 
-    Real( wp ) :: r2, e2, x2, x2_old, dx2, dx_max
+    Real( wp ) :: r2, x2, x2_old, dx2, dx_max
     Real( wp ) :: tol
     Real( wp ) :: Energy, Energy_old, dE
     Real( wp ) :: lambda
@@ -265,10 +265,10 @@ Contains
 
     Integer :: FD_order, halo_width
     Integer :: rank
-    Integer :: i
     Integer :: lb1, lb2, lb3
     Integer :: ub1, ub2, ub3
     Integer :: error
+    Integer :: outer_iter, solver_iter
 
     Logical :: do_io
     Logical :: do_corners
@@ -282,11 +282,13 @@ Contains
     tol = rtol
 
     ! Get the initial Order 2 solution
-!!$    x = 0.0_wp
-!!$    x = b / method%stencil_diag_2
     x = b * ( 1.0_wp /  method%stencil_diag_2 )
-    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, itn, rnorm, istop )
-!!$    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), 1e-2_wp, b, x, itn, rnorm, istop )
+    Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, b, x, solver_iter, rnorm, istop )
+    If( report ) Then
+       x2_old = Sqrt( method%contract( method%comms, x, x  ) )
+    Else
+       x2_old = 0.0_wp
+    End If
 
     ! Set up the data structures for the higher order solution
     ! gfortran 9 has a bug with Mold that doesn't propagate the bounds of the arrays
@@ -306,7 +308,6 @@ Contains
     Call method%halo_swapper%allocate( lb, ub, halo_width, x_with_halo )
 
     ! Initial Energy
-!!$    Energy = - method%contract( method%comms, x, b / ( 4.0_wp * pi ) )
     Energy = method%contract( method%comms, x, b  ) * method%V / Product( method%n )
     ! And scale with the appropriate constants
     Energy = - 0.5_wp * Energy / ( 4.0_wp * pi )
@@ -315,8 +316,11 @@ Contains
     If( do_io ) Then
        Write( *, * ) 'Initial energy: ', Energy
        Write( *, * ) 'Mix = ', mix
-       Write( *, * ) 'order, iter, iterations rnorm r2, e2, x2, dx2, dx_max, Energy, dE'
-       x2_old = 0.0_wp
+       Write( *, * )
+       Write( *, '( a7, 2a5 )' ) '  FD   ', 'Outer', 'FD 2 '
+       Write( *, '( a7, 2a5, t20, 4a13, 2a16 )' ) &
+            'order ', 'iter ', 'iter ', &
+            'FD 2 norm    ', 'Full norm    ', 'dSoln Norm   ', 'dSoln Max    ', 'Energy       ', 'dE           '
     End If
 
     ! If orthog stencil can save some message passing
@@ -325,7 +329,7 @@ Contains
        Call method%halo_swapper%set_corners( .False. )
     End If
     
-    iteration_loop: Do i = 1, max_iter
+    iteration_loop: Do outer_iter = 1, max_iter
 
        ! Get the residual for the higher order operator
        Call method%halo_swapper%fill( halo_width, Lbound( x_with_halo ), x, x_with_halo, error )
@@ -335,10 +339,8 @@ Contains
        ! The residual should not contain any null space component as b can not contain any, and the
        ! action of the matrix on the solution projects out the null space, by definition
        ! Hence we can just call the solver
-!!$       e = 0.0_wp
        e = r * ( 1.0_wp /  method%stencil_diag_2 ) 
-       Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, itn, rnorm, istop )
-!!$       Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), 1e-2_wp, r, e, itn, rnorm, istop )
+       Call ssp_hypre_struct_pfmg_solve( method%hypre_objects, n( 1 ), n( 2 ), n( 3 ), tol, r, e, solver_iter, rnorm, istop )
        ! Update the solution - written this way to allow mixing c.f. SCF solvers
        x = x + mix * e
        ! New energy
@@ -346,22 +348,21 @@ Contains
        Energy = method%contract( method%comms, x, b  ) * method%V / Product( method%n )
        ! And scale with the appropriate constants
        Energy = - 0.5_wp * Energy / ( 4.0_wp * pi )
-       dE = Abs( Energy - Energy_old )
+       dE = Energy - Energy_old
        ! If reqd tell the world things
        If( report ) Then
           r2 = Sqrt( method%contract( method%comms, r, r  ) )
-          e2 = Sqrt( method%contract( method%comms, e, e  ) )
           x2 = Sqrt( method%contract( method%comms, x, x  ) )
           dx2 = Abs( x2 - x2_old )
           dx_max = Maxval( Abs( e ) )
           Call method%comms%max( dx_max )
           If( do_io ) Then
-             Write( *, '( 3( i2, 1x ), 3( g12.6, 1x ), f0.8, 1x, 2( g12.6, 1x ), 2( g16.10, 1x ) )' ) &
-                  FD_order * 2, i, itn, rnorm, r2, e2, x2, dx2, dx_max, Energy, Abs( Energy - Energy_old )
+             Write( *, '( 2x, 3( i4, 1x ), t20, 4( g12.6, 1x ), 2( g16.10, 1x ) )' ) &
+                  FD_order * 2, outer_iter, solver_iter, rnorm, r2, dx2, dx_max, Energy, Abs( Energy - Energy_old )
           End If
           x2_old = x2
        End If
-       If( dE < method%iter_tol ) Then
+       If( Abs( dE ) < method%iter_tol ) Then
           Exit iteration_loop
        End If
        ! After the solve e may now be contaminated with components of the Null space, so project null space out
@@ -388,6 +389,8 @@ Contains
     End If
 
     istop_message = "Who knows?"
+
+    itn = outer_iter
 
   Contains
 

@@ -8,6 +8,9 @@
 
 #include "ssp_hypre.h"
 
+/* Set the solver we are going to use - should at some point make this a function parameter */
+#define SOLVER PFMG
+
 struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3 ], int ub[ 3 ],
 				   int n_stencil, int stencil_elements[ n_stencil ][ 3 ], double stencil_values[ n_stencil ] ) {
 
@@ -99,6 +102,10 @@ struct ssp_hypre_struct *ssp_hypre_struct_setup( int comm, int n[ 3 ], int lb[ 3
   case PFMG :
     /* PFMG Solver */
     HYPRE_StructPFMGCreate( data_for_hypre_struct -> comm, &( data_for_hypre_struct -> solver ) );
+    /* By default the PFMG method doesn't return the proper number of iterations */
+    HYPRE_StructPFMGSetLogging( data_for_hypre_struct -> solver, 1 );
+    /* If REALLY pushing the tolerances the default number of iterations (200) can be a little small */
+    HYPRE_StructPFMGSetMaxIter( data_for_hypre_struct -> solver, 1000 );    
     HYPRE_StructPFMGSetup ( data_for_hypre_struct -> solver, data_for_hypre_struct -> A, data_for_hypre_struct -> b, data_for_hypre_struct -> x );
     data_for_hypre_struct -> SetTol            = HYPRE_StructPFMGSetTol;
     data_for_hypre_struct -> Solve             = HYPRE_StructPFMGSolve;

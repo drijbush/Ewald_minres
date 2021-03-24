@@ -13,8 +13,6 @@
 
 const char *solver_names[] = { "PFMG", "Jacobi", "GMRES", "HYBRID", "BICGSTAB" };
 
-#define SOLVER PFMG
-
 /* For debugging */
 #define DEBUG
 #undef  DEBUG

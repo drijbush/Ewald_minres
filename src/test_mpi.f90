@@ -206,6 +206,9 @@ Program test_mpi
   If( me == 0 ) Then
      Write( *, '( a, 3( t25, 3( f10.5, 1x ) / ) )' ) &
           'Lattice vectors: ', l%get_direct_vectors()
+     Write( *, * )
+     Write( *, '( a, 3( 1x, g12.6 ) )' ) 'DLP Nett force: ', Sum( dlp_force, Dim = 2 )
+     Write( *, * )
   End If
 
   ! Find the size of the grid
