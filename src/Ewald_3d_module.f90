@@ -28,6 +28,7 @@ Module Ewald_3d_module
      Integer                                                 :: range_gauss
      Real( wp )                                              :: gauss_tol
      Real( wp )                                              :: residual_tol
+     Real( wp )                                              :: energy_tol
      Class( comms_base_class                  ), Allocatable :: comms
      Class( FD_template                       ), Allocatable :: FD
      Class( halo_setter_base_class            ), Allocatable :: FD_swapper
@@ -61,6 +62,7 @@ Module Ewald_3d_module
 !!$  Character( Len = * ), Parameter :: default_solver       = "CG"
 !!$  Character( Len = * ), Parameter :: default_solver       = "wjac"
   Real( wp ),           Parameter :: residual_tol_default = 1e-08_wp ! Tolerance on residual in equation solver
+  Real( wp ),           Parameter :: energy_tol_default   = 1e-06_wp ! Tolerance on energy in PFMG SCF like solver
 
 Contains
 
@@ -144,7 +146,7 @@ Contains
   End Subroutine Ewald_3d
 
   Subroutine Ewald_3d_init( recipe, l, alpha, error, communicator, equation_solver, range_gauss, gauss_tol, &
-       FD_order, residual_tol )
+       FD_order, residual_tol, energy_tol )
 
     Use lattice_module,                    Only : lattice
 
@@ -189,6 +191,7 @@ Contains
     Real( wp ),               Intent( In    ), Optional :: gauss_tol
     Integer,                  Intent( In    ), Optional :: FD_order
     Real( wp ),               Intent( In    ), Optional :: residual_tol
+    Real( wp ),               Intent( In    ), Optional :: energy_tol
 
     Class( comms_base_class                  ), Allocatable :: comms
     Class( FD_template                       ), Allocatable :: FD
@@ -204,6 +207,7 @@ Contains
 
     Real( wp ) :: gauss_tol_use
     Real( wp ) :: residual_tol_use
+    Real( wp ) :: energy_tol_use
 
     Integer, Dimension( 1:3 ) :: n_grid
     Integer, Dimension( 1:3 ) :: n_proc_grid
@@ -369,11 +373,18 @@ Contains
     End If
 
     ! Set up the equation solver
-    ! First decide on the accuracy
+    ! First decide on the accuracy for the solver
     If( Present( residual_tol ) ) Then
        residual_tol_use = residual_tol
     Else
        residual_tol_use = residual_tol_default
+    End If
+
+    ! Now if relevant set an energy tolerance for the SCF like solver
+    If( Present( energy_tol ) ) Then
+       energy_tol_use = energy_tol
+    Else
+       energy_tol_use = energy_tol_default
     End If
     
     ! TESTING PRECONDITIONER
@@ -405,10 +416,6 @@ Contains
 !!$       Call precon%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD_precon )
 !!$    End Select
 
-
-
-
-
     If( Present( equation_solver ) ) Then
        loc_equation_solver = equation_solver
     Else
@@ -437,10 +444,8 @@ Contains
     ! HACK!!!!
     Select Type( solver )
     Class is ( equation_solver_hypre_pfmg )
-       Call solver%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD, l%get_volume() )
+       Call solver%pfmg_init( comms, n_grid, domain_base_coords, domain_end_coords, FD, l%get_volume(), energy_tol_use )
     End Select
-       
-    
 
     ! Set up the quadrature method
     Allocate( quadrature_trapezium_rule :: grid_integrator )
@@ -454,6 +459,7 @@ Contains
     recipe%range_gauss        = range_gauss_use
     recipe%gauss_tol          = gauss_tol_use
     recipe%residual_tol       = residual_tol_use
+    recipe%energy_tol         = energy_tol_use
 !!$    recipe%comms              = comms
 !!$    recipe%FD                 = FD
 !!$    recipe%FD_swapper         = FD_swapper

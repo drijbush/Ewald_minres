@@ -11,17 +11,17 @@ Module equation_solver_hypre_pfmg_module
   Private
   
   Type, Public, Extends( equation_solver_precon_base_class ) :: equation_solver_hypre_pfmg
-     Integer, Dimension( 1:3 )                     :: n                     ! Number of grid point
-     Real( wp )                                    :: V                     ! Volume
-     Real( wp )                                    :: iter_tol = 1.0e-06_wp ! Tolerance for iterations around order 2 solver
-     Logical                                       :: orthog_stencil        ! If the stencil only has elements along the axes can save some message passing
+     Integer, Dimension( 1:3 )                     :: n                       ! Number of grid point
+     Real( wp )                                    :: V                       ! Volume
+     Real( wp )                                    :: energy_tol = 1.0e-06_wp ! Tolerance for iterations around order 2 solver
+     Logical                                       :: orthog_stencil          ! If the stencil only has elements along the axes can save some message passing
      Real( wp ), Dimension( :, :, : ), Allocatable :: stencil_2
      Real( wp )                                    :: stencil_diag_2
      Type( c_ptr )                                 :: hypre_objects
    Contains
      Procedure, Public :: solve => pfmg
      Procedure, Public :: pfmg_init
-     Procedure, Public :: set_iter_tol
+     Procedure, Public :: set_energy_tol
 !!$     Final             :: pfmg_destroy
   End Type equation_solver_hypre_pfmg
 
@@ -150,7 +150,7 @@ Module equation_solver_hypre_pfmg_module
   
 Contains
 
-  Subroutine pfmg_init( method, comms, n, lb, ub, FD_operator, V )
+  Subroutine pfmg_init( method, comms, n, lb, ub, FD_operator, V, energy_tol )
 
     Use constants              , Only : wp
     Use comms_base_class_module, Only : comms_base_class
@@ -169,6 +169,7 @@ Contains
     Integer, Dimension( 1:3 )          , Intent( In    ) :: ub
     Class( FD_template )               , Intent( In    ) :: FD_operator
     Real( wp )                         , Intent( In    ) :: V
+    Real( wp )                         , Intent( In    ) :: energy_tol
 
     Real( wp ), Dimension( :, :, : ), Allocatable :: stencil
 
@@ -228,6 +229,9 @@ Contains
     End Do
 
     method%hypre_objects = ssp_hypre_struct_setup( comm, n, lb, ub, n_stencil, stencil_elements, stencil_values )
+
+    ! Finally set the energy tolerance
+    method%energy_tol = energy_tol
 
   End Subroutine pfmg_init
 
@@ -362,7 +366,7 @@ Contains
           End If
           x2_old = x2
        End If
-       If( Abs( dE ) < method%iter_tol ) Then
+       If( Abs( dE ) < method%energy_tol ) Then
           Exit iteration_loop
        End If
        ! After the solve e may now be contaminated with components of the Null space, so project null space out
@@ -478,15 +482,15 @@ Contains
 !!$
 !!$  End Subroutine pfmg_destroy
   
-  Subroutine set_iter_tol( method, tol )
+  Subroutine set_energy_tol( method, tol )
 
     Implicit None
 
     Class( equation_solver_hypre_pfmg ), Intent( InOut ) :: method
     Real( wp )                         , Intent( In    ) :: tol
 
-    method%iter_tol = tol
+    method%energy_tol = tol
 
-  End Subroutine set_iter_tol
+  End Subroutine set_energy_tol
   
 End Module equation_solver_hypre_pfmg_module

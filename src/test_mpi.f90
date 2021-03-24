@@ -68,7 +68,7 @@ Program test_mpi
   Real( wp ), Dimension( 1:3 ) :: t
   Real( wp ), Dimension( 1:3 ) :: f_ssp
 
-  Real( wp ) :: alpha, rtol
+  Real( wp ) :: alpha, rtol, etol
   Real( wp ) :: gauss_tol
   Real( wp ) :: xshift
   Real( wp ) :: recip_E_ffp
@@ -119,9 +119,12 @@ Program test_mpi
      Write( *, * ) 'Cut off tolerance for gaussians?'
      Read ( *, * ) gauss_tol
      Write( *, * ) gauss_tol
-     Write( *, * ) 'Residual tolerance for solver?'
+     Write( *, * ) 'Residual tolerance for FD order 2 solver?'
      Read ( *, * ) rtol
      Write( *, * ) rtol
+     Write( *, * ) 'Energy tolerance for solver?'
+     Read ( *, * ) etol
+     Write( *, * ) etol
      Write( *, * ) 'FD_order?'
      Read ( *, * ) FD_order
      Write( *, * ) FD_order
@@ -155,6 +158,7 @@ Program test_mpi
   Call mpi_bcast( range_gauss,           1, mpi_integer,          0, mpi_comm_world, error )
   Call mpi_bcast( gauss_tol,             1, mpi_double_precision, 0, mpi_comm_world, error )
   Call mpi_bcast( rtol,                  1, mpi_double_precision, 0, mpi_comm_world, error )
+  Call mpi_bcast( etol,                  1, mpi_double_precision, 0, mpi_comm_world, error )
   Call mpi_bcast( FD_order,              1, mpi_integer,          0, mpi_comm_world, error )
   Call mpi_bcast( n,                     1, mpi_integer,          0, mpi_comm_world, error )
   Call mpi_bcast( a,             Size( a ), mpi_double_precision, 0, mpi_comm_world, error )
@@ -317,7 +321,7 @@ Program test_mpi
   ! Need to set these up earlier so use consistent sizes throughout calculation
   ! Set the recipe for the calculation
   Call ewald_recipe%mix( l, alpha, error, communicator = cart_comm%mpi_val, equation_solver = what, &
-       residual_tol = rtol, FD_order = FD_order, range_gauss = range_gauss, gauss_tol = gauss_tol )
+       residual_tol = rtol, energy_tol = etol, FD_order = FD_order, range_gauss = range_gauss, gauss_tol = gauss_tol )
   ! May have changed some dimnsions due to constrains of parallel implementation
   ! Need these for checking potential grids etc.
   Call ewald_recipe%get_ingredients( n_grid = n_grid, range_gauss = range_gauss, &
